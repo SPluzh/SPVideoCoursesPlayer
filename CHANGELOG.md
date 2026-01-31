@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.9]
+- **UI**: Enhanced the **Settings Dialog** with comprehensive icon support:
+    - Added custom icons for **Add**, **Edit**, **Remove**, **Scan**, **Save**, and **Clear Data** buttons.
+    - Implemented status icons (**Check**, **Fail**, **Upload**, **Download**) for library path validation and dependency checks (FFmpeg/Libmpv).
+
 ## [1.0.8]
 - **UI**: Fixed window splitter behavior so the library panel is collapsible while the player panel behaves correctly.
 
