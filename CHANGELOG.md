@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.7]
+- **Feature**: Added Seek Slider Hover Preview:
+    - Moves mouse over the timeline to see a timestamp and video thumbnail from that moment.
+    - Uses optimized FFmpeg background processing for fast updates.
+    - Styled with a "plaque" (rounded dark background) for the timestamp for better readability.
+    - Popup stays vertically anchored to the slider to prevent jitter.
+
 ## [1.0.6]
 - **UI**: Refined status bar flexibility and styling
 

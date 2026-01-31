@@ -147,6 +147,7 @@ class VideoCourseBrowser(QMainWindow):
         self.video_player.setMinimumWidth(400) # Ensure player has minimum width
         self.video_player.db = self.db
         self.video_player.taskbar_progress = self.taskbar_progress
+        self.video_player.show_preview = self.show_preview_popup
 
         self.video_player.setSizePolicy(
             QSizePolicy.Policy.Expanding,
@@ -1106,7 +1107,10 @@ class VideoCourseBrowser(QMainWindow):
     def create_default_settings(self):
         config = configparser.ConfigParser()
 
-        config['General'] = {'language': 'ru'}
+        config['General'] = {
+        'language': 'ru',
+        'show_preview_popup': 'True'
+    }
         config['Paths'] = {
             'paths': '',
             'thumbnails_dir': 'data/video_thumbnails',
@@ -1152,6 +1156,7 @@ class VideoCourseBrowser(QMainWindow):
 
         lang = config.get('General', 'language', fallback='ru')
         tr.load_language(lang)
+        self.show_preview_popup = config.getboolean('General', 'show_preview_popup', fallback=True)
 
         self.library_paths = config.get('Paths', 'paths', fallback='')
         self.thumbnails_dir = DATA_DIR / 'video_thumbnails'

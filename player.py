@@ -2,19 +2,27 @@
 import sys
 from pathlib import Path
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QSlider, QSizePolicy
-from PyQt6.QtCore import Qt, QTimer, pyqtSignal
+from PyQt6.QtCore import Qt, QTimer, pyqtSignal, QPoint
 from PyQt6.QtGui import QIcon, QColor, QPalette
 
 from mpv_handler import setup_mpv_dll, MPVVideoWidget
 from translator import tr
 from subtitle_popup import SubtitleButton
 from volume_popup import VolumeButton
+from preview_popup import PreviewPopup
 
 ROOT_DIR = Path(__file__).parent
 RESOURCES_DIR = ROOT_DIR / "resources"
 
 class ClickableSlider(QSlider):
     """Slider that jumps to click position."""
+    hovered = pyqtSignal(int, QPoint)
+    hover_left = pyqtSignal()
+
+    def __init__(self, orientation):
+        super().__init__(orientation)
+        self.setMouseTracking(True)
+
     def mousePressEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
             pos_ratio = event.position().x() / self.width()
@@ -22,6 +30,17 @@ class ClickableSlider(QSlider):
             self.setValue(value)
             self.sliderMoved.emit(value)
         super().mousePressEvent(event)
+
+    def mouseMoveEvent(self, event):
+        pos_ratio = event.position().x() / self.width()
+        value = int(self.minimum() + pos_ratio * (self.maximum() - self.minimum()))
+        value = max(self.minimum(), min(self.maximum(), value))
+        self.hovered.emit(value, event.globalPosition().toPoint())
+        super().mouseMoveEvent(event)
+
+    def leaveEvent(self, event):
+        self.hover_left.emit()
+        super().leaveEvent(event)
 
 
 class VideoPlayerWidget(QWidget):
@@ -163,6 +182,47 @@ class VideoPlayerWidget(QWidget):
         layout.addWidget(control_panel)
 
         self.video_widget.toggle_play_pause.connect(self.play_pause)
+
+        # Preview Popup
+        self.preview_popup = PreviewPopup(self.video_widget)
+        self.progress_slider.hovered.connect(self._on_slider_hovered)
+        self.progress_slider.hover_left.connect(self._on_slider_left)
+
+    def _on_slider_hovered(self, value, global_pos):
+        """Show preview popup on slider hover."""
+        if not getattr(self, 'show_preview', True):
+            return
+            
+        if not self.player or not self.current_file or not self.player.duration:
+            return
+            
+        duration = self.player.duration
+        if duration <= 0: return
+
+        # Calculate time in seconds
+        # slider value is in milliseconds (set by duration_changed)
+        seconds = value / 1000.0
+        
+        # Anchor Y to slider top to avoid jitter
+        slider_geo = self.progress_slider.mapToGlobal(QPoint(0, 0))
+        # The popup attempts to position itself above global_pos. 
+        # We want the bottom of the popup (arrow tip) to touch the top of the slider.
+        # update_content calculates: y = global_pos.y() - popup_height - 15.
+        # We want y = slider_y - height.
+        # So passes global_pos.y such that global_pos.y() - 15 = slider_y? 
+        # No, let's fix update_content in preview_popup to respect the arrow.
+        
+        # Actually, let's just pass the exact top-left corner we want, or pass the target anchor point.
+        # For now, let's pass the slider top Y as the anchor Y.
+        target_pos = QPoint(global_pos.x(), slider_geo.y())
+        
+        self.preview_popup.update_content(seconds, target_pos)
+        if self.preview_popup.isHidden():
+            self.preview_popup.show()
+
+    def _on_slider_left(self):
+        """Hide preview popup."""
+        self.preview_popup.hide()
 
     def toggle_mute(self):
         """Toggle audio mute."""
@@ -346,9 +406,14 @@ class VideoPlayerWidget(QWidget):
 
         self.current_file = file_path
         self.saved_position = saved_position
+        self.saved_position = saved_position
         self.position_restore_attempted = False
         self.is_loading = True
         self.auto_play_pending = auto_play
+        
+        # Update preview popup video path
+        if hasattr(self, 'preview_popup'):
+            self.preview_popup.set_video(str(file_path))
 
         self.video_widget.reset_zoom_pan()
 
