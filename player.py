@@ -383,6 +383,11 @@ class VideoPlayerWidget(QWidget):
         except Exception as e:
             print(f"Error ensuring playback: {e}")
 
+    def set_ffmpeg_path(self, path):
+        """Set FFmpeg path for preview generation."""
+        if hasattr(self, 'preview_popup'):
+            self.preview_popup.ffmpeg_path = path
+
     def load_video(self, file_path, saved_position=0, volume=100, auto_play=True):
         """
         Load video

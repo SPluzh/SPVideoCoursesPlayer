@@ -74,6 +74,7 @@ class PreviewPopup(QWidget):
         
         self.pending_time = None
         self.resources_dir = Path(__file__).parent / "resources"
+        self.ffmpeg_path = None
 
     def set_video(self, file_path):
         """Update current video path and clear cache."""
@@ -182,11 +183,8 @@ class PreviewPopup(QWidget):
         self.thumb_label.setPixmap(pixmap)
         
     def _resolve_ffmpeg(self):
-        # Look in resources/bin
-        bin_path = self.resources_dir / "bin" / "ffmpeg.exe"
-        if bin_path.exists():
-            return bin_path
-        
-        # Look on PATH
-        # (This is a simplified check, usually we rely on the bunbled one)
-        return "ffmpeg"
+        if self.ffmpeg_path:
+             path = Path(str(self.ffmpeg_path))
+             if path.exists():
+                 return path
+        return None

@@ -148,6 +148,7 @@ class VideoCourseBrowser(QMainWindow):
         self.video_player.db = self.db
         self.video_player.taskbar_progress = self.taskbar_progress
         self.video_player.show_preview = self.show_preview_popup
+        self.video_player.set_ffmpeg_path(self.ffmpeg_path)
 
         self.video_player.setSizePolicy(
             QSizePolicy.Policy.Expanding,
