@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.8]
+- **UI**: Fixed window splitter behavior so the library panel is collapsible while the player panel behaves correctly.
+
 ## [1.0.7]
 - **Feature**: Added Seek Slider Hover Preview:
     - Moves mouse over the timeline to see a timestamp and video thumbnail from that moment.

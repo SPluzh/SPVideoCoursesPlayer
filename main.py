@@ -101,7 +101,7 @@ class VideoCourseBrowser(QMainWindow):
         self.path_edit.setVisible(False)
 
         self.splitter = QSplitter(Qt.Orientation.Horizontal)
-        self.splitter.setChildrenCollapsible(False) # Prevents widgets from being hidden
+        self.splitter.setChildrenCollapsible(False) # Default non-collapsible, specific overrides applied later
         main_layout.addWidget(self.splitter, 1)
 
         browser_widget = QWidget()
@@ -175,6 +175,10 @@ class VideoCourseBrowser(QMainWindow):
         self.splitter.setStretchFactor(1, 3)
 
         self.restore_window_state()
+        
+        # Override collapsible state from settings: Library (0) collapsible, Player (1) fixed
+        self.splitter.setCollapsible(0, True)
+        self.splitter.setCollapsible(1, False)
         
         # Double-check splitter sizes after all geometry is set
         QTimer.singleShot(50, self._ensure_player_visible)

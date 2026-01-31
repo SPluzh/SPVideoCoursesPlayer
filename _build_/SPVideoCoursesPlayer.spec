@@ -19,6 +19,7 @@ a = Analysis(
         # --- icons ---
         ('../resources/icons/*.png', 'resources/icons'),
         ('../resources/icons/*.ico', 'resources/icons'),
+        ('../resources/version.txt', 'resources'),
     ],
     hiddenimports=[
         'mutagen.mp3',
