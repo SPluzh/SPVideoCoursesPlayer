@@ -20,7 +20,11 @@ QWidget {
 QStatusBar {
     background-color: #373737;
     color: #eaeaea;
-    font-size: 12px;
+}
+
+QStatusBar QLabel {
+    font-size: 11px;
+    margin-left: 0px;
 }
 
 QPushButton {

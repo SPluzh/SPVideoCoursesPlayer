@@ -93,8 +93,9 @@ class VideoCourseBrowser(QMainWindow):
         main_layout = QVBoxLayout(central_widget)
 
         self.status = self.statusBar()
+        self.status.setContentsMargins(5, 0, 5, 0)
         self.info_label = QLabel(tr('status.not_loaded'))
-        self.status.addPermanentWidget(self.info_label, 1)
+        self.status.addWidget(self.info_label, 1)
 
         self.path_edit = QLineEdit(self.library_paths)
         self.path_edit.setVisible(False)
