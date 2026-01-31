@@ -32,6 +32,8 @@ class VideoPlayerWidget(QWidget):
     request_show_main_window = pyqtSignal()
     pause_changed = pyqtSignal(bool)
     subtitle_style_changed = pyqtSignal(str, object)
+    next_video_requested = pyqtSignal()
+    prev_video_requested = pyqtSignal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -79,12 +81,21 @@ class VideoPlayerWidget(QWidget):
         panel_layout.setContentsMargins(0, 5, 0, 0)
 
         self.icons = {}
-        for name in ["prev_frame", "next_frame", "play", "pause", "screenshot"]:
+        for name in ["prev_frame", "next_frame", "play", "pause", "screenshot", "next", "prev"]:
             path = RESOURCES_DIR / "icons" / f"{name}.png"
             if path.exists():
                 self.icons[name] = QIcon(str(path))
             else:
                  self.icons[name] = QIcon()
+
+        # Previous Video Button
+        self.prev_video_btn = QPushButton()
+        self.prev_video_btn.setIcon(self.icons['prev'])
+        self.prev_video_btn.setFixedSize(30, 30)
+        self.prev_video_btn.setToolTip(tr('player.tooltip_prev_video'))
+        self.prev_video_btn.clicked.connect(self.prev_video_requested.emit)
+        self.prev_video_btn.setEnabled(False)
+        panel_layout.addWidget(self.prev_video_btn)
 
         self.frame_back_btn = QPushButton()
         self.frame_back_btn.setIcon(self.icons['prev_frame'])
@@ -109,6 +120,15 @@ class VideoPlayerWidget(QWidget):
         self.frame_step_btn.clicked.connect(self.frame_step)
         self.frame_step_btn.setEnabled(False)
         panel_layout.addWidget(self.frame_step_btn)
+
+        # Next Video Button
+        self.next_video_btn = QPushButton()
+        self.next_video_btn.setIcon(self.icons['next'])
+        self.next_video_btn.setFixedSize(30, 30)
+        self.next_video_btn.setToolTip(tr('player.tooltip_next_video'))
+        self.next_video_btn.clicked.connect(self.next_video_requested.emit)
+        self.next_video_btn.setEnabled(False)
+        panel_layout.addWidget(self.next_video_btn)
 
         self.progress_slider = ClickableSlider(Qt.Orientation.Horizontal)
         self.progress_slider.setRange(0, 1000)
@@ -323,6 +343,8 @@ class VideoPlayerWidget(QWidget):
             self.progress_slider.setEnabled(True)
             self.frame_back_btn.setEnabled(True)
             self.frame_step_btn.setEnabled(True)
+            self.prev_video_btn.setEnabled(True)
+            self.next_video_btn.setEnabled(True)
             self.screenshot_btn.setEnabled(True)
 
             # ADDED: Load audio tracks

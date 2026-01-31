@@ -140,6 +140,8 @@ class VideoCourseBrowser(QMainWindow):
         self.video_player.position_changed.connect(self.save_progress)
         self.video_player.pause_changed.connect(self.on_player_pause_changed)
         self.video_player.subtitle_style_changed.connect(self.save_subtitle_settings)
+        self.video_player.next_video_requested.connect(self.play_next_video)
+        self.video_player.prev_video_requested.connect(self.play_prev_video)
 
         # Apply initial subtitle settings
         self.video_player.set_subtitle_styles(self.sub_color, self.sub_border_color, self.sub_scale)
@@ -756,7 +758,71 @@ class VideoCourseBrowser(QMainWindow):
         elif item_type == 'folder':
             item.setExpanded(not item.isExpanded())
 
-    def play_video_in_player(self, item, resume=True):
+    def play_next_video(self):
+        if not self.video_player.current_file:
+            return
+
+        current_item = self.find_video_item(self.video_player.current_file)
+        if not current_item:
+            return
+
+        # Determine if we should auto-play the next video
+        # If player is currently playing (not paused), then auto-play next
+        should_play = True
+        if self.video_player.player:
+            should_play = not self.video_player.player.pause
+
+        iterator = QTreeWidgetItemIterator(self.course_tree, QTreeWidgetItemIterator.IteratorFlag.All)
+        # Advance to current
+        while iterator.value():
+            item = iterator.value()
+            iterator += 1
+            if item == current_item:
+                break
+        
+        # Continue to find next video
+        while iterator.value():
+            item = iterator.value()
+            item_type = item.data(0, Qt.ItemDataRole.UserRole + 1)
+            if item_type == 'video':
+                self.play_video_in_player(item, resume=True, auto_play=should_play)
+                self.course_tree.scrollToItem(item)
+                self.course_tree.setCurrentItem(item)
+                return
+            iterator += 1
+
+    def play_prev_video(self):
+        if not self.video_player.current_file:
+            return
+
+        current_item = self.find_video_item(self.video_player.current_file)
+        if not current_item:
+            return
+
+        # Determine if we should auto-play the prev video
+        should_play = True
+        if self.video_player.player:
+            should_play = not self.video_player.player.pause
+
+        iterator = QTreeWidgetItemIterator(self.course_tree, QTreeWidgetItemIterator.IteratorFlag.All)
+        last_video_item = None
+
+        while iterator.value():
+            item = iterator.value()
+            if item == current_item:
+                if last_video_item:
+                    self.play_video_in_player(last_video_item, resume=True, auto_play=should_play)
+                    self.course_tree.scrollToItem(last_video_item)
+                    self.course_tree.setCurrentItem(last_video_item)
+                return
+            
+            item_type = item.data(0, Qt.ItemDataRole.UserRole + 1)
+            if item_type == 'video':
+                last_video_item = item
+            
+            iterator += 1
+
+    def play_video_in_player(self, item, resume=True, auto_play=True):
         file_path = item.data(0, Qt.ItemDataRole.UserRole)
 
         if file_path and Path(file_path).exists():
@@ -765,12 +831,12 @@ class VideoCourseBrowser(QMainWindow):
             if resume:
                 saved_position, saved_volume = self.get_saved_position(file_path)
 
-            self.video_player.load_video(file_path, saved_position, volume=saved_volume)
+            self.video_player.load_video(file_path, saved_position, volume=saved_volume, auto_play=auto_play)
             # Update delegate
             delegate = self.course_tree.itemDelegate()
             if isinstance(delegate, VideoItemDelegate):
                 delegate.playing_path = file_path
-                delegate.is_paused = False
+                delegate.is_paused = not auto_play
                 self.course_tree.viewport().update()
                 
             #self.video_player.restore_audio_track(file_path)
