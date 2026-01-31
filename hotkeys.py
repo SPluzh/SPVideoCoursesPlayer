@@ -98,6 +98,10 @@ class HotkeyManager(QObject):
             Qt.Key.Key_C: "toggle_subtitles",
             Qt.Key.Key_R: "reset_zoom",
             Qt.Key.Key_Z: "zoom_mode",
+            Qt.Key.Key_Comma: "frame_back",
+            Qt.Key.Key_Period: "frame_step",
+            Qt.Key.Key_BracketLeft: "zoom_out",
+            Qt.Key.Key_BracketRight: "zoom_in",
             
             # Fallback for Cyrillic layout (Russian)
             0x410: "toggle_fullscreen", # RU A (where F is)
@@ -106,6 +110,10 @@ class HotkeyManager(QObject):
             0x441: "toggle_subtitles",  # RU S (where C is)
             0x41a: "reset_zoom",        # RU K (where R is)
             0x42f: "zoom_mode",         # RU YA (where Z is)
+            0x431: "frame_back",        # RU B (where < is)
+            0x44e: "frame_step",        # RU YU (where > is)
+            0x445: "zoom_out",          # RU H (where [ is)
+            0x44a: "zoom_in",           # RU TVZ (where ] is)
             
             # Multimedia keys (local behavior)
             Qt.Key.Key_MediaPlay: "toggle_pause",
@@ -141,6 +149,10 @@ class HotkeyManager(QObject):
             0x43: "toggle_subtitles",  # C
             0x52: "reset_zoom",        # R
             0x5A: "zoom_mode",         # Z
+            0xBC: "frame_back",        # Comma (<)
+            0xBE: "frame_step",        # Period (>)
+            0xDB: "zoom_out",          # [
+            0xDD: "zoom_in",           # ]
         }
         
         # Start global listener thread

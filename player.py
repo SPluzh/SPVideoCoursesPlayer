@@ -278,6 +278,14 @@ class VideoPlayerWidget(QWidget):
         """Reset zoom via button."""
         self.video_widget.reset_zoom_pan()
 
+    def zoom_in(self):
+        """Increase zoom level."""
+        self.video_widget.zoom_in()
+
+    def zoom_out(self):
+        """Decrease zoom level."""
+        self.video_widget.zoom_out()
+
     def set_zoom_mode(self, enabled):
         """Set zoom state for Z key (hold)."""
         self.video_widget.z_key_pressed = enabled

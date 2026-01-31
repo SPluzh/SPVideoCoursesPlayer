@@ -186,9 +186,19 @@ class VideoCourseBrowser(QMainWindow):
         self.progress_save_timer.start(1000)
 
     def keyPressEvent(self, event: QKeyEvent):
-        if event.isAutoRepeat():
-            return
         action = self.hotkey_manager.get_action(event)
+        
+        # Actions that allow auto-repeat (like seeking, volume, or speed with arrows)
+        repeatable_actions = [
+            "seek_forward", "seek_backward", 
+            "speed_up", "speed_down", 
+            "volume_up", "volume_down",
+            "zoom_in", "zoom_out"
+        ]
+        
+        if event.isAutoRepeat() and action not in repeatable_actions:
+            return
+            
         if action:
             self.handle_player_action(action, pressed=True)
             event.accept()
@@ -239,6 +249,14 @@ class VideoCourseBrowser(QMainWindow):
             self.video_player.screenshot_to_clipboard()
         elif action == "reset_zoom":
             self.video_player.reset_zoom()
+        elif action == "zoom_in":
+            self.video_player.zoom_in()
+        elif action == "zoom_out":
+            self.video_player.zoom_out()
+        elif action == "frame_step":
+            self.video_player.frame_step()
+        elif action == "frame_back":
+            self.video_player.frame_back_step()
         elif action == "speed_up":
             self.video_player.adjust_speed(0.1)
         elif action == "speed_down":
