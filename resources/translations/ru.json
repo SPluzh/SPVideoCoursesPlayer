@@ -15,6 +15,9 @@
         "language_ru": "Русский",
         "language_en": "English"
     },
+    "library": {
+        "search_placeholder": "Поиск..."
+    },
     "settings": {
         "title": "Настройки",
         "library_group": "Библиотека видеокурсов",

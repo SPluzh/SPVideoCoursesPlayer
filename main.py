@@ -107,6 +107,14 @@ class VideoCourseBrowser(QMainWindow):
         browser_widget.setMinimumWidth(200) # Ensure library has minimum width
         browser_layout = QVBoxLayout(browser_widget)
         browser_layout.setContentsMargins(0, 0, 0, 0)
+        browser_layout.setSpacing(0)
+
+        self.search_edit = QLineEdit()
+        self.search_edit.setPlaceholderText(tr('library.search_placeholder'))
+        self.search_edit.setClearButtonEnabled(True)
+        self.search_edit.textChanged.connect(self.filter_library)
+        self.search_edit.setObjectName("librarySearch")
+        browser_layout.addWidget(self.search_edit)
 
         self.course_tree = HoverTreeWidget()
         self.course_tree.setColumnCount(1)
@@ -298,6 +306,8 @@ class VideoCourseBrowser(QMainWindow):
             self.menuBar().clear()
             print("DEBUG: Recreating menu bar")
             self.create_menu_bar()
+            if hasattr(self, 'search_edit'):
+                self.search_edit.setPlaceholderText(tr('library.search_placeholder'))
             if hasattr(self, 'video_player') and self.video_player:
                 print("DEBUG: Updating player texts")
                 self.video_player.update_texts()
@@ -1277,6 +1287,44 @@ class VideoCourseBrowser(QMainWindow):
                                    videos=video_count,
                                    thumbs=thumb_count,
                                    resumed=resumed_count))
+        
+        # Apply current filter if any
+        if hasattr(self, 'search_edit') and self.search_edit.text():
+            self.filter_library(self.search_edit.text())
+
+    def filter_library(self, text):
+        """Filter library items by text."""
+        query = text.lower()
+        self.course_tree.blockSignals(True)
+        self.course_tree.setUpdatesEnabled(False)
+        try:
+            for i in range(self.course_tree.topLevelItemCount()):
+                item = self.course_tree.topLevelItem(i)
+                self._apply_filter(item, query)
+        finally:
+            self.course_tree.setUpdatesEnabled(True)
+            self.course_tree.blockSignals(False)
+
+    def _apply_filter(self, item, query, parent_matches=False):
+        """Recursively apply filter to item and children."""
+        item_text = item.text(0).lower()
+        item_matches = query in item_text
+        
+        # If parent matches, all children are shown
+        actual_matches = item_matches or parent_matches
+        
+        child_visible = False
+        for i in range(item.childCount()):
+            if self._apply_filter(item.child(i), query, actual_matches):
+                child_visible = True
+        
+        is_visible = actual_matches or child_visible
+        item.setHidden(not is_visible)
+        
+        if query and child_visible:
+            item.setExpanded(True)
+            
+        return is_visible
 
     def showEvent(self, event):
         super().showEvent(event)
