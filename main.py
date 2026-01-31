@@ -255,6 +255,7 @@ class VideoCourseBrowser(QMainWindow):
         self.setWindowTitle(title)
 
     def restore_window_state(self):
+        is_maximized = False
         config = configparser.ConfigParser()
         if self.config_file.exists():
             config.read(self.config_file, encoding='utf-8')
@@ -269,6 +270,12 @@ class VideoCourseBrowser(QMainWindow):
                     self.resize(self.window_width, self.window_height)
             else:
                 self.resize(self.window_width, self.window_height)
+
+            if config.has_option('Window', 'is_maximized'):
+                try:
+                    is_maximized = config.getboolean('Window', 'is_maximized')
+                except Exception as e:
+                    print(f"Error reading maximized state: {e}")
 
             if config.has_option('Window', 'splitter_state'):
                 try:
@@ -295,6 +302,8 @@ class VideoCourseBrowser(QMainWindow):
                     print(f"Error restoring playback speed: {e}")
         else:
             self.resize(self.window_width, self.window_height)
+        
+        return is_maximized
 
     def _ensure_player_visible(self):
         """Ensure the player pane in the splitter is not collapsed."""
@@ -321,6 +330,8 @@ class VideoCourseBrowser(QMainWindow):
 
         splitter_state = self.splitter.saveState().toHex().data().decode('utf-8')
         config['Window']['splitter_state'] = splitter_state
+
+        config['Window']['is_maximized'] = str(self.isMaximized())
 
         if self.video_player.current_file:
             config['Window']['last_video'] = self.video_player.current_file
@@ -1098,7 +1109,17 @@ def main():
 
     try:
         window = VideoCourseBrowser()
+        is_maximized = window.restore_window_state()
         window.show()
+        if is_maximized:
+            # Explicitly synchronize screen association before maximizing
+            center = window.geometry().center()
+            screen = QApplication.screenAt(center)
+            if screen and window.windowHandle():
+                window.windowHandle().setScreen(screen)
+                
+            # Still using a small delay to ensure OS window manager is ready
+            QTimer.singleShot(100, window.showMaximized)
         sys.exit(app.exec())
     except Exception as e:
         import traceback

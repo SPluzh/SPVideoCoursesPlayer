@@ -277,6 +277,29 @@ class MPVVideoWidget(QFrame):
             self.pending_single_click = False
             self.toggle_play_pause.emit()
 
+    def _get_target_screen(self):
+        """Find the screen that should contain this window or where the user is looking."""
+        # 1. Try to find the screen by mouse position (most accurate for user intent)
+        cursor_pos = QCursor.pos()
+        for screen in QApplication.screens():
+            if screen.geometry().contains(cursor_pos):
+                return screen
+        
+        # 2. Try to find the screen by window center (most accurate for current placement)
+        window = self.window()
+        if window:
+            window_center = window.geometry().center()
+            for screen in QApplication.screens():
+                if screen.geometry().contains(window_center):
+                    return screen
+            
+            # 3. Fallback to the current window's screen association
+            if window.screen():
+                return window.screen()
+        
+        # 4. Final fallback
+        return QApplication.primaryScreen()
+
     def mouseDoubleClickEvent(self, event: QMouseEvent):
         if event.button() == Qt.MouseButton.LeftButton:
             self.click_timer.stop()
@@ -284,11 +307,15 @@ class MPVVideoWidget(QFrame):
             self.is_fullscreen = not self.is_fullscreen
 
             if self.is_fullscreen:
-                screen = QApplication.screenAt(self.mapToGlobal(QPoint(0, 0)))
-                if screen is None:
-                    screen = QApplication.primaryScreen()
+                screen = self._get_target_screen()
                 screen_geometry = screen.geometry()
+                
                 self.setWindowFlags(Qt.WindowType.Window | Qt.WindowType.FramelessWindowHint)
+                self.show() # Ensure window handle is created/updated for the new window mode
+                
+                if self.windowHandle():
+                    self.windowHandle().setScreen(screen)
+                
                 self.setGeometry(screen_geometry)
                 self.showFullScreen()
             else:
