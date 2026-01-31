@@ -199,6 +199,7 @@ class VideoPlayerWidget(QWidget):
                 wid=str(int(self.video_widget.winId())),
                 vo='gpu',
                 hwdec='auto-safe',
+                sid='no', # Disable subtitles by default
                 keep_open=True,
                 idle=True,
                 osc=False,
@@ -307,6 +308,7 @@ class VideoPlayerWidget(QWidget):
                 if hasattr(self.volume_btn.popup, '_update_label'):
                     self.volume_btn.popup._update_label(int(volume))
 
+            self.player.sid = 'no'
             self.player.loadfile(file_path)
             self.play_btn.setEnabled(True)
             self.progress_slider.setEnabled(True)
@@ -317,8 +319,9 @@ class VideoPlayerWidget(QWidget):
             # ADDED: Load audio tracks
             QTimer.singleShot(200, lambda: self.load_audio_tracks(file_path))
             
-            # ADDED: Load subtitles
-            QTimer.singleShot(250, lambda: self.load_subtitle_tracks(file_path))
+            # Load tracks info from DB and restore state
+            QTimer.singleShot(100, lambda: self.load_subtitle_tracks(file_path))
+            QTimer.singleShot(200, lambda: self.restore_subtitle_track(file_path))
 
             if auto_play:
                 QTimer.singleShot(100, self._start_playback)
@@ -615,8 +618,8 @@ class VideoPlayerWidget(QWidget):
             # Set button state based on subtitles_enabled from DB
             self.subtitle_btn.set_enabled_state(bool(subtitles_enabled))
 
-            # Restore selected subtitles
-            QTimer.singleShot(400, lambda: self.restore_subtitle_track(filepath))
+            # Restore state is now handled in load_video for better timing control
+            # QTimer.singleShot(400, lambda: self.restore_subtitle_track(filepath))
 
         except Exception as e:
             print(f"Error loading subtitle tracks: {e}")

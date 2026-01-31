@@ -841,23 +841,24 @@ class VideoScanner:
                     # Determine language from filename
                     language = None
                     lang_patterns = [
-                        (r'[\\[\\(\\.]?(rus|russian|ru|рус)[\\]\\)\\.\\-_]?', 'ru'),
-                        (r'[\\[\\(\\.]?(eng|english|en|англ)[\\]\\)\\.\\-_]?', 'en'),
-                        (r'[\\[\\(\\.]?(ukr|ukrainian|ua|укр)[\\]\\)\\.\\-_]?', 'uk'),
-                        (r'[\\[\\(\\.]?(jpn|japanese|ja|jp|яп)[\\]\\)\\.\\-_]?', 'ja'),
-                        (r'[\\[\\(\\.]?(ger|german|de|deu|нем)[\\]\\)\\.\\-_]?', 'de'),
-                        (r'[\\[\\(\\.]?(fra|french|fr|фр)[\\]\\)\\.\\-_]?', 'fr'),
-                        (r'[\\[\\(\\.]?(spa|spanish|es|исп)[\\]\\)\\.\\-_]?', 'es'),
-                        (r'[\\[\\(\\.]?(chi|chinese|zh|кит)[\\]\\)\\.\\-_]?', 'zh'),
+                        (r'(?:^|[\[\(._\-])(rus|russian|ru|рус)(?:$|[\]\)._\-])', 'ru'),
+                        (r'(?:^|[\[\(._\-])(eng|english|en|англ)(?:$|[\]\)._\-])', 'en'),
+                        (r'(?:^|[\[\(._\-])(ukr|ukrainian|ua|укр)(?:$|[\]\)._\-])', 'uk'),
+                        (r'(?:^|[\[\(._\-])(jpn|japanese|ja|jp|яп)(?:$|[\]\)._\-])', 'ja'),
+                        (r'(?:^|[\[\(._\-])(ger|german|de|deu|нем)(?:$|[\]\)._\-])', 'de'),
+                        (r'(?:^|[\[\(._\-])(fra|french|fr|фр)(?:$|[\]\)._\-])', 'fr'),
+                        (r'(?:^|[\[\(._\-])(spa|spanish|es|исп)(?:$|[\]\)._\-])', 'es'),
+                        (r'(?:^|[\[\(._\-])(chi|chinese|zh|кит)(?:$|[\]\)._\-])', 'zh'),
                     ]
                     for pattern, lang in lang_patterns:
                         if re.search(pattern, sub_name, re.IGNORECASE):
                             language = lang
+                            print(f"DEBUG: Found subtitle language {lang} for {sub_name}")
                             break
                     
                     # Determine if subtitles are forced
                     is_forced = 0
-                    if re.search(r'[\\[\\(\\.]?forced[\\]\\)\\.\\-_]?', sub_name, re.IGNORECASE):
+                    if re.search(r'(?:^|[\[\(._\-])forced(?:$|[\]\)._\-])', sub_name, re.IGNORECASE):
                         is_forced = 1
                     
                     # Codec by extension
