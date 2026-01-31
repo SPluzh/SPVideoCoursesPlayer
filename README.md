@@ -36,26 +36,13 @@ SP Video Courses Player is a desktop application designed specifically for watch
 - **🎨 Dark Theme** - Modern dark interface with customizable styles
 - **📁 Folder Navigation** - Quick access to course folders from context menu
 
-### 📋 Requirements
+### 📖 Usage
 
-- **Operating System**: Windows 10/11
-- **Python**: 3.10+ (for source installation)
+1. **Add Library Paths**: Go to `Library → Settings` and add folders containing your video courses
+2. **Scan Library**: Click `Library → Scan` to index your videos
+3. **Watch Videos**: Double-click any video to start playback
+4. **Resume Playback**: Your progress is automatically saved - just double-click to resume
 
-### 📦 Dependencies
-
-```
-PyQt6
-python-mpv
-comtypes
-mutagen
-pyinstaller (for building)
-```
-
-### 🔧 Additional Components
-
-The application will automatically download these components on first run:
-- **libmpv-2.dll** - MPV video playback library
-- **FFmpeg & FFprobe** - For video analysis and thumbnail generation
 
 ### 🚀 Installation
 
@@ -81,13 +68,27 @@ The application will automatically download these components on first run:
    python main.py
    ```
 
-### 📖 Usage
 
-1. **Add Library Paths**: Go to `Library → Settings` and add folders containing your video courses
-2. **Scan Library**: Click `Library → Scan` to index your videos
-3. **Watch Videos**: Double-click any video to start playback
-4. **Resume Playback**: Your progress is automatically saved - just double-click to resume
+### 📋 Requirements
 
+- **Operating System**: Windows 10/11
+- **Python**: 3.10+ (for source installation)
+
+### 📦 Dependencies
+
+```
+PyQt6
+python-mpv
+comtypes
+mutagen
+pyinstaller (for building)
+```
+
+### 🔧 Additional Components
+
+The application will automatically download these components on first run:
+- **libmpv-2.dll** - MPV video playback library
+- **FFmpeg & FFprobe** - For video analysis and thumbnail generation
 
 ---
 
@@ -112,26 +113,12 @@ SP Video Courses Player — это настольное приложение, с
 - **🎨 Тёмная тема** — современный тёмный интерфейс с настраиваемыми стилями
 - **📁 Навигация по папкам** — быстрый доступ к папкам курсов через контекстное меню
 
-### 📋 Требования
+### 📖 Использование
 
-- **Операционная система**: Windows 10/11
-- **Python**: 3.10+ (для запуска из исходников)
-
-### 📦 Зависимости
-
-```
-PyQt6
-python-mpv
-comtypes
-mutagen
-pyinstaller (для сборки)
-```
-
-### 🔧 Дополнительные компоненты
-
-Приложение автоматически загрузит эти компоненты при первом запуске:
-- **libmpv-2.dll** — библиотека воспроизведения видео MPV
-- **FFmpeg и FFprobe** — для анализа видео и генерации миниатюр
+1. **Добавьте пути к библиотеке**: Перейдите в `Библиотека → Настройки` и добавьте папки с видеокурсами
+2. **Сканирование библиотеки**: Нажмите `Библиотека → Сканировать` для индексации видео
+3. **Просмотр видео**: Дважды щёлкните по видео для начала воспроизведения
+4. **Продолжение просмотра**: Ваш прогресс сохраняется автоматически — просто дважды щёлкните для продолжения
 
 ### 🚀 Установка
 
@@ -157,12 +144,26 @@ pyinstaller (для сборки)
    python main.py
    ```
 
-### 📖 Использование
+### 📋 Требования
 
-1. **Добавьте пути к библиотеке**: Перейдите в `Библиотека → Настройки` и добавьте папки с видеокурсами
-2. **Сканирование библиотеки**: Нажмите `Библиотека → Сканировать` для индексации видео
-3. **Просмотр видео**: Дважды щёлкните по видео для начала воспроизведения
-4. **Продолжение просмотра**: Ваш прогресс сохраняется автоматически — просто дважды щёлкните для продолжения
+- **Операционная система**: Windows 10/11
+- **Python**: 3.10+ (для запуска из исходников)
+
+### 📦 Зависимости
+
+```
+PyQt6
+python-mpv
+comtypes
+mutagen
+pyinstaller (для сборки)
+```
+
+### 🔧 Дополнительные компоненты
+
+Приложение автоматически загрузит эти компоненты при первом запуске:
+- **libmpv-2.dll** — библиотека воспроизведения видео MPV
+- **FFmpeg и FFprobe** — для анализа видео и генерации миниатюр
 
 
 ---
