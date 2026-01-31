@@ -39,7 +39,7 @@ SP Video Courses Player is a desktop application designed specifically for watch
 ### 📋 Requirements
 
 - **Operating System**: Windows 10/11
-- **Python**: 3.10+
+- **Python**: 3.10+ (for source installation)
 
 ### 📦 Dependencies
 
@@ -59,6 +59,12 @@ The application will automatically download these components on first run:
 
 ### 🚀 Installation
 
+#### Option 1: Download Executable (Recommended)
+1. Download the latest release from the [Releases](../../releases) page
+2. Extract the archive to your desired location
+3. Run `SP Video Courses Player.exe`
+
+#### Option 2: Run from Source
 1. Clone the repository:
    ```bash
    git clone https://github.com/yourusername/SPVideoCoursesPlayer.git
@@ -109,7 +115,7 @@ SP Video Courses Player — это настольное приложение, с
 ### 📋 Требования
 
 - **Операционная система**: Windows 10/11
-- **Python**: 3.10+
+- **Python**: 3.10+ (для запуска из исходников)
 
 ### 📦 Зависимости
 
@@ -129,6 +135,12 @@ pyinstaller (для сборки)
 
 ### 🚀 Установка
 
+#### Вариант 1: Скачать исполняемый файл (рекомендуется)
+1. Скачайте последний релиз со страницы [Releases](../../releases)
+2. Распакуйте архив в нужное место
+3. Запустите `SP Video Courses Player.exe`
+
+#### Вариант 2: Запуск из исходников
 1. Клонируйте репозиторий:
    ```bash
    git clone https://github.com/yourusername/SPVideoCoursesPlayer.git
