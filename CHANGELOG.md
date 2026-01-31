@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.6]
+- **UI**: Refined status bar flexibility and styling
+
 ## [1.0.5]
 - **UX**: Added "Open Directory" option to the video context menu to quickly access files in Explorer.
 - **UX**: Added "Reset All Progress" option to the folder context menu to mark all videos in a folder as unwatched.
