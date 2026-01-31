@@ -16,6 +16,7 @@ class SubtitlePopup(QWidget):
     """Popup window with subtitle list and settings."""
     subtitleChanged = pyqtSignal(int)
     styleChanged = pyqtSignal(str, object)  # (property_name, value)
+    subtitleToggled = pyqtSignal(bool)
     
     def __init__(self, parent=None):
         super().__init__(parent, Qt.WindowType.Popup)
@@ -25,21 +26,70 @@ class SubtitlePopup(QWidget):
         
         self.setObjectName("subtitlePopup")
         self.setMinimumWidth(380)
+        self.setMaximumHeight(185)
         
-        # Left side: subtitle list
+        # Left side: toggle + subtitle list
+        left_panel = QHBoxLayout()
+        left_panel.setSpacing(8)
+        left_panel.setContentsMargins(0, 0, 0, 0)
+        left_panel.setAlignment(Qt.AlignmentFlag.AlignTop)
+        
+        # Toggle button column
+        toggle_col = QVBoxLayout()
+        toggle_col.setContentsMargins(0, 0, 0, 0)
+        toggle_col.setSpacing(0)
+        
+        # Spacer to align with list (to offset the list label height)
+        toggle_col.addSpacing(16) 
+        
+        self.toggle_btn = QPushButton()
+        self.toggle_btn.setFixedSize(30, 30)
+        self.toggle_btn.clicked.connect(self._toggle_subtitles)
+        self.toggle_btn.setObjectName("popupSubtitleToggle")
+        toggle_col.addWidget(self.toggle_btn)
+        toggle_col.addStretch()
+        left_panel.addLayout(toggle_col)
+
+        # List section (vertical: label + list)
+        list_section = QVBoxLayout()
+        list_section.setSpacing(4)
+        list_section.setContentsMargins(0, 0, 0, 0)
+        
+        self.list_title_label = QLabel(tr('player.tooltip_subtitle_track'))
+        self.list_title_label.setStyleSheet("color: #aaa; font-size: 10px;")
+        self.list_title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.list_title_label.setFixedHeight(12)
+        list_section.addWidget(self.list_title_label)
+
         self.list_widget = QListWidget()
         self.list_widget.setObjectName("subtitleList")
         self.list_widget.setMinimumWidth(250)
-        self.list_widget.setMaximumHeight(150)
         self.list_widget.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self.list_widget.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.list_widget.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         self.list_widget.itemClicked.connect(self._on_item_clicked)
-        main_layout.addWidget(self.list_widget)
+        list_section.addWidget(self.list_widget)
+        
+        left_panel.addLayout(list_section)
+        
+        main_layout.addLayout(left_panel)
+        
+        # Load icons
+        self.icons = {}
+        for name in ["subtitle_on", "subtitle_off"]:
+            path = RESOURCES_DIR / "icons" / f"{name}.png"
+            if path.exists():
+                self.icons[name] = QIcon(str(path))
+            else:
+                self.icons[name] = QIcon()
+        
+        self.subtitles_enabled = False
+        self._update_toggle_icon()
 
         
         # Right side: buttons and colors
         right_panel = QVBoxLayout()
         right_panel.setSpacing(8)
+        right_panel.setContentsMargins(0, 0, 0, 0)
         right_panel.setAlignment(Qt.AlignmentFlag.AlignTop)
         
         # Size buttons (horizontal)
@@ -49,26 +99,21 @@ class SubtitlePopup(QWidget):
         self.size_title_label = QLabel(tr('player.subtitle_size'))
         self.size_title_label.setStyleSheet("color: #aaa; font-size: 10px;")
         self.size_title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.size_title_label.setFixedHeight(12)
         size_layout.addWidget(self.size_title_label)
         
         size_btns = QHBoxLayout()
         size_btns.setSpacing(4)
         self.size_down_btn = QPushButton("−")
-        self.size_down_btn.setFixedSize(28, 28)
+        self.size_down_btn.setFixedSize(30, 30)
         self.size_down_btn.clicked.connect(self._decrease_size)
         self.size_up_btn = QPushButton("+")
-        self.size_up_btn.setFixedSize(28, 28)
+        self.size_up_btn.setFixedSize(30, 30)
         self.size_up_btn.clicked.connect(self._increase_size)
         size_btns.addWidget(self.size_down_btn)
         size_btns.addWidget(self.size_up_btn)
         size_layout.addLayout(size_btns)
         right_panel.addLayout(size_layout)
-        
-        # Separator
-        separator = QFrame()
-        separator.setFrameShape(QFrame.Shape.HLine)
-        separator.setStyleSheet("background-color: #555;")
-        right_panel.addWidget(separator)
         
         # Text color
         text_layout = QVBoxLayout()
@@ -76,11 +121,14 @@ class SubtitlePopup(QWidget):
         self.text_title_label = QLabel(tr('player.subtitle_text'))
         self.text_title_label.setStyleSheet("color: #aaa; font-size: 10px;")
         self.text_title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.text_title_label.setFixedHeight(12)
+        self.text_title_label.setContentsMargins(0, 0, 0, 0)
         self.text_color_btn = QPushButton()
-        self.text_color_btn.setFixedSize(60, 22)
-        self.text_color_btn.setStyleSheet("background-color: #FFFFFF; border: 1px solid #666;")
+        self.text_color_btn.setFixedSize(64, 30)
+        self.text_color_btn.setObjectName("textColorBtn")
         self.text_color_btn.clicked.connect(self._pick_text_color)
         self.text_color = "#FFFFFF"
+        self._update_text_color_btn()
         text_layout.addWidget(self.text_title_label)
         text_layout.addWidget(self.text_color_btn)
         right_panel.addLayout(text_layout)
@@ -91,11 +139,14 @@ class SubtitlePopup(QWidget):
         self.outline_title_label = QLabel(tr('player.subtitle_outline'))
         self.outline_title_label.setStyleSheet("color: #aaa; font-size: 10px;")
         self.outline_title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.outline_title_label.setFixedHeight(12)
+        self.outline_title_label.setContentsMargins(0, 0, 0, 0)
         self.outline_color_btn = QPushButton()
-        self.outline_color_btn.setFixedSize(60, 22)
-        self.outline_color_btn.setStyleSheet("background-color: #000000; border: 1px solid #666;")
+        self.outline_color_btn.setFixedSize(64, 30)
+        self.outline_color_btn.setObjectName("outlineColorBtn")
         self.outline_color_btn.clicked.connect(self._pick_outline_color)
         self.outline_color = "#000000"
+        self._update_outline_color_btn()
         outline_layout.addWidget(self.outline_title_label)
         outline_layout.addWidget(self.outline_color_btn)
         right_panel.addLayout(outline_layout)
@@ -129,14 +180,22 @@ class SubtitlePopup(QWidget):
                 background-color: #018574;
             }
             QPushButton {
-                background-color: #555;
+                background-color: #373737;
                 color: #eaeaea;
-                border: 1px solid #666;
-                font-size: 14px;
+                border: 1px solid #808080;
+                padding: 0px;
+                margin: 0px;
+                font-weight: 500;
                 border-radius: 3px;
+                min-width: 30px;
+                min-height: 30px;
             }
             QPushButton:hover {
-                background-color: #666;
+                background-color: #018574;
+                border-color: #018574;
+            }
+            QPushButton:pressed {
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #00634d, stop:1 #018574);
             }
             QLabel {
                 color: #aaa;
@@ -144,18 +203,18 @@ class SubtitlePopup(QWidget):
             }
         """)
         
-        # Bright colors for text (with teal)
+        # Professional cinema text colors
         self.text_colors = [
-            "#FFFFFF", "#FFFF00", "#00FF00", "#00FFFF", 
-            "#FF00FF", "#FF0000", "#FFA500", "#018574",
-            "#FFD700", "#7FFF00", "#FF69B4", "#00BFFF"
+            "#FFFFFF", "#FFFF00", "#FFD700", "#ADD8E6",
+            "#90EE90", "#FFB6C1", "#E6E6FA", "#FFE4B5",
+            "#AFEEEE", "#DCDCDC", "#FFA500", "#018574"
         ]
         
-        # Dark colors for outline
+        # Dark colorful outline colors
         self.outline_colors = [
-            "#000000", "#1a1a1a", "#333333", "#4d4d4d",
-            "#0d0d0d", "#262626", "#404040", "#595959",
-            "#1c1c1c", "#2e2e2e", "#424242", "#555555"
+            "#000000", "#4D0000", "#003300", "#00004D",
+            "#331A00", "#330033", "#003333", "#1A0033",
+            "#2F4F4F", "#222222", "#424242", "#004D40"
         ]
 
     
@@ -172,8 +231,8 @@ class SubtitlePopup(QWidget):
             row = i // cols
             col = i % cols
             btn = QPushButton()
-            btn.setFixedSize(22, 22)
-            btn.setStyleSheet(f"background-color: {color}; border: 1px solid #666; border-radius: 3px;")
+            btn.setFixedSize(33, 33)
+            btn.setStyleSheet(f"background-color: {color}; border: 1px solid #666; border-radius: 3px; min-width: 0px; min-height: 0px;")
             btn.clicked.connect(lambda checked, c=color: self._apply_color(c, target_btn, signal_name, palette))
             layout.addWidget(btn, row, col)
         
@@ -193,7 +252,7 @@ class SubtitlePopup(QWidget):
     
     def _apply_color(self, color, target_btn, signal_name, palette):
         """Apply selected color."""
-        target_btn.setStyleSheet(f"background-color: {color}; border: 1px solid #666; border-radius: 3px;")
+        target_btn.setStyleSheet(f"background-color: {color}; border: 1px solid #808080; border-radius: 3px; padding: 0px; margin: 0px; min-width: 64px; min-height: 30px;")
         if signal_name == "sub-color":
             self.text_color = color
         else:
@@ -253,13 +312,33 @@ class SubtitlePopup(QWidget):
         # Close popup after selection
         QTimer.singleShot(150, self.hide)
     
+    def _toggle_subtitles(self):
+        self.subtitles_enabled = not self.subtitles_enabled
+        self._update_toggle_icon()
+        self.subtitleToggled.emit(self.subtitles_enabled)
+        
+    def _update_toggle_icon(self):
+        icon_name = "subtitle_on" if self.subtitles_enabled else "subtitle_off"
+        self.toggle_btn.setIcon(self.icons[icon_name])
+        
+    def setSubtitlesEnabled(self, enabled):
+        self.subtitles_enabled = enabled
+        self._update_toggle_icon()
+    
     def hideEvent(self, event):
         if isinstance(self.parent(), SubtitleButton):
             self.parent().on_popup_hidden()
         super().hideEvent(event)
 
+    def _update_text_color_btn(self):
+        self.text_color_btn.setStyleSheet(f"background-color: {self.text_color}; border: 1px solid #808080; padding: 0px; margin: 0px; min-width: 64px; min-height: 30px;")
+
+    def _update_outline_color_btn(self):
+        self.outline_color_btn.setStyleSheet(f"background-color: {self.outline_color}; border: 1px solid #808080; padding: 0px; margin: 0px; min-width: 64px; min-height: 30px;")
+
     def update_texts(self):
         """Update texts on language change."""
+        self.list_title_label.setText(tr('player.tooltip_subtitle_track'))
         self.size_title_label.setText(tr('player.subtitle_size'))
         self.text_title_label.setText(tr('player.subtitle_text'))
         self.outline_title_label.setText(tr('player.subtitle_outline'))
@@ -272,7 +351,7 @@ class SubtitleButton(QPushButton):
     
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setFixedWidth(30)
+        self.setFixedSize(30, 30)
         
         self.icons = {}
         for name in ["subtitle_on", "subtitle_off"]:
@@ -285,6 +364,7 @@ class SubtitleButton(QPushButton):
         self.setToolTip(tr('player.tooltip_subtitle_track'))
         self.popup = SubtitlePopup(self)
         self.popup.subtitleChanged.connect(self._on_subtitle_changed)
+        self.popup.subtitleToggled.connect(self._on_popup_subtitle_toggled)
         self.last_hide_time = 0
         self.subtitles_enabled = False
         self._update_icon()
@@ -314,6 +394,7 @@ class SubtitleButton(QPushButton):
             
         # Position popup above the button
         self.popup.adjustSize()
+        self.popup.setSubtitlesEnabled(self.subtitles_enabled)
         pos = self.mapToGlobal(QPoint(0, 0))
         
         target_x = pos.x() + (self.width() - self.popup.width()) // 2
@@ -326,11 +407,17 @@ class SubtitleButton(QPushButton):
         
         self.popup.move(target_x, target_y)
         self.popup.show()
+
+    def _on_popup_subtitle_toggled(self, enabled):
+        self.subtitles_enabled = enabled
+        self._update_icon()
+        self.subtitleToggled.emit(enabled)
     
     def _on_subtitle_changed(self, index):
         self.subtitleChanged.emit(index)
         # Automatically enable subtitles upon selection
         self.subtitles_enabled = True
+        self.popup.setSubtitlesEnabled(True)
         self._update_icon()
     
     def _update_icon(self):

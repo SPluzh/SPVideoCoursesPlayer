@@ -84,7 +84,7 @@ class VideoPlayerWidget(QWidget):
 
         self.frame_back_btn = QPushButton()
         self.frame_back_btn.setIcon(self.icons['prev_frame'])
-        self.frame_back_btn.setFixedWidth(30)
+        self.frame_back_btn.setFixedSize(30, 30)
         self.frame_back_btn.setToolTip(tr('player.tooltip_frame_back'))
         self.frame_back_btn.clicked.connect(self.frame_back_step)
         self.frame_back_btn.setEnabled(False)
@@ -93,13 +93,14 @@ class VideoPlayerWidget(QWidget):
         self.play_btn = QPushButton()
         self.play_btn.setIcon(self.icons['play'])
         self.play_btn.setObjectName("playBtn")
+        self.play_btn.setFixedHeight(30)
         self.play_btn.clicked.connect(self.play_pause)
         self.play_btn.setEnabled(False)
         panel_layout.addWidget(self.play_btn)
 
         self.frame_step_btn = QPushButton()
         self.frame_step_btn.setIcon(self.icons['next_frame'])
-        self.frame_step_btn.setFixedWidth(30)
+        self.frame_step_btn.setFixedSize(30, 30)
         self.frame_step_btn.setToolTip(tr('player.tooltip_frame_step'))
         self.frame_step_btn.clicked.connect(self.frame_step)
         self.frame_step_btn.setEnabled(False)
@@ -124,11 +125,9 @@ class VideoPlayerWidget(QWidget):
         self.subtitle_btn.popup.styleChanged.connect(self.change_subtitle_style)
         panel_layout.addWidget(self.subtitle_btn)
 
-        panel_layout.addWidget(self.subtitle_btn)
-
         self.screenshot_btn = QPushButton()
         self.screenshot_btn.setIcon(self.icons['screenshot'])
-        self.screenshot_btn.setFixedWidth(30)
+        self.screenshot_btn.setFixedSize(30, 30)
         self.screenshot_btn.setToolTip(tr('player.tooltip_screenshot'))
         self.screenshot_btn.clicked.connect(self.screenshot_to_clipboard)
         self.screenshot_btn.setEnabled(False)
@@ -136,6 +135,7 @@ class VideoPlayerWidget(QWidget):
 
         self.reset_zoom_btn = QPushButton("100%")
         self.reset_zoom_btn.setFixedWidth(80)
+        self.reset_zoom_btn.setFixedHeight(30)
         self.reset_zoom_btn.setToolTip(tr('player.tooltip_zoom'))
         self.reset_zoom_btn.clicked.connect(self.reset_zoom)
         panel_layout.addWidget(self.reset_zoom_btn)

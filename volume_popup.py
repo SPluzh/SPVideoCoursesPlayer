@@ -205,7 +205,7 @@ class VolumeButton(QPushButton):
     
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setFixedWidth(30)
+        self.setFixedSize(30, 30)
         
         self.icons = {}
         for name in ["volume_mute", "volume_low", "volume_medium", "volume_hight"]:
