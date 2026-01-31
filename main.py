@@ -610,6 +610,10 @@ class VideoCourseBrowser(QMainWindow):
             else:
                 self.icons[name] = QIcon()
 
+        # Set window icon
+        if 'app_icon' in self.icons:
+            self.setWindowIcon(self.icons['app_icon'])
+
         self.folder_icon = self.style().standardIcon(QStyle.StandardPixmap.SP_DirIcon)
         self.video_icon = self.style().standardIcon(QStyle.StandardPixmap.SP_MediaPlay)
 
