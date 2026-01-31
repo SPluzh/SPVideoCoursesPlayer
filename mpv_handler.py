@@ -156,35 +156,8 @@ class MPVVideoWidget(QFrame):
             self.setWindowFlags(Qt.WindowType.SubWindow)
             self.showNormal()
             event.accept()
-        elif event.key() == Qt.Key.Key_Z and not event.isAutoRepeat():
-            self.z_key_pressed = True
-            self.setCursor(Qt.CursorShape.SizeVerCursor)
-            event.accept()
-        elif event.key() == Qt.Key.Key_R:
-            self.reset_zoom_pan()
-            event.accept()
-        elif event.key() == Qt.Key.Key_Plus or event.key() == Qt.Key.Key_Equal:
-            self.zoom_in()
-            event.accept()
-        elif event.key() == Qt.Key.Key_Minus:
-            self.zoom_out()
-            event.accept()
-        elif event.key() == Qt.Key.Key_0:
-            self.reset_zoom_pan()
-            event.accept()
-        elif event.key() in (Qt.Key.Key_Comma, Qt.Key.Key_Less):
-            self.frame_back_step()
-            event.accept()
-        elif event.key() in (Qt.Key.Key_Period, Qt.Key.Key_Greater):
-            self.frame_step()
-            event.accept()
-        elif event.key() == Qt.Key.Key_S:
-            self.screenshot_to_clipboard()
-            event.accept()
-        elif event.key() == Qt.Key.Key_Print:
-            self.screenshot_to_clipboard()
-            event.accept()
         else:
+            # Let parent handle other shortcuts (Space, F, M, S, C, Z, R etc.)
             super().keyPressEvent(event)
 
     def keyReleaseEvent(self, event: QKeyEvent):

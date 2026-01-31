@@ -351,6 +351,7 @@ class VideoItemDelegate(QStyledItemDelegate):
 class HoverTreeWidget(QTreeWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
+        self.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.setMouseTracking(True)
         self.hover_timer = QTimer()
         self.hover_timer.timeout.connect(self._on_hover_timer)

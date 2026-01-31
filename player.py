@@ -34,6 +34,7 @@ class VideoPlayerWidget(QWidget):
     subtitle_style_changed = pyqtSignal(str, object)
     next_video_requested = pyqtSignal()
     prev_video_requested = pyqtSignal()
+    toggle_fullscreen_requested = pyqtSignal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -178,9 +179,70 @@ class VideoPlayerWidget(QWidget):
         self.speed_label = QLabel(tr('player.speed', speed='1.0'))
         panel_layout.addWidget(self.speed_label)
 
+        # Ensure buttons don't take focus to avoid breaking global hotkeys
+        for btn in [self.prev_video_btn, self.frame_back_btn, self.play_btn, 
+                    self.frame_step_btn, self.next_video_btn, self.screenshot_btn, 
+                    self.reset_zoom_btn, self.subtitle_btn, self.volume_btn]:
+            btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        
+        # Sliders should also not take focus if we want Space to always work for play/pause
+        self.progress_slider.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self.speed_slider.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+
         layout.addWidget(control_panel)
 
         self.video_widget.toggle_play_pause.connect(self.play_pause)
+
+    def toggle_mute(self):
+        """Toggle audio mute."""
+        if not self.player: return
+        try:
+            is_muted = getattr(self.player, 'mute', False)
+            self.player.mute = not is_muted
+            # Update volume button UI if needed
+            current_vol = self.player.volume
+            self.volume_btn._update_icon(0 if self.player.mute else current_vol)
+        except Exception as e:
+            print(f"Error toggling mute: {e}")
+
+    def adjust_volume(self, delta):
+        """Adjust volume by delta percentage."""
+        if not self.player: return
+        try:
+            current = self.player.volume or 0
+            new_vol = max(0, min(100, current + delta))
+            self.player.volume = new_vol
+            # Update UI
+            self.volume_btn.popup.slider.blockSignals(True)
+            self.volume_btn.popup.slider.setValue(int(new_vol))
+            self.volume_btn.popup.slider.blockSignals(False)
+            self.volume_btn._update_icon(int(new_vol))
+            if hasattr(self.volume_btn.popup, '_update_label'):
+                self.volume_btn.popup._update_label(int(new_vol))
+        except Exception as e:
+            print(f"Error adjusting volume: {e}")
+
+    def adjust_speed(self, delta):
+        """Adjust playback speed by delta."""
+        if not self.player: return
+        try:
+            # speed_slider range is 5 (0.5x) to 30 (3.0x)
+            current_slider_val = self.speed_slider.value()
+            # delta is e.g. 0.1, which corresponds to 1 unit on slider
+            slider_delta = int(delta * 10)
+            new_val = max(5, min(30, current_slider_val + slider_delta))
+            self.speed_slider.setValue(new_val)
+            # change_speed is already connected to valueChanged
+        except Exception as e:
+            print(f"Error adjusting speed: {e}")
+
+    def seek_relative(self, seconds):
+        """Seek relative to current position."""
+        if not self.player: return
+        try:
+            self.player.seek(seconds, 'relative')
+        except Exception as e:
+            print(f"Error seeking: {e}")
 
     def frame_step(self):
         """Step forward one frame."""
@@ -215,6 +277,14 @@ class VideoPlayerWidget(QWidget):
     def reset_zoom(self):
         """Reset zoom via button."""
         self.video_widget.reset_zoom_pan()
+
+    def set_zoom_mode(self, enabled):
+        """Set zoom state for Z key (hold)."""
+        self.video_widget.z_key_pressed = enabled
+        if enabled:
+            self.video_widget.setCursor(Qt.CursorShape.SizeVerCursor)
+        else:
+            self.video_widget.setCursor(Qt.CursorShape.ArrowCursor)
 
     def setup_mpv(self):
         try:
@@ -678,6 +748,14 @@ class VideoPlayerWidget(QWidget):
         # Save on/off state for current video
         if self.current_file and self.db:
             self.db.update_subtitle_enabled(self.current_file, enabled)
+
+    def toggle_subtitles_hotkey(self):
+        """Toggle subtitles on/off via hotkey."""
+        if not self.player:
+            return
+        new_state = not self.subtitle_btn.subtitles_enabled
+        self.subtitle_btn.set_enabled_state(new_state)
+        self.toggle_subtitles(new_state)
 
     def change_subtitle_style(self, property_name, value):
         """Change subtitle style in MPV."""

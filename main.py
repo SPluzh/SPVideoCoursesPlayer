@@ -53,6 +53,7 @@ from volume_popup import VolumePopup, VolumeButton
 from placeholders import draw_video_placeholder, draw_library_placeholder
 from player import VideoPlayerWidget
 from library import HoverTreeWidget, VideoItemDelegate
+from hotkeys import HotkeyManager
 
 
 
@@ -65,6 +66,8 @@ class VideoCourseBrowser(QMainWindow):
 
     def __init__(self):
         super().__init__()
+        self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+        self.setFocus()
         self.setWindowTitle(tr('app.title'))
 
         self.script_dir = Path(__file__).parent
@@ -72,6 +75,11 @@ class VideoCourseBrowser(QMainWindow):
         self.db_file = DATA_DIR / 'video_courses.db'
         self.db = DatabaseManager(self.db_file)
 
+        self.hotkey_manager = HotkeyManager(self)
+        self.hotkey_manager.global_action_triggered.connect(self.handle_player_action)
+        self.hotkey_manager.global_action_state_changed.connect(
+            lambda action, pressed: self.handle_player_action(action, pressed)
+        )
         self.load_settings()
 
         self.load_icons()
@@ -142,6 +150,7 @@ class VideoCourseBrowser(QMainWindow):
         self.video_player.subtitle_style_changed.connect(self.save_subtitle_settings)
         self.video_player.next_video_requested.connect(self.play_next_video)
         self.video_player.prev_video_requested.connect(self.play_prev_video)
+        self.video_player.toggle_fullscreen_requested.connect(self.toggle_fullscreen)
 
         # Apply initial subtitle settings
         self.video_player.set_subtitle_styles(self.sub_color, self.sub_border_color, self.sub_scale)
@@ -160,13 +169,93 @@ class VideoCourseBrowser(QMainWindow):
         QTimer.singleShot(50, self._ensure_player_visible)
         
         self.load_courses()
-
+        self.course_tree.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         QTimer.singleShot(100, self.restore_last_video)
 
         self.last_saved_position = {}
         self.progress_save_timer = QTimer(self)
         self.progress_save_timer.timeout.connect(self.periodic_progress_save)
         self.progress_save_timer.start(1000)
+
+    def keyPressEvent(self, event: QKeyEvent):
+        if event.isAutoRepeat():
+            return
+        action = self.hotkey_manager.get_action(event)
+        if action:
+            self.handle_player_action(action, pressed=True)
+            event.accept()
+        else:
+            super().keyPressEvent(event)
+
+    def keyReleaseEvent(self, event: QKeyEvent):
+        if event.isAutoRepeat():
+            return
+        action = self.hotkey_manager.get_action(event)
+        if action:
+            self.handle_player_action(action, pressed=False)
+            event.accept()
+        else:
+            super().keyReleaseEvent(event)
+
+    def handle_player_action(self, action, pressed=True):
+        if not hasattr(self, 'video_player') or not self.video_player:
+            return
+
+        # Special case for hold actions (currently only zoom_mode)
+        if action == "zoom_mode":
+            self.video_player.set_zoom_mode(pressed)
+            return
+
+        # For all other actions, process ONLY on press
+        if not pressed:
+            return
+
+        if action == "toggle_pause":
+            self.video_player.play_pause()
+        elif action == "pause":
+            if self.video_player.player and not self.video_player.player.pause:
+                self.video_player.player.pause = True
+        elif action == "seek_forward":
+            self.video_player.seek_relative(5)
+        elif action == "seek_backward":
+            self.video_player.seek_relative(-5)
+        elif action == "volume_up":
+            self.video_player.adjust_volume(5)
+        elif action == "volume_down":
+            self.video_player.adjust_volume(-5)
+        elif action == "toggle_mute":
+            self.video_player.toggle_mute()
+        elif action == "toggle_subtitles":
+            self.video_player.toggle_subtitles_hotkey()
+        elif action == "take_screenshot":
+            self.video_player.screenshot_to_clipboard()
+        elif action == "reset_zoom":
+            self.video_player.reset_zoom()
+        elif action == "speed_up":
+            self.video_player.adjust_speed(0.1)
+        elif action == "speed_down":
+            self.video_player.adjust_speed(-0.1)
+        elif action == "next_video":
+            self.play_next_video()
+        elif action == "prev_video":
+            self.play_prev_video()
+        elif action == "toggle_fullscreen":
+            self.toggle_fullscreen()
+
+    def toggle_fullscreen(self):
+        if self.isFullScreen():
+            self.showNormal()
+            self.menuBar().show()
+            self.status.show()
+            if hasattr(self, '_saved_splitter_state'):
+                self.splitter.restoreState(self._saved_splitter_state)
+        else:
+            self._saved_splitter_state = self.splitter.saveState()
+            self.showFullScreen()
+            self.menuBar().hide()
+            self.status.hide()
+            # Collapse library
+            self.splitter.setSizes([0, self.width()])
 
     def change_language(self, lang_code):
         if tr.current_lang == lang_code:
@@ -376,7 +465,7 @@ class VideoCourseBrowser(QMainWindow):
                 
             self.course_tree.setCurrentItem(item)
             self.course_tree.scrollToItem(item)
-            self.course_tree.setFocus()
+            self.setFocus()
             self.update_window_title_for_item(item)
 
     def find_video_item(self, file_path):
@@ -1191,6 +1280,7 @@ class VideoCourseBrowser(QMainWindow):
 
     def showEvent(self, event):
         super().showEvent(event)
+        self.setFocus()
         if self.taskbar_progress:
             try:
                 hwnd = int(self.winId())
@@ -1201,6 +1291,8 @@ class VideoCourseBrowser(QMainWindow):
 
     def closeEvent(self, event):
         self.save_window_state()
+        if hasattr(self, 'hotkey_manager'):
+            self.hotkey_manager.stop()
         self.taskbar_progress.clear()
         event.accept()
 
