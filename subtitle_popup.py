@@ -184,7 +184,7 @@ class SubtitlePopup(QWidget):
         target_y = pos.y()
         
         # Screen boundary check
-        screen = QApplication.primaryScreen().availableGeometry()
+        screen = self.screen().availableGeometry()
         target_x = max(screen.left(), min(target_x, screen.right() - palette.width()))
         target_y = max(screen.top(), min(target_y, screen.bottom() - palette.height()))
         
@@ -320,7 +320,7 @@ class SubtitleButton(QPushButton):
         target_y = pos.y() - self.popup.height() - 5
         
         # Screen boundary check
-        screen = QApplication.primaryScreen().availableGeometry()
+        screen = self.screen().availableGeometry()
         target_x = max(screen.left(), min(target_x, screen.right() - self.popup.width()))
         target_y = max(screen.top(), min(target_y, screen.bottom() - self.popup.height()))
         
