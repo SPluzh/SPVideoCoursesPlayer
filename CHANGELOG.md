@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.5]
+- **UX**: Added "Open Directory" option to the video context menu to quickly access files in Explorer.
+- **UX**: Added "Reset All Progress" option to the folder context menu to mark all videos in a folder as unwatched.
+- **UI**: Standardized context menu iconography:
+    - Added volume icons to the audio track submenu and its items.
+    - Removed emojis from audio track/menu labels for a professional, system-consistent look.
+
 ## [1.0.4]
 - **UI**: Streamlined the player control panel by removing secondary action buttons:
     - Removed Reset Zoom, Take Screenshot, and Frame Step buttons.

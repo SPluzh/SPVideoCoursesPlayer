@@ -746,7 +746,8 @@ class VideoCourseBrowser(QMainWindow):
         icon_names = [
             "menu_scan", "menu_settings", "menu_reload", "menu_about",
             "context_open_folder", "context_mark_read", "context_mark_unread",
-            "context_play", "app_icon", "screenshot", "next_frame", "prev_frame"
+            "context_play", "app_icon", "screenshot", "next_frame", "prev_frame",
+            "volume_hight"
         ]
         for name in icon_names:
             icon_path = RESOURCES_DIR / "icons" / f"{name}.png"
@@ -793,7 +794,7 @@ class VideoCourseBrowser(QMainWindow):
             menu.addSeparator()
 
             # ADDED: Audio track selection submenu
-            audio_menu = menu.addMenu(tr('player.audio_tracks'))
+            audio_menu = menu.addMenu(self.icons.get('volume_hight', QIcon()), tr('player.audio_tracks'))
             self.populate_audio_submenu(audio_menu, file_path, item)
 
             menu.addSeparator()
@@ -803,6 +804,10 @@ class VideoCourseBrowser(QMainWindow):
 
             reset_action = menu.addAction(self.icons.get('context_mark_unread', QIcon()), tr('context_menu.reset_progress'))
             reset_action.triggered.connect(lambda: self.reset_video_progress(item))
+
+            menu.addSeparator()
+            open_dir_action = menu.addAction(self.icons.get('context_open_folder', QIcon()), tr('context_menu.open_directory'))
+            open_dir_action.triggered.connect(lambda: self.open_video_directory(item))
 
         elif item_type == 'folder':
             open_action = menu.addAction(self.icons.get('context_open_folder', QIcon()), tr('context_menu.open_folder'))
@@ -815,6 +820,9 @@ class VideoCourseBrowser(QMainWindow):
 
             mark_all_action = menu.addAction(self.icons.get('context_mark_read', QIcon()), tr('context_menu.mark_all_watched'))
             mark_all_action.triggered.connect(lambda: self.mark_folder_as_watched(item))
+
+            reset_all_action = menu.addAction(self.icons.get('context_mark_unread', QIcon()), tr('context_menu.reset_all_progress'))
+            reset_all_action.triggered.connect(lambda: self.reset_folder_progress(item))
 
         menu.exec(self.course_tree.viewport().mapToGlobal(pos))
 
@@ -854,12 +862,12 @@ class VideoCourseBrowser(QMainWindow):
                     if title:
                         label += f" - {title}"
                 else:
-                    label = f"🔊 {audio_file_name or tr('player.external_audio')}"
+                    label = f"{audio_file_name or tr('player.external_audio')}"
 
                 if is_default:
                     label += f" [{tr('player.default')}]"
 
-                action = menu.addAction(label)
+                action = menu.addAction(self.icons.get('volume_hight', QIcon()), label)
                 action.setCheckable(True)
                 action.setChecked(track_id == selected_audio_id)
                 action.setActionGroup(action_group)
@@ -999,6 +1007,11 @@ class VideoCourseBrowser(QMainWindow):
         self.db.mark_folder_as_watched(folder_path)
         self.load_courses()
 
+    def reset_folder_progress(self, item):
+        folder_path = item.data(0, Qt.ItemDataRole.UserRole)
+        self.db.reset_folder_progress(folder_path)
+        self.load_courses()
+
     def play_folder(self, item):
         if item.childCount() > 0:
             first_child = item.child(0)
@@ -1015,6 +1028,18 @@ class VideoCourseBrowser(QMainWindow):
 
             if folder.exists():
                 print(folder)
+                os.startfile(folder)
+            else:
+                QMessageBox.warning(self, tr('error.title'), tr('error.folder_not_found', folder=folder))
+        else:
+            QMessageBox.warning(self, tr('error.title'), tr('error.folder_path_unknown'))
+
+    def open_video_directory(self, item):
+        file_path = item.data(0, Qt.ItemDataRole.UserRole)
+        if file_path and Path(file_path).exists():
+            import os
+            folder = Path(file_path).parent
+            if folder.exists():
                 os.startfile(folder)
             else:
                 QMessageBox.warning(self, tr('error.title'), tr('error.folder_not_found', folder=folder))

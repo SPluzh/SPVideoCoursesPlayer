@@ -75,7 +75,7 @@
         "tooltip_zoom": "Reset zoom",
         "tooltip_subtitle_track": "Subtitles",
         "tooltip_volume": "Volume\nL-click for slider\nR-click to mute",
-        "audio_tracks": "🔊 Audio Tracks",
+        "audio_tracks": "Audio Tracks",
         "embedded_audio": "Embedded",
         "external_audio": "External",
         "default": "(default)",
@@ -272,8 +272,10 @@
         "mark_watched": "Mark as Watched",
         "reset_progress": "Reset Progress",
         "open_folder": "Open Folder",
+        "open_directory": "Open Directory",
         "play_all": "Play All",
-        "mark_all_watched": "Mark All as Watched"
+        "mark_all_watched": "Mark All as Watched",
+        "reset_all_progress": "Reset All Progress"
     },
     "error": {
         "title": "Error",

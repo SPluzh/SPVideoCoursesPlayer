@@ -353,6 +353,17 @@ class DatabaseManager:
         except Exception as e:
             print(f"Error marking folder as watched: {e}")
 
+    def reset_folder_progress(self, folder_path):
+        """Resets playback progress for all videos in a folder."""
+        try:
+            with self.get_connection() as conn:
+                c = conn.cursor()
+                c.execute('UPDATE video_files SET watched_percent = 0, last_position = 0 WHERE folder_path = ?', 
+                          (str(folder_path),))
+                conn.commit()
+        except Exception as e:
+            print(f"Error resetting folder progress: {e}")
+
     def reset_video_progress(self, file_path):
         """Resets playback progress for a video."""
         try:
