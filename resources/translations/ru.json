@@ -55,8 +55,8 @@
         "data_cleared": "Данные успешно удалены"
     },
     "player": {
-        "play": "▶",
-        "pause": "||",
+        "play": "Воспроизвести",
+        "pause": "Пауза",
         "speed": "{speed}x",
         "no_tracks": "Нет дорожек",
         "time_format": "{current} / {total}",
@@ -156,9 +156,9 @@
         "arg_force": "Принудительно скачать и обновить",
         "interrupted": "\n  ! Обновление прервано пользователем.",
         "press_enter": "Нажмите Enter для выхода...",
-        "missing_auto_download": "⚠️ FFmpeg/ffprobe не найдены в {path}. Запуск автозагрузки...",
+        "missing_auto_download": "⚠️ FFmpeg/ffprobe не найдены в \n{path}\nЗапуск автозагрузки...",
         "auto_download_failed": "❌ Ошибка автозагрузки FFmpeg: {error}",
-        "missing_libmpv_auto_download": "⚠️ libmpv-2.dll не найден в {path}. Запуск автозагрузки...",
+        "missing_libmpv_auto_download": "⚠️ libmpv-2.dll не найден в  \n{path}\nЗапуск автозагрузки...",
         "libmpv_auto_download_failed": "❌ Ошибка автозагрузки libmpv: {error}"
     },
     "scanner": {

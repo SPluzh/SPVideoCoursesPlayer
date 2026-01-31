@@ -22,7 +22,6 @@ dist/
 data/
 *.log
 settings.ini
-gemini.md
 
 # Binaries
 ffmpeg.exe
@@ -35,4 +34,9 @@ libmpv.version
 
 # Serena
 .serena/
+
+# Documentation
+gemini.md
+TODO.md
+
 

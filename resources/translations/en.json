@@ -55,8 +55,8 @@
         "data_cleared": "Data successfully cleared"
     },
     "player": {
-        "play": "▶",
-        "pause": "||",
+        "play": "Play",
+        "pause": "Pause",
         "speed": "{speed}x",
         "no_tracks": "No tracks",
         "time_format": "{current} / {total}",
@@ -156,9 +156,9 @@
         "arg_force": "Force download and update",
         "interrupted": "\n  ! Update interrupted by user.",
         "press_enter": "Press Enter to exit...",
-        "missing_auto_download": "⚠️ FFmpeg/ffprobe not found in {path}. Starting auto-download...",
+        "missing_auto_download": "⚠️ FFmpeg/ffprobe not found in \n{path}\nStarting auto-download...",
         "auto_download_failed": "❌ FFmpeg auto-download failed: {error}",
-        "missing_libmpv_auto_download": "⚠️ libmpv-2.dll not found in {path}. Starting auto-download...",
+        "missing_libmpv_auto_download": "⚠️ libmpv-2.dll not found in \n{path}\nStarting auto-download...",
         "libmpv_auto_download_failed": "❌ libmpv auto-download failed: {error}"
     },
     "scanner": {
