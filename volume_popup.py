@@ -4,7 +4,7 @@ from PyQt6.QtWidgets import (
     QWidget, QHBoxLayout, QVBoxLayout, QLabel, QListWidget, QFrame,
     QSlider, QPushButton, QApplication
 )
-from PyQt6.QtCore import Qt, pyqtSignal, QTimer, QPoint
+from PyQt6.QtCore import Qt, pyqtSignal, QTimer, QPoint, QRect
 from PyQt6.QtGui import QIcon
 
 from translator import tr
@@ -253,16 +253,39 @@ class VolumeButton(QPushButton):
             return
             
         # Position popup above the button
+        self.popup.ensurePolished()
         self.popup.adjustSize()
-        pos = self.mapToGlobal(QPoint(0, 0))
         
-        target_x = pos.x() + (self.width() - self.popup.width()) // 2
-        target_y = pos.y() - self.popup.height() - 5
+        # Determine current screen based on button center
+        button_rect_global = QRect(self.mapToGlobal(QPoint(0, 0)), self.size())
+        button_center_global = button_rect_global.center()
         
-        # Screen boundary check
-        screen = self.screen().availableGeometry()
-        target_x = max(screen.left(), min(target_x, screen.right() - self.popup.width()))
-        target_y = max(screen.top(), min(target_y, screen.bottom() - self.popup.height()))
+        screen = QApplication.screenAt(button_center_global)
+        if not screen:
+            screen = self.window().screen() if self.window() else QApplication.primaryScreen()
+        
+        screen_geo = screen.availableGeometry()
+        
+        # Use adjusted size directly
+        pw = self.popup.width()
+        ph = self.popup.height()
+        
+        # Calculate ideal target (above center)
+        target_x = button_center_global.x() - pw // 2
+        target_y = button_rect_global.top() - ph - 5
+        
+        # Clamp strictly within available geometry with 20px safety margin (30px on right)
+        margin_x = 20
+        margin_right = 30
+        margin_top = 20
+        
+        min_x = screen_geo.left() + margin_x
+        max_x = screen_geo.left() + screen_geo.width() - pw - margin_right
+        min_y = screen_geo.top() + margin_top
+        max_y = screen_geo.top() + screen_geo.height() - ph
+        
+        target_x = max(min_x, min(target_x, max_x))
+        target_y = max(min_y, min(target_y, max_y))
         
         self.popup.move(target_x, target_y)
         self.popup.show()

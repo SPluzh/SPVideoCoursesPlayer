@@ -4,7 +4,7 @@ from PyQt6.QtWidgets import (
     QWidget, QHBoxLayout, QVBoxLayout, QListWidget, QLabel, QPushButton,
     QFrame, QGridLayout, QApplication
 )
-from PyQt6.QtCore import Qt, pyqtSignal, QTimer, QPoint
+from PyQt6.QtCore import Qt, pyqtSignal, QTimer, QPoint, QRect
 from PyQt6.QtGui import QIcon
 
 from translator import tr
@@ -236,16 +236,37 @@ class SubtitlePopup(QWidget):
             btn.clicked.connect(lambda checked, c=color: self._apply_color(c, target_btn, signal_name, palette))
             layout.addWidget(btn, row, col)
         
+        palette.ensurePolished()
         palette.adjustSize()
-        pos = target_btn.mapToGlobal(QPoint(0, target_btn.height() + 5))
         
-        target_x = pos.x()
-        target_y = pos.y()
+        # Determine current screen based on button center
+        btn_center_global = target_btn.mapToGlobal(target_btn.rect().center())
+        screen = QApplication.screenAt(btn_center_global)
+        if not screen:
+            screen = self.window().screen() if self.window() else QApplication.primaryScreen()
+            
+        screen_geo = screen.availableGeometry()
         
-        # Screen boundary check
-        screen = self.screen().availableGeometry()
-        target_x = max(screen.left(), min(target_x, screen.right() - palette.width()))
-        target_y = max(screen.top(), min(target_y, screen.bottom() - palette.height()))
+        # Use the absolute maximum possible width/height for safest clamping
+        pw = max(palette.width(), palette.sizeHint().width(), palette.minimumWidth())
+        ph = max(palette.height(), palette.sizeHint().height(), palette.minimumHeight())
+        
+        btn_rect_global = QRect(target_btn.mapToGlobal(QPoint(0, 0)), target_btn.size())
+        target_x = btn_rect_global.left()
+        target_y = btn_rect_global.bottom() + 5
+        
+        # Clamp strictly within available geometry
+        margin_x = 20
+        margin_right = 30
+        margin_top = 20
+        
+        min_x = screen_geo.left() + margin_x
+        max_x = screen_geo.left() + screen_geo.width() - pw - margin_right
+        min_y = screen_geo.top() + margin_top
+        max_y = screen_geo.top() + screen_geo.height() - ph # No bottom margin
+        
+        target_x = max(min_x, min(target_x, max_x))
+        target_y = max(min_y, min(target_y, max_y))
         
         palette.move(target_x, target_y)
         palette.show()
@@ -393,17 +414,40 @@ class SubtitleButton(QPushButton):
             return
             
         # Position popup above the button
-        self.popup.adjustSize()
         self.popup.setSubtitlesEnabled(self.subtitles_enabled)
-        pos = self.mapToGlobal(QPoint(0, 0))
+        self.popup.ensurePolished()
+        self.popup.adjustSize()
         
-        target_x = pos.x() + (self.width() - self.popup.width()) // 2
-        target_y = pos.y() - self.popup.height() - 5
+        # Determine current screen based on button center
+        button_rect_global = QRect(self.mapToGlobal(QPoint(0, 0)), self.size())
+        button_center_global = button_rect_global.center()
         
-        # Screen boundary check
-        screen = self.screen().availableGeometry()
-        target_x = max(screen.left(), min(target_x, screen.right() - self.popup.width()))
-        target_y = max(screen.top(), min(target_y, screen.bottom() - self.popup.height()))
+        screen = QApplication.screenAt(button_center_global)
+        if not screen:
+            screen = self.window().screen() if self.window() else QApplication.primaryScreen()
+        
+        screen_geo = screen.availableGeometry()
+        
+        # Use adjusted size directly
+        pw = self.popup.width()
+        ph = self.popup.height()
+        
+        # Calculate ideal target (above button)
+        target_x = button_center_global.x() - pw // 2
+        target_y = button_rect_global.top() - ph - 5
+        
+        # Clamp strictly within available geometry
+        margin_x = 20
+        margin_right = 30
+        margin_top = 20
+        
+        min_x = screen_geo.left() + margin_x
+        max_x = screen_geo.left() + screen_geo.width() - pw - margin_right
+        min_y = screen_geo.top() + margin_top
+        max_y = screen_geo.top() + screen_geo.height() - ph # No bottom margin
+        
+        target_x = max(min_x, min(target_x, max_x))
+        target_y = max(min_y, min(target_y, max_y))
         
         self.popup.move(target_x, target_y)
         self.popup.show()
