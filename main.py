@@ -139,6 +139,10 @@ class VideoCourseBrowser(QMainWindow):
         self.video_player.video_finished.connect(self.on_video_finished)
         self.video_player.position_changed.connect(self.save_progress)
         self.video_player.pause_changed.connect(self.on_player_pause_changed)
+        self.video_player.subtitle_style_changed.connect(self.save_subtitle_settings)
+
+        # Apply initial subtitle settings
+        self.video_player.set_subtitle_styles(self.sub_color, self.sub_border_color, self.sub_scale)
 
         self.splitter.addWidget(self.video_player)
 
@@ -899,6 +903,11 @@ class VideoCourseBrowser(QMainWindow):
         config['Video'] = {
             'extensions': '.mp4,.mkv,.avi,.mov,.wmv,.flv,.webm,.m4v,.mpg,.mpeg,.3gp,.ts'
         }
+        config['Subtitles'] = {
+            'text_color': '#FFFFFF',
+            'outline_color': '#000000',
+            'font_scale': '1.0'
+        }
 
         with open(self.config_file, 'w', encoding='utf-8') as f:
             config.write(f)
@@ -937,6 +946,30 @@ class VideoCourseBrowser(QMainWindow):
         self.display_width = config.getint('Thumbnails', 'display_width', fallback=160)
         self.display_height = config.getint('Thumbnails', 'display_height', fallback=90)
         self.animation_interval = config.getint('Thumbnails', 'animation_interval', fallback=400)
+
+        # Subtitle settings
+        self.sub_color = config.get('Subtitles', 'text_color', fallback='#FFFFFF')
+        self.sub_border_color = config.get('Subtitles', 'outline_color', fallback='#000000')
+        self.sub_scale = config.getfloat('Subtitles', 'font_scale', fallback=1.0)
+
+    def save_subtitle_settings(self, property_name, value):
+        """Save subtitle style settings to ini file."""
+        config = configparser.ConfigParser()
+        if self.config_file.exists():
+            config.read(self.config_file, encoding='utf-8')
+
+        if 'Subtitles' not in config:
+            config['Subtitles'] = {}
+
+        if property_name == "sub-color":
+            config['Subtitles']['text_color'] = value
+        elif property_name == "sub-border-color":
+            config['Subtitles']['outline_color'] = value
+        elif property_name == "sub-scale":
+            config['Subtitles']['font_scale'] = f"{value:.2f}"
+
+        with open(self.config_file, 'w', encoding='utf-8') as f:
+            config.write(f)
 
     def format_time(self, seconds):
         if not seconds:

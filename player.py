@@ -31,6 +31,7 @@ class VideoPlayerWidget(QWidget):
     request_hide_main_window = pyqtSignal()
     request_show_main_window = pyqtSignal()
     pause_changed = pyqtSignal(bool)
+    subtitle_style_changed = pyqtSignal(str, object)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -44,6 +45,9 @@ class VideoPlayerWidget(QWidget):
         self.is_loading = False
         self.auto_play_pending = False
         self.player = None
+        self.sub_color = "#FFFFFF"
+        self.sub_border_color = "#000000"
+        self.sub_scale = 1.0
         self.setup_ui()
         self.setup_mpv()
 
@@ -216,6 +220,10 @@ class VideoPlayerWidget(QWidget):
                 log_handler=print,
                 loglevel='warn'
             )
+            
+            # Apply initial subtitle styles
+            self._apply_subtitle_styles()
+
             @self.player.property_observer('time-pos')
             def time_observer(_name, value):
                 if value is not None:
@@ -310,6 +318,7 @@ class VideoPlayerWidget(QWidget):
 
             self.player.sid = 'no'
             self.player.loadfile(file_path)
+            self._apply_subtitle_styles()
             self.play_btn.setEnabled(True)
             self.progress_slider.setEnabled(True)
             self.frame_back_btn.setEnabled(True)
@@ -658,19 +667,60 @@ class VideoPlayerWidget(QWidget):
                 # Convert HEX to MPV format (ARGB)
                 hex_color = value.lstrip('#')
                 self.player.sub_color = f"#FF{hex_color.upper()}"
+                self.sub_color = value
+                self.subtitle_style_changed.emit("sub-color", value)
                 print(f"📝 Subtitle color: {value}")
             elif property_name == "sub-border-color":
                 hex_color = value.lstrip('#')
                 self.player.sub_border_color = f"#FF{hex_color.upper()}"
+                self.sub_border_color = value
+                self.subtitle_style_changed.emit("sub-border-color", value)
                 print(f"📝 Subtitle border color: {value}")
             elif property_name == "sub-scale":
                 # value is delta (+5 or -5)
                 current_scale = getattr(self.player, 'sub_scale', 1.0)
                 new_scale = max(0.5, min(3.0, current_scale + value / 100.0))
                 self.player.sub_scale = new_scale
+                self.sub_scale = new_scale
+                self.subtitle_style_changed.emit("sub-scale", new_scale)
                 print(f"📝 Subtitle scale: {new_scale:.2f}")
         except Exception as e:
             print(f"Error changing subtitle style: {e}")
+
+    def set_subtitle_styles(self, color, border_color, scale):
+        """Set initial subtitle styles."""
+        self.sub_color = color
+        self.sub_border_color = border_color
+        self.sub_scale = scale
+        
+        # Also sync with popup
+        if hasattr(self, 'subtitle_btn'):
+            self.subtitle_btn.popup.text_color = color
+            self.subtitle_btn.popup.outline_color = border_color
+            self.subtitle_btn.popup._update_text_color_btn()
+            self.subtitle_btn.popup._update_outline_color_btn()
+            
+        if self.player:
+            self._apply_subtitle_styles()
+
+    def _apply_subtitle_styles(self):
+        """Apply stored subtitle styles to MPV player."""
+        if not self.player:
+            return
+        
+        try:
+            # Color
+            hex_color = self.sub_color.lstrip('#')
+            self.player.sub_color = f"#FF{hex_color.upper()}"
+            
+            # Border
+            hex_border = self.sub_border_color.lstrip('#')
+            self.player.sub_border_color = f"#FF{hex_border.upper()}"
+            
+            # Scale
+            self.player.sub_scale = self.sub_scale
+        except Exception as e:
+            print(f"Error applying subtitle styles: {e}")
 
     def change_subtitle_track(self, index):
         """Switch subtitles on selection."""
