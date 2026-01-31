@@ -23,7 +23,7 @@ if exist "!VERSION_FILE!" (
     set "VERSION=unknown"
 )
 
-set "ZIP_NAME=SP_VideoCoursesPlayer_v!VERSION!.zip"
+set "ZIP_NAME=SP_Video_Courses_Player_v!VERSION!.zip"
 
 echo.
 echo Creating release zip: !ZIP_NAME!
