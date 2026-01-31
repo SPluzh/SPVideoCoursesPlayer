@@ -82,7 +82,7 @@ class VideoPlayerWidget(QWidget):
         panel_layout.setContentsMargins(0, 5, 0, 0)
 
         self.icons = {}
-        for name in ["prev_frame", "next_frame", "play", "pause", "screenshot", "next", "prev"]:
+        for name in ["play", "pause", "next", "prev"]:
             path = RESOURCES_DIR / "icons" / f"{name}.png"
             if path.exists():
                 self.icons[name] = QIcon(str(path))
@@ -98,14 +98,6 @@ class VideoPlayerWidget(QWidget):
         self.prev_video_btn.setEnabled(False)
         panel_layout.addWidget(self.prev_video_btn)
 
-        self.frame_back_btn = QPushButton()
-        self.frame_back_btn.setIcon(self.icons['prev_frame'])
-        self.frame_back_btn.setFixedSize(30, 30)
-        self.frame_back_btn.setToolTip(tr('player.tooltip_frame_back'))
-        self.frame_back_btn.clicked.connect(self.frame_back_step)
-        self.frame_back_btn.setEnabled(False)
-        panel_layout.addWidget(self.frame_back_btn)
-
         self.play_btn = QPushButton()
         self.play_btn.setIcon(self.icons['play'])
         self.play_btn.setObjectName("playBtn")
@@ -114,13 +106,6 @@ class VideoPlayerWidget(QWidget):
         self.play_btn.setEnabled(False)
         panel_layout.addWidget(self.play_btn)
 
-        self.frame_step_btn = QPushButton()
-        self.frame_step_btn.setIcon(self.icons['next_frame'])
-        self.frame_step_btn.setFixedSize(30, 30)
-        self.frame_step_btn.setToolTip(tr('player.tooltip_frame_step'))
-        self.frame_step_btn.clicked.connect(self.frame_step)
-        self.frame_step_btn.setEnabled(False)
-        panel_layout.addWidget(self.frame_step_btn)
 
         # Next Video Button
         self.next_video_btn = QPushButton()
@@ -150,20 +135,7 @@ class VideoPlayerWidget(QWidget):
         self.subtitle_btn.popup.styleChanged.connect(self.change_subtitle_style)
         panel_layout.addWidget(self.subtitle_btn)
 
-        self.screenshot_btn = QPushButton()
-        self.screenshot_btn.setIcon(self.icons['screenshot'])
-        self.screenshot_btn.setFixedSize(30, 30)
-        self.screenshot_btn.setToolTip(tr('player.tooltip_screenshot'))
-        self.screenshot_btn.clicked.connect(self.screenshot_to_clipboard)
-        self.screenshot_btn.setEnabled(False)
-        panel_layout.addWidget(self.screenshot_btn)
 
-        self.reset_zoom_btn = QPushButton("100%")
-        self.reset_zoom_btn.setFixedWidth(80)
-        self.reset_zoom_btn.setFixedHeight(30)
-        self.reset_zoom_btn.setToolTip(tr('player.tooltip_zoom'))
-        self.reset_zoom_btn.clicked.connect(self.reset_zoom)
-        panel_layout.addWidget(self.reset_zoom_btn)
 
         self.volume_btn = VolumeButton()
         self.volume_btn.volumeChanged.connect(self.change_volume)
@@ -180,9 +152,8 @@ class VideoPlayerWidget(QWidget):
         panel_layout.addWidget(self.speed_label)
 
         # Ensure buttons don't take focus to avoid breaking global hotkeys
-        for btn in [self.prev_video_btn, self.frame_back_btn, self.play_btn, 
-                    self.frame_step_btn, self.next_video_btn, self.screenshot_btn, 
-                    self.reset_zoom_btn, self.subtitle_btn, self.volume_btn]:
+        for btn in [self.prev_video_btn, self.play_btn, self.next_video_btn, 
+                    self.subtitle_btn, self.volume_btn]:
             btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         
         # Sliders should also not take focus if we want Space to always work for play/pause
@@ -254,25 +225,11 @@ class VideoPlayerWidget(QWidget):
 
     def screenshot_to_clipboard(self):
         """Screenshot to clipboard."""
-        if self.video_widget.screenshot_to_clipboard():
-            self.show_screenshot_notification()
-
-    def show_screenshot_notification(self):
-        """Show screenshot notification."""
-        original_icon = self.screenshot_btn.icon()
-        self.screenshot_btn.setIcon(QIcon())
-        self.screenshot_btn.setText("✓")
-        
-        def restore():
-            self.screenshot_btn.setText("")
-            self.screenshot_btn.setIcon(original_icon)
-            
-        QTimer.singleShot(1000, restore)
+        return self.video_widget.screenshot_to_clipboard()
 
     def on_zoom_changed(self, zoom_level):
         """Handle zoom change."""
-        zoom_percent = int(100 * (2 ** zoom_level))
-        self.reset_zoom_btn.setText(f"{zoom_percent}%")
+        pass
 
     def reset_zoom(self):
         """Reset zoom via button."""
@@ -419,11 +376,8 @@ class VideoPlayerWidget(QWidget):
             self._apply_subtitle_styles()
             self.play_btn.setEnabled(True)
             self.progress_slider.setEnabled(True)
-            self.frame_back_btn.setEnabled(True)
-            self.frame_step_btn.setEnabled(True)
             self.prev_video_btn.setEnabled(True)
             self.next_video_btn.setEnabled(True)
-            self.screenshot_btn.setEnabled(True)
 
             # ADDED: Load audio tracks
             QTimer.singleShot(200, lambda: self.load_audio_tracks(file_path))
@@ -1093,10 +1047,6 @@ class VideoPlayerWidget(QWidget):
         speed = self.speed_slider.value() / 10.0
         self.speed_label.setText(tr('player.speed', speed=f'{speed:.1f}'))
         # Update tooltips and buttons
-        self.frame_back_btn.setToolTip(tr('player.tooltip_frame_back'))
-        self.frame_step_btn.setToolTip(tr('player.tooltip_frame_step'))
-        self.screenshot_btn.setToolTip(tr('player.tooltip_screenshot'))
-        self.reset_zoom_btn.setToolTip(tr('player.tooltip_zoom'))
         self.volume_btn.update_texts()
         self.subtitle_btn.update_texts()
         self.play_btn.setToolTip(tr('player.play') if self.player and self.player.pause else tr('player.pause'))

@@ -13,7 +13,11 @@
         "about": "О программе",
         "language": "Язык",
         "language_ru": "Русский",
-        "language_en": "English"
+        "language_en": "English",
+        "tools": "Инструменты",
+        "screenshot": "Сделать скриншот",
+        "frame_step": "Следующий кадр",
+        "frame_back": "Предыдущий кадр"
     },
     "library": {
         "search_placeholder": "Поиск..."

@@ -13,7 +13,11 @@
         "about": "About",
         "language": "Language",
         "language_ru": "Русский",
-        "language_en": "English"
+        "language_en": "English",
+        "tools": "Tools",
+        "screenshot": "Take Screenshot",
+        "frame_step": "Next Frame",
+        "frame_back": "Previous Frame"
     },
     "library": {
         "search_placeholder": "Search..."

@@ -246,7 +246,9 @@ class VideoCourseBrowser(QMainWindow):
         elif action == "toggle_subtitles":
             self.video_player.toggle_subtitles_hotkey()
         elif action == "take_screenshot":
-            self.video_player.screenshot_to_clipboard()
+            if self.video_player.screenshot_to_clipboard():
+                self.info_label.setText(tr('player.tooltip_screenshot') + " ✓")
+                QTimer.singleShot(2000, lambda: self.info_label.setText(tr('status.ready')))
         elif action == "reset_zoom":
             self.video_player.reset_zoom()
         elif action == "zoom_in":
@@ -520,6 +522,26 @@ class VideoCourseBrowser(QMainWindow):
         settings_action.setShortcut('Ctrl+,')
         settings_action.triggered.connect(self.open_settings)
         lib_menu.addAction(settings_action)
+        
+        # [Tools] Menu
+        tools_menu = menubar.addMenu(tr('menu.tools'))
+        
+        screenshot_action = QAction(self.icons.get('screenshot', QIcon()), tr('menu.screenshot'), self)
+        screenshot_action.setShortcut('S')
+        screenshot_action.triggered.connect(lambda: self.handle_player_action("take_screenshot"))
+        tools_menu.addAction(screenshot_action)
+        
+        tools_menu.addSeparator()
+        
+        frame_step_action = QAction(self.icons.get('next_frame', QIcon()), tr('menu.frame_step'), self)
+        frame_step_action.setShortcut('.')
+        frame_step_action.triggered.connect(lambda: self.handle_player_action("frame_step"))
+        tools_menu.addAction(frame_step_action)
+        
+        frame_back_action = QAction(self.icons.get('prev_frame', QIcon()), tr('menu.frame_back'), self)
+        frame_back_action.setShortcut(',')
+        frame_back_action.triggered.connect(lambda: self.handle_player_action("frame_back"))
+        tools_menu.addAction(frame_back_action)
 
         # [View] Menu
         view_menu = menubar.addMenu(tr('menu.view'))
@@ -724,7 +746,7 @@ class VideoCourseBrowser(QMainWindow):
         icon_names = [
             "menu_scan", "menu_settings", "menu_reload", "menu_about",
             "context_open_folder", "context_mark_read", "context_mark_unread",
-            "context_play", "app_icon"
+            "context_play", "app_icon", "screenshot", "next_frame", "prev_frame"
         ]
         for name in icon_names:
             icon_path = RESOURCES_DIR / "icons" / f"{name}.png"

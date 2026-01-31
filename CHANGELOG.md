@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.4]
+- **UI**: Streamlined the player control panel by removing secondary action buttons:
+    - Removed Reset Zoom, Take Screenshot, and Frame Step buttons.
+- **Tools Menu**: Introduced a new "Tools" menu in the main window:
+    - Relocated "Take Screenshot" and "Frame Step" actions to this menu.
+    - Added status bar confirmation with a checkmark (✓) when taking a screenshot.
+
 ## [1.0.3]
 - **Library**: Added a search bar with real-time filtering:
     - Implemented recursive matching logic (shows parent folders for matching videos and all children for matching folders).
