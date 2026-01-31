@@ -11,7 +11,7 @@ from PyQt6.QtWidgets import (
     QFrame
 )
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal, QThread
-from PyQt6.QtGui import QTextCursor
+from PyQt6.QtGui import QTextCursor, QIcon
 
 from translator import tr
 from styles import DARK_STYLE
@@ -276,8 +276,19 @@ class SettingsDialog(QDialog):
         self.config_file = config_file
         self.setWindowTitle(tr('settings.title'))
         self.setMinimumWidth(650)
+        self.load_icons()
         self.setup_ui()
         self.load_current_settings()
+
+    def load_icons(self):
+        self.icons = {}
+        icon_names = ["menu_scan", "add", "edit", "delete", "save", "upload", "download", "check", "fail"]
+        for name in icon_names:
+            icon_path = RESOURCES_DIR / "icons" / f"{name}.png"
+            if icon_path.exists():
+                self.icons[name] = QIcon(str(icon_path))
+            else:
+                self.icons[name] = QIcon()
 
     def setup_ui(self):
         main_layout = QVBoxLayout(self)
@@ -293,20 +304,24 @@ class SettingsDialog(QDialog):
 
         buttons = QHBoxLayout()
         add_btn = QPushButton(tr('settings.add'))
+        add_btn.setIcon(self.icons.get('add', QIcon()))
         add_btn.clicked.connect(self.add_path)
         buttons.addWidget(add_btn)
 
         edit_btn = QPushButton(tr('settings.edit'))
+        edit_btn.setIcon(self.icons.get('edit', QIcon()))
         edit_btn.clicked.connect(self.edit_path)
         buttons.addWidget(edit_btn)
 
         remove_btn = QPushButton(tr('settings.remove'))
+        remove_btn.setIcon(self.icons.get('delete', QIcon()))
         remove_btn.clicked.connect(self.remove_path)
         buttons.addWidget(remove_btn)
 
         library_layout.addLayout(buttons)
 
         self.scan_btn = QPushButton(tr('settings.scan'))
+        self.scan_btn.setIcon(self.icons.get('menu_scan', QIcon()))
         self.scan_btn.clicked.connect(self.start_scan)
         library_layout.addWidget(self.scan_btn)
 
@@ -331,6 +346,7 @@ class SettingsDialog(QDialog):
         storage_layout = QVBoxLayout()
         
         self.clear_data_btn = QPushButton(tr('settings.clear_data'))
+        self.clear_data_btn.setIcon(self.icons.get('delete', QIcon()))
         self.clear_data_btn.setStyleSheet("background-color: #8B0000; color: white; font-weight: bold;")
         self.clear_data_btn.clicked.connect(self.clear_metadata)
         storage_layout.addWidget(self.clear_data_btn)
@@ -350,6 +366,7 @@ class SettingsDialog(QDialog):
         QTimer.singleShot(200, self.check_ffmpeg_version)
 
         save_btn = QPushButton(tr('settings.save'))
+        save_btn.setIcon(self.icons.get('save', QIcon()))
         save_btn.clicked.connect(self.save_settings)
         main_layout.addWidget(save_btn)
 
@@ -448,11 +465,11 @@ class SettingsDialog(QDialog):
     def _validate_path(self, item):
         path = item.text(0)
         if os.path.exists(path):
-            icon = self.style().standardIcon(QStyle.StandardPixmap.SP_DialogApplyButton)
+            icon = self.icons.get('check', self.style().standardIcon(QStyle.StandardPixmap.SP_DialogApplyButton))
             item.setIcon(0, icon)
             item.setToolTip(0, tr('settings.path_valid', path=path))
         else:
-            icon = self.style().standardIcon(QStyle.StandardPixmap.SP_MessageBoxWarning)
+            icon = self.icons.get('fail', self.style().standardIcon(QStyle.StandardPixmap.SP_MessageBoxWarning))
             item.setIcon(0, icon)
             item.setToolTip(0, tr('settings.path_invalid', path=path))
 
@@ -538,16 +555,20 @@ class SettingsDialog(QDialog):
             latest_version, _ = get_latest_release()
             
             if local_version == latest_version and dll_path.exists():
-                self.libmpv_btn.setText(f"✓ libmpv-2.dll ({latest_version})")
+                self.libmpv_btn.setText(f" libmpv-2.dll ({latest_version})")
+                self.libmpv_btn.setIcon(self.icons.get('check', QIcon()))
                 self.libmpv_btn.setToolTip(tr('settings.libmpv_up_to_date'))
             elif dll_path.exists():
-                self.libmpv_btn.setText(f"⬆ libmpv-2.dll ({local_version or '?'} → {latest_version})")
+                self.libmpv_btn.setText(f" libmpv-2.dll ({local_version or '?'} → {latest_version})")
+                self.libmpv_btn.setIcon(self.icons.get('upload', QIcon()))
                 self.libmpv_btn.setToolTip(tr('settings.libmpv_update_available'))
             else:
-                self.libmpv_btn.setText(f"⬇ libmpv-2.dll ({latest_version})")
+                self.libmpv_btn.setText(f" libmpv-2.dll ({latest_version})")
+                self.libmpv_btn.setIcon(self.icons.get('download', QIcon()))
                 self.libmpv_btn.setToolTip(tr('settings.libmpv_not_installed'))
         except Exception as e:
-            self.libmpv_btn.setText(f"⚠ libmpv-2.dll")
+            self.libmpv_btn.setText(f" libmpv-2.dll")
+            self.libmpv_btn.setIcon(self.icons.get('fail', QIcon()))
             self.libmpv_btn.setToolTip(str(e))
 
     def update_libmpv(self):
@@ -571,13 +592,16 @@ class SettingsDialog(QDialog):
             ffprobe_path = resolve_binary_path(config, 'ffprobe_path', 'bin/ffprobe.exe')
             
             if ffmpeg_path.exists() and ffprobe_path.exists():
-                self.ffmpeg_btn.setText(f"✓ FFmpeg & ffprobe")
+                self.ffmpeg_btn.setText(f" FFmpeg & ffprobe")
+                self.ffmpeg_btn.setIcon(self.icons.get('check', QIcon()))
                 self.ffmpeg_btn.setToolTip(tr('settings.ffmpeg_found'))
             else:
-                self.ffmpeg_btn.setText(f"⬇ {tr('settings.ffmpeg_update')}")
+                self.ffmpeg_btn.setText(f" {tr('settings.ffmpeg_update')}")
+                self.ffmpeg_btn.setIcon(self.icons.get('download', QIcon()))
                 self.ffmpeg_btn.setToolTip(tr('settings.ffmpeg_not_found'))
         except Exception as e:
-            self.ffmpeg_btn.setText(f"⚠ FFmpeg")
+            self.ffmpeg_btn.setText(f" FFmpeg")
+            self.ffmpeg_btn.setIcon(self.icons.get('fail', QIcon()))
             self.ffmpeg_btn.setToolTip(str(e))
 
     def update_ffmpeg(self):
