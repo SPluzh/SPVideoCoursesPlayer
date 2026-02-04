@@ -540,6 +540,11 @@ class VideoCourseBrowser(QMainWindow):
         screenshot_action.triggered.connect(lambda: self.handle_player_action("take_screenshot"))
         tools_menu.addAction(screenshot_action)
         
+        add_marker_action = QAction(self.icons.get('add', QIcon()), tr('player.add_marker_title'), self)
+        add_marker_action.setShortcut('B')
+        add_marker_action.triggered.connect(lambda: self.handle_player_action("add_marker"))
+        tools_menu.addAction(add_marker_action)
+        
         tools_menu.addSeparator()
         
         frame_step_action = QAction(self.icons.get('next_frame', QIcon()), tr('menu.frame_step'), self)
@@ -756,7 +761,7 @@ class VideoCourseBrowser(QMainWindow):
             "menu_scan", "menu_settings", "menu_reload", "menu_about",
             "context_open_folder", "context_mark_read", "context_mark_unread",
             "context_play", "app_icon", "screenshot", "next_frame", "prev_frame",
-            "volume_hight"
+            "volume_hight", "add"
         ]
         for name in icon_names:
             icon_path = RESOURCES_DIR / "icons" / f"{name}.png"

@@ -91,7 +91,17 @@
         "info": "Info",
         "ready": "Ready",
         "scan_tooltip": "Scan folders for new videos",
-        "settings_tooltip": "Application Settings"
+        "settings_tooltip": "Application Settings",
+        "add_marker_title": "Add Marker",
+        "marker_timestamp": "Timestamp",
+        "marker_label_placeholder": "Enter marker label...",
+        "marker_color": "Color",
+        "edit_marker": "Edit Marker",
+        "delete_marker": "Delete Marker",
+        "edit_marker_title": "Edit Marker",
+        "delete_marker_title": "Delete Marker",
+        "delete_marker_confirm": "Are you sure you want to delete this marker?",
+        "default_marker_label": "Marker"
     },
     "status": {
         "ready": "Ready",

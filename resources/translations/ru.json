@@ -91,7 +91,17 @@
         "info": "Информация",
         "ready": "Готов к работе",
         "scan_tooltip": "Сканировать папки на наличие новых видео",
-        "settings_tooltip": "Настройки приложения"
+        "settings_tooltip": "Настройки приложения",
+        "add_marker_title": "Добавить метку",
+        "marker_timestamp": "Время",
+        "marker_label_placeholder": "Введите название метки...",
+        "marker_color": "Цвет",
+        "edit_marker": "Редактировать метку",
+        "delete_marker": "Удалить метку",
+        "edit_marker_title": "Редактирование метки",
+        "delete_marker_title": "Удаление метки",
+        "delete_marker_confirm": "Вы уверены, что хотите удалить эту метку?",
+        "default_marker_label": "Метка"
     },
     "status": {
         "ready": "Готов",

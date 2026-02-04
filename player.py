@@ -1,7 +1,7 @@
 
 import sys
 from pathlib import Path
-from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QSlider, QSizePolicy, QStylePainter, QStyleOptionSlider, QStyle, QToolTip, QDialog, QLineEdit, QDialogButtonBox, QFormLayout, QButtonGroup
+from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QSlider, QSizePolicy, QStylePainter, QStyleOptionSlider, QStyle, QToolTip, QMenu
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal, QPoint, QRect
 from PyQt6.QtGui import QIcon, QColor, QPalette, QPainter, QPen, QBrush
 
@@ -10,6 +10,7 @@ from translator import tr
 from subtitle_popup import SubtitleButton
 from volume_popup import VolumeButton
 from preview_popup import PreviewPopup
+from marker_dialog import MarkerDialog
 
 ROOT_DIR = Path(__file__).parent
 RESOURCES_DIR = ROOT_DIR / "resources"
@@ -18,6 +19,9 @@ class ClickableSlider(QSlider):
     """Slider that jumps to click position."""
     hovered = pyqtSignal(int, QPoint)
     hover_left = pyqtSignal()
+    marker_edit_requested = pyqtSignal(dict)
+    marker_delete_requested = pyqtSignal(int)
+    add_marker_requested = pyqtSignal(float)
 
     def __init__(self, orientation):
         super().__init__(orientation)
@@ -89,76 +93,43 @@ class ClickableSlider(QSlider):
         self.hover_left.emit()
         super().leaveEvent(event)
 
-class MarkerDialog(QDialog):
-    """Simple dialog to add/edit a marker."""
-    def __init__(self, parent=None, timestamp=0.0, label="", color="#FFD700"):
-        super().__init__(parent)
-        print(f"DEBUG: MarkerDialog init, timestamp={timestamp}") # DEBUG
-        self.setWindowTitle(tr('player.add_marker_title'))
-        self.setFixedWidth(350)
-        self.selected_color = color
-        
-        layout = QVBoxLayout(self)
-        
-        info = QLabel(f"{tr('player.marker_timestamp')}: {self.format_time(timestamp)}")
-        layout.addWidget(info)
-        
-        self.input = QLineEdit()
-        self.input.setText(label)
-        self.input.setPlaceholderText(tr('player.marker_label_placeholder'))
-        layout.addWidget(self.input)
+    def contextMenuEvent(self, event):
+        """Show context menu for markers."""
+        if not self.markers or self.duration <= 0:
+            return
 
-        # Color selection
-        color_layout = QHBoxLayout()
-        color_layout.addWidget(QLabel(f"{tr('player.marker_color') or 'Color'}:"))
+        w = self.width()
+        click_x = event.pos().x()
+        click_ratio = click_x / w
+        click_sec = click_ratio * self.duration
         
-        self.color_group = QButtonGroup(self)
-        colors = ["#FFD700", "#FF4136", "#2ECC40", "#0074D9", "#B10DC9", "#FF851B"]
+        # Look for nearby marker (tolerance: 10 pixels)
+        tolerance_sec = (10 / w) * self.duration if w > 0 else 2
         
-        for i, c in enumerate(colors):
-            btn = QPushButton()
-            btn.setFixedSize(24, 24)
-            btn.setCheckable(True)
-            btn.setStyleSheet(f"background-color: {c}; border-radius: 12px; border: 2px solid {'white' if c == color else 'transparent'};")
-            if c == color:
-                btn.setChecked(True)
+        target_marker = None
+        for m in self.markers:
+            if abs(m.get('position_seconds', 0) - click_sec) < tolerance_sec:
+                target_marker = m
+                break
+        
+        menu = QMenu(self)
+        add_action = menu.addAction(tr('player.add_marker_title') or "Add Marker")
+        
+        edit_action = None
+        delete_action = None
+        
+        if target_marker:
+            menu.addSeparator()
+            edit_action = menu.addAction(tr('player.edit_marker') or "Edit Marker")
+            delete_action = menu.addAction(tr('player.delete_marker') or "Delete Marker")
             
-            btn.setProperty("color_val", c)
-            btn.clicked.connect(self._on_color_selected)
-            color_layout.addWidget(btn)
-            self.color_group.addButton(btn, i)
-            
-        color_layout.addStretch()
-        layout.addLayout(color_layout)
-        
-        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
-        buttons.accepted.connect(self.accept)
-        buttons.rejected.connect(self.reject)
-        layout.addWidget(buttons)
-        
-        self.input.setFocus()
-
-    def _on_color_selected(self):
-        btn = self.sender()
-        self.selected_color = btn.property("color_val")
-        # Update borders to show selection
-        for b in self.color_group.buttons():
-            c = b.property("color_val")
-            b.setStyleSheet(f"background-color: {c}; border-radius: 12px; border: 2px solid {'white' if b == btn else 'transparent'};")
-
-    def format_time(self, seconds):
-        if seconds is None: seconds = 0
-        m, s = divmod(int(seconds), 60)
-        h, m = divmod(m, 60)
-        if h > 0:
-            return f"{h:02d}:{m:02d}:{s:02d}"
-        return f"{m:02d}:{s:02d}"
-
-    def get_data(self):
-        return self.input.text().strip(), self.selected_color
-
-    def get_label(self):
-        return self.input.text().strip()
+        action = menu.exec(event.globalPos())
+        if action == add_action:
+            self.add_marker_requested.emit(click_sec)
+        elif edit_action and action == edit_action:
+            self.marker_edit_requested.emit(target_marker)
+        elif delete_action and action == delete_action:
+            self.marker_delete_requested.emit(target_marker.get('id'))
 
 
 class VideoPlayerWidget(QWidget):
@@ -257,7 +228,6 @@ class VideoPlayerWidget(QWidget):
         self.next_video_btn.setFixedSize(30, 30)
         self.next_video_btn.setToolTip(tr('player.tooltip_next_video'))
         self.next_video_btn.clicked.connect(self.next_video_requested.emit)
-        self.next_video_btn.setEnabled(False)
         panel_layout.addWidget(self.next_video_btn)
 
         self.progress_slider = ClickableSlider(Qt.Orientation.Horizontal)
@@ -266,6 +236,9 @@ class VideoPlayerWidget(QWidget):
         self.progress_slider.sliderPressed.connect(self._on_slider_pressed)
         self.progress_slider.sliderReleased.connect(self._on_slider_released)
         self.progress_slider.setEnabled(False)
+        self.progress_slider.marker_edit_requested.connect(self.edit_marker)
+        self.progress_slider.marker_delete_requested.connect(self.delete_marker)
+        self.progress_slider.add_marker_requested.connect(self.add_marker)
         panel_layout.addWidget(self.progress_slider, 1)
 
         self.time_label = QLabel("00:00 / 00:00")
@@ -969,20 +942,23 @@ class VideoPlayerWidget(QWidget):
         duration = self.player.duration if self.player else 0
         self.progress_slider.set_markers(self.markers, duration)
 
-    def add_marker(self):
-        """Add marker at current position."""
+    def add_marker(self, timestamp=None):
+        """Add marker at specified position or current position."""
         print("DEBUG: add_marker called") # DEBUG
         if not self.player or not self.current_file:
             print("DEBUG: No player or file") # DEBUG
             return
             
-        # Get current time
-        try:
-            pos = self.player.time_pos or 0
-            print(f"DEBUG: Current pos: {pos}") # DEBUG
-        except Exception as e:
-            print(f"DEBUG: Error getting time_pos: {e}") # DEBUG
-            pos = 0
+        # Get position
+        if timestamp is not None:
+            pos = timestamp
+        else:
+            try:
+                pos = self.player.time_pos or 0
+                print(f"DEBUG: Current pos: {pos}") # DEBUG
+            except Exception as e:
+                print(f"DEBUG: Error getting time_pos: {e}") # DEBUG
+                pos = 0
             
         # Pause playback
         was_playing = not self.player.pause
@@ -990,12 +966,22 @@ class VideoPlayerWidget(QWidget):
             self.player.pause = True
             
         try:
-            # Show dialog
-            print("DEBUG: Opening dialog...") # DEBUG
-            dlg = MarkerDialog(self, pos)
+            # Generate default label (e.g., "Marker 3")
+            marker_count = len(self.markers) if hasattr(self, 'markers') else 0
+            default_label = f"{tr('player.default_marker_label') or 'Marker'} {marker_count + 1}"
+            
+            # Show dialog - Pass empty label to keep field clear
+            print(f"DEBUG: Opening dialog... Default label fallback: {default_label}") # DEBUG
+            dlg = MarkerDialog(self, pos, label="")
             if dlg.exec():
                 label, color = dlg.get_data()
+                
+                # Apply default if input is empty
+                if not label:
+                    label = default_label
+                
                 print(f"DEBUG: Dialog accepted, label: '{label}', color: '{color}'") # DEBUG
+                
                 if label:
                     # Save to DB
                     if self.db:
@@ -1016,6 +1002,51 @@ class VideoPlayerWidget(QWidget):
         # Resume if needed
         if was_playing:
             self.player.pause = False
+
+    def edit_marker(self, marker_data):
+        """Edit an existing marker."""
+        if not self.db or not self.current_file:
+            return
+            
+        m_id = marker_data.get('id')
+        pos = marker_data.get('position_seconds', 0)
+        label = marker_data.get('label', "")
+        color = marker_data.get('color', "#FFD700")
+        
+        # Pause playback
+        was_playing = not self.player.pause
+        if was_playing:
+            self.player.pause = True
+            
+        try:
+            dlg = MarkerDialog(self, pos, label, color)
+            dlg.setWindowTitle(tr('player.edit_marker_title') or "Edit Marker")
+            if dlg.exec():
+                new_label, new_color = dlg.get_data()
+                if new_label:
+                    self.db.update_marker(m_id, new_label, new_color)
+                    self.load_markers(self.current_file)
+        except Exception as e:
+            print(f"Error editing marker: {e}")
+            
+        if was_playing:
+            self.player.pause = False
+
+    def delete_marker(self, marker_id):
+        """Delete marker with confirmation."""
+        from PyQt6.QtWidgets import QMessageBox
+        
+        res = QMessageBox.question(
+            self, 
+            tr('player.delete_marker_title') or "Delete Marker",
+            tr('player.delete_marker_confirm') or "Are you sure you want to delete this marker?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+        )
+        
+        if res == QMessageBox.StandardButton.Yes:
+            if self.db:
+                self.db.delete_marker(marker_id)
+                self.load_markers(self.current_file)
 
     def set_subtitle_styles(self, color, border_color, scale):
         """Set initial subtitle styles."""
