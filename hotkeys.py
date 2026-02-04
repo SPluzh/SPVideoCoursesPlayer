@@ -23,58 +23,64 @@ class GlobalHotkeyThread(QThread):
         self.VK_Z = 0x5A
 
     def run(self):
-        user32 = ctypes.windll.user32
-        kernel32 = ctypes.windll.kernel32
-        
-        # Map VK codes to internal action names (Trigger items)
-        trigger_vk_map = {
-            self.VK_MEDIA_PLAY_PAUSE: "toggle_pause",
-            self.VK_MEDIA_STOP: "pause",
-            self.VK_MEDIA_NEXT_TRACK: "next_video",
-            self.VK_MEDIA_PREV_TRACK: "prev_video",
-            self.VK_VOLUME_UP: "volume_up",
-            self.VK_VOLUME_DOWN: "volume_down",
-            self.VK_VOLUME_MUTE: "toggle_mute"
-        }
-        
-        # Map VK codes to state actions (Hold items)
-        state_vk_map = {
-            self.VK_Z: "zoom_mode"
-        }
-
-        # Last state for each key
-        last_state = {vk: False for vk in (list(trigger_vk_map.keys()) + list(state_vk_map.keys()))}
-        
-        # Get current process ID once
-        current_pid = kernel32.GetCurrentProcessId()
-
-        while self.running:
-            # Check if our application has focus using Windows API (thread-safe)
-            has_focus = False
-            foreground_hwnd = user32.GetForegroundWindow()
-            if foreground_hwnd:
-                foreground_pid = wintypes.DWORD()
-                user32.GetWindowThreadProcessId(foreground_hwnd, ctypes.byref(foreground_pid))
-                if foreground_pid.value == current_pid:
-                    has_focus = True
-
-            # Process triggers (one-shot actions)
-            for vk, action in trigger_vk_map.items():
-                is_down = bool(user32.GetAsyncKeyState(vk) & 0x8000)
-                if is_down and not last_state[vk]:
-                    if not has_focus:
-                        self.action_triggered.emit(action)
-                last_state[vk] = is_down
+        print("DEBUG: GlobalHotkeyThread run enter") # DEBUG
+        try:
+            user32 = ctypes.windll.user32
+            kernel32 = ctypes.windll.kernel32
             
-            # Process state keys (Hold actions)
-            for vk, action in state_vk_map.items():
-                is_down = bool(user32.GetAsyncKeyState(vk) & 0x8000)
-                if is_down != last_state[vk]:
-                    if not has_focus:
-                        self.action_state_changed.emit(action, is_down)
+            # Map VK codes to internal action names (Trigger items)
+            trigger_vk_map = {
+                self.VK_MEDIA_PLAY_PAUSE: "toggle_pause",
+                self.VK_MEDIA_STOP: "pause",
+                self.VK_MEDIA_NEXT_TRACK: "next_video",
+                self.VK_MEDIA_PREV_TRACK: "prev_video",
+                self.VK_VOLUME_UP: "volume_up",
+                self.VK_VOLUME_DOWN: "volume_down",
+                self.VK_VOLUME_MUTE: "toggle_mute"
+            }
+            
+            # Map VK codes to state actions (Hold items)
+            state_vk_map = {
+                self.VK_Z: "zoom_mode"
+            }
+
+            # Last state for each key
+            last_state = {vk: False for vk in (list(trigger_vk_map.keys()) + list(state_vk_map.keys()))}
+            
+            # Get current process ID once
+            current_pid = kernel32.GetCurrentProcessId()
+
+            while self.running:
+                # Check if our application has focus using Windows API (thread-safe)
+                has_focus = False
+                foreground_hwnd = user32.GetForegroundWindow()
+                if foreground_hwnd:
+                    foreground_pid = wintypes.DWORD()
+                    user32.GetWindowThreadProcessId(foreground_hwnd, ctypes.byref(foreground_pid))
+                    if foreground_pid.value == current_pid:
+                        has_focus = True
+
+                # Process triggers (one-shot actions)
+                for vk, action in trigger_vk_map.items():
+                    is_down = bool(user32.GetAsyncKeyState(vk) & 0x8000)
+                    if is_down and not last_state[vk]:
+                        if not has_focus:
+                            self.action_triggered.emit(action)
                     last_state[vk] = is_down
-            
-            time.sleep(0.01)
+                
+                # Process state keys (Hold actions)
+                for vk, action in state_vk_map.items():
+                    is_down = bool(user32.GetAsyncKeyState(vk) & 0x8000)
+                    if is_down != last_state[vk]:
+                        if not has_focus:
+                            self.action_state_changed.emit(action, is_down)
+                        last_state[vk] = is_down
+                
+                time.sleep(0.01)
+        except Exception as e:
+            print(f"❌ CRASH in GlobalHotkeyThread: {e}")
+            import traceback
+            traceback.print_exc()
 
     def stop(self):
         self.running = False
@@ -102,6 +108,7 @@ class HotkeyManager(QObject):
             Qt.Key.Key_Period: "frame_step",
             Qt.Key.Key_BracketLeft: "zoom_out",
             Qt.Key.Key_BracketRight: "zoom_in",
+            Qt.Key.Key_B: "add_marker",
             
             # Fallback for Cyrillic layout (Russian)
             0x410: "toggle_fullscreen", # RU A (where F is)
@@ -113,7 +120,9 @@ class HotkeyManager(QObject):
             0x431: "frame_back",        # RU B (where < is)
             0x44e: "frame_step",        # RU YU (where > is)
             0x445: "zoom_out",          # RU H (where [ is)
+            0x445: "zoom_out",          # RU H (where [ is)
             0x44a: "zoom_in",           # RU TVZ (where ] is)
+            0x418: "add_marker",        # RU I (where B is)
             
             # Multimedia keys (local behavior)
             Qt.Key.Key_MediaPlay: "toggle_pause",
@@ -153,13 +162,16 @@ class HotkeyManager(QObject):
             0xBE: "frame_step",        # Period (>)
             0xDB: "zoom_out",          # [
             0xDD: "zoom_in",           # ]
+            0x42: "add_marker",        # B
         }
         
         # Start global listener thread
+        print("DEBUG: Starting GlobalHotkeyThread") # DEBUG
         self.global_thread = GlobalHotkeyThread()
         self.global_thread.action_triggered.connect(self.global_action_triggered.emit)
         self.global_thread.action_state_changed.connect(self.global_action_state_changed.emit)
-        self.global_thread.start()
+        self.global_thread.start() 
+        print("DEBUG: GlobalHotkeyThread started successfully") # DEBUG
 
     def stop(self):
         if hasattr(self, 'global_thread'):

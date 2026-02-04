@@ -276,6 +276,8 @@ class VideoCourseBrowser(QMainWindow):
             self.play_prev_video()
         elif action == "toggle_fullscreen":
             self.toggle_fullscreen()
+        elif action == "add_marker":
+            self.video_player.add_marker()
 
     def toggle_fullscreen(self):
         if self.isFullScreen():
@@ -1237,6 +1239,7 @@ class VideoCourseBrowser(QMainWindow):
 
     def load_courses(self):
         """Load courses from DB and build tree."""
+        print("DEBUG: load_courses start") # DEBUG
         folder_font = QFont()
         folder_font.setBold(True)
 
@@ -1403,6 +1406,7 @@ class VideoCourseBrowser(QMainWindow):
         return is_visible
 
     def showEvent(self, event):
+        print("DEBUG: showEvent start") # DEBUG
         super().showEvent(event)
         self.setFocus()
         if self.taskbar_progress:
@@ -1427,9 +1431,13 @@ def main():
     app.setStyleSheet(DARK_STYLE)
 
     try:
+        print("DEBUG: Application starting...") # DEBUG
         window = VideoCourseBrowser()
+        print("DEBUG: Window created") # DEBUG
         is_maximized = window.restore_window_state()
+        print("DEBUG: Window state restored") # DEBUG
         window.show()
+        print("DEBUG: Window shown") # DEBUG
         if is_maximized:
             # Explicitly synchronize screen association before maximizing
             center = window.geometry().center()

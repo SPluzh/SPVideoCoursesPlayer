@@ -116,6 +116,19 @@ class DatabaseManager:
                 )
             """)
 
+            # Video markers table
+            c.execute("""
+                CREATE TABLE IF NOT EXISTS video_markers (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    video_id INTEGER NOT NULL,
+                    position_seconds REAL NOT NULL,
+                    label TEXT,
+                    color TEXT DEFAULT '#FFD700',
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY(video_id) REFERENCES video_files(id) ON DELETE CASCADE
+                )
+            """)
+
             # Indices
             c.execute("CREATE INDEX IF NOT EXISTS idx_parent_path ON folders(parent_path)")
             c.execute("CREATE INDEX IF NOT EXISTS idx_folder_path ON video_files(folder_path)")
@@ -123,6 +136,7 @@ class DatabaseManager:
             c.execute("CREATE INDEX IF NOT EXISTS idx_audio_video_path ON audio_tracks(video_file_path)")
             c.execute("CREATE INDEX IF NOT EXISTS idx_subtitle_video_id ON subtitle_tracks(video_id)")
             c.execute("CREATE INDEX IF NOT EXISTS idx_subtitle_video_path ON subtitle_tracks(video_file_path)")
+            c.execute("CREATE INDEX IF NOT EXISTS idx_markers_video_id ON video_markers(video_id)")
             
             # Migrations (ensure columns exist)
             c.execute("PRAGMA table_info(video_files)")
@@ -141,6 +155,12 @@ class DatabaseManager:
                 c.execute("ALTER TABLE video_files ADD COLUMN subtitle_track_count INTEGER DEFAULT 0")
             if 'selected_subtitle_id' not in columns:
                 c.execute("ALTER TABLE video_files ADD COLUMN selected_subtitle_id INTEGER DEFAULT NULL")
+
+            # Migration for video_markers
+            c.execute("PRAGMA table_info(video_markers)")
+            columns = [col[1] for col in c.fetchall()]
+            if 'color' not in columns:
+                c.execute("ALTER TABLE video_markers ADD COLUMN color TEXT DEFAULT '#FFD700'")
 
             conn.commit()
 
@@ -401,6 +421,70 @@ class DatabaseManager:
         except Exception as e:
             print(f"Error getting video info: {e}")
         return None
+
+    # ===================== MARKERS =====================
+    def add_marker(self, file_path, position_seconds, label, color="#FFD700"):
+        """Adds a new marker for the video."""
+        try:
+            with self.get_connection() as conn:
+                c = conn.cursor()
+                # Get video_id first
+                c.execute("SELECT id FROM video_files WHERE file_path = ?", (str(file_path),))
+                row = c.fetchone()
+                if not row:
+                    return None
+                
+                video_id = row[0]
+                c.execute("""
+                    INSERT INTO video_markers (video_id, position_seconds, label, color)
+                    VALUES (?, ?, ?, ?)
+                """, (video_id, position_seconds, label, color))
+                conn.commit()
+                return c.lastrowid
+        except Exception as e:
+            print(f"Error adding marker: {e}")
+            return None
+
+    def get_markers(self, file_path):
+        """Retrieves all markers for a video."""
+        try:
+            with self.get_connection() as conn:
+                conn.row_factory = sqlite3.Row
+                c = conn.cursor()
+                c.execute("""
+                    SELECT m.* FROM video_markers m
+                    JOIN video_files v ON m.video_id = v.id
+                    WHERE v.file_path = ?
+                    ORDER BY m.position_seconds ASC
+                """, (str(file_path),))
+                return [dict(row) for row in c.fetchall()]
+        except Exception as e:
+            print(f"Error getting markers: {e}")
+            return []
+
+    def delete_marker(self, marker_id):
+        """Deletes a specific marker."""
+        try:
+            with self.get_connection() as conn:
+                c = conn.cursor()
+                c.execute("DELETE FROM video_markers WHERE id = ?", (marker_id,))
+                conn.commit()
+                return True
+        except Exception as e:
+            print(f"Error deleting marker: {e}")
+            return False
+
+    def update_marker(self, marker_id, label, color):
+        """Updates a marker's label and color."""
+        try:
+            with self.get_connection() as conn:
+                c = conn.cursor()
+                c.execute("UPDATE video_markers SET label = ?, color = ? WHERE id = ?", (label, color, marker_id))
+                conn.commit()
+                return True
+        except Exception as e:
+            print(f"Error updating marker: {e}")
+            return False
 
     def close(self):
         """Placeholder for closing resources if needed (sqlite3 handles this via context managers)."""

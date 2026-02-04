@@ -1,9 +1,9 @@
 
 import sys
 from pathlib import Path
-from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QSlider, QSizePolicy
-from PyQt6.QtCore import Qt, QTimer, pyqtSignal, QPoint
-from PyQt6.QtGui import QIcon, QColor, QPalette
+from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QSlider, QSizePolicy, QStylePainter, QStyleOptionSlider, QStyle, QToolTip, QDialog, QLineEdit, QDialogButtonBox, QFormLayout, QButtonGroup
+from PyQt6.QtCore import Qt, QTimer, pyqtSignal, QPoint, QRect
+from PyQt6.QtGui import QIcon, QColor, QPalette, QPainter, QPen, QBrush
 
 from mpv_handler import setup_mpv_dll, MPVVideoWidget
 from translator import tr
@@ -22,6 +22,53 @@ class ClickableSlider(QSlider):
     def __init__(self, orientation):
         super().__init__(orientation)
         self.setMouseTracking(True)
+        self.markers = []
+        self.duration = 0
+
+    def set_markers(self, markers, duration):
+        """Update markers and duration for drawing."""
+        self.markers = markers
+        self.duration = duration
+        self.update()
+
+    def paintEvent(self, event):
+        """Custom paint to draw marker ticks."""
+        try:
+            # print("DEBUG: ClickableSlider paintEvent start") # DEBUG
+            super().paintEvent(event)
+            
+            if not self.markers or self.duration <= 0:
+                # print("DEBUG: No markers or zero duration") # DEBUG
+                return
+
+            painter = QPainter(self)
+            painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+            
+            w = self.width()
+            h = self.height()
+            
+            # Draw markers
+            for marker in self.markers:
+                pos_sec = marker.get('position_seconds', 0)
+                m_color = marker.get('color', '#FFD700')
+                if pos_sec > self.duration: continue
+                
+                # Ratio 0..1
+                ratio = pos_sec / self.duration
+                x = int(ratio * w)
+                
+                # Draw tick mark with marker color
+                painter.setPen(QPen(QColor(m_color), 2))
+                tick_h = 8
+                y = (h - tick_h) // 2
+                painter.drawLine(x, y, x, y + tick_h)
+            
+            painter.end()
+            # print("DEBUG: ClickableSlider paintEvent end") # DEBUG
+        except Exception as e:
+            print(f"❌ ERROR in ClickableSlider.paintEvent: {e}")
+            import traceback
+            traceback.print_exc()
 
     def mousePressEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
@@ -42,6 +89,77 @@ class ClickableSlider(QSlider):
         self.hover_left.emit()
         super().leaveEvent(event)
 
+class MarkerDialog(QDialog):
+    """Simple dialog to add/edit a marker."""
+    def __init__(self, parent=None, timestamp=0.0, label="", color="#FFD700"):
+        super().__init__(parent)
+        print(f"DEBUG: MarkerDialog init, timestamp={timestamp}") # DEBUG
+        self.setWindowTitle(tr('player.add_marker_title'))
+        self.setFixedWidth(350)
+        self.selected_color = color
+        
+        layout = QVBoxLayout(self)
+        
+        info = QLabel(f"{tr('player.marker_timestamp')}: {self.format_time(timestamp)}")
+        layout.addWidget(info)
+        
+        self.input = QLineEdit()
+        self.input.setText(label)
+        self.input.setPlaceholderText(tr('player.marker_label_placeholder'))
+        layout.addWidget(self.input)
+
+        # Color selection
+        color_layout = QHBoxLayout()
+        color_layout.addWidget(QLabel(f"{tr('player.marker_color') or 'Color'}:"))
+        
+        self.color_group = QButtonGroup(self)
+        colors = ["#FFD700", "#FF4136", "#2ECC40", "#0074D9", "#B10DC9", "#FF851B"]
+        
+        for i, c in enumerate(colors):
+            btn = QPushButton()
+            btn.setFixedSize(24, 24)
+            btn.setCheckable(True)
+            btn.setStyleSheet(f"background-color: {c}; border-radius: 12px; border: 2px solid {'white' if c == color else 'transparent'};")
+            if c == color:
+                btn.setChecked(True)
+            
+            btn.setProperty("color_val", c)
+            btn.clicked.connect(self._on_color_selected)
+            color_layout.addWidget(btn)
+            self.color_group.addButton(btn, i)
+            
+        color_layout.addStretch()
+        layout.addLayout(color_layout)
+        
+        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
+        buttons.accepted.connect(self.accept)
+        buttons.rejected.connect(self.reject)
+        layout.addWidget(buttons)
+        
+        self.input.setFocus()
+
+    def _on_color_selected(self):
+        btn = self.sender()
+        self.selected_color = btn.property("color_val")
+        # Update borders to show selection
+        for b in self.color_group.buttons():
+            c = b.property("color_val")
+            b.setStyleSheet(f"background-color: {c}; border-radius: 12px; border: 2px solid {'white' if b == btn else 'transparent'};")
+
+    def format_time(self, seconds):
+        if seconds is None: seconds = 0
+        m, s = divmod(int(seconds), 60)
+        h, m = divmod(m, 60)
+        if h > 0:
+            return f"{h:02d}:{m:02d}:{s:02d}"
+        return f"{m:02d}:{s:02d}"
+
+    def get_data(self):
+        return self.input.text().strip(), self.selected_color
+
+    def get_label(self):
+        return self.input.text().strip()
+
 
 class VideoPlayerWidget(QWidget):
     """MPV-based player with audio track support."""
@@ -57,6 +175,7 @@ class VideoPlayerWidget(QWidget):
 
     def __init__(self, parent=None):
         super().__init__(parent)
+        print("DEBUG: VideoPlayerWidget init start") # DEBUG
         self.db = None
         self.current_file = None
         self.saved_position = 0
@@ -70,8 +189,14 @@ class VideoPlayerWidget(QWidget):
         self.sub_color = "#FFFFFF"
         self.sub_border_color = "#000000"
         self.sub_scale = 1.0
+        self.sub_scale = 1.0
+        self.markers = [] 
+        
+        print("DEBUG: Calling setup_ui") # DEBUG
         self.setup_ui()
+        print("DEBUG: Calling setup_mpv") # DEBUG
         self.setup_mpv()
+        print("DEBUG: VideoPlayerWidget init done") # DEBUG
 
     def setup_ui(self):
         layout = QVBoxLayout(self)
@@ -203,19 +328,31 @@ class VideoPlayerWidget(QWidget):
         # slider value is in milliseconds (set by duration_changed)
         seconds = value / 1000.0
         
+        # Check for nearby markers
+        marker_text = ""
+        for m in self.markers:
+            m_sec = m['position_seconds']
+            # Tolerance: e.g. 1% of duration or fixed 5 seconds, whichever is smaller
+            tolerance = max(2.0, duration * 0.005)
+            if abs(seconds - m_sec) < tolerance:
+                marker_text = f" [{m['label']}]"
+                break
+
         # Anchor Y to slider top to avoid jitter
         slider_geo = self.progress_slider.mapToGlobal(QPoint(0, 0))
-        # The popup attempts to position itself above global_pos. 
-        # We want the bottom of the popup (arrow tip) to touch the top of the slider.
-        # update_content calculates: y = global_pos.y() - popup_height - 15.
-        # We want y = slider_y - height.
-        # So passes global_pos.y such that global_pos.y() - 15 = slider_y? 
-        # No, let's fix update_content in preview_popup to respect the arrow.
-        
-        # Actually, let's just pass the exact top-left corner we want, or pass the target anchor point.
-        # For now, let's pass the slider top Y as the anchor Y.
         target_pos = QPoint(global_pos.x(), slider_geo.y())
         
+        # Pass marker text to preview popup if supported, otherwise just update content
+        # For this iteration, let's assume update_content only takes seconds. 
+        # We might need to modify preview_popup.py to support custom text label.
+        # But for now, let's just stick to time. 
+        # Better: Uses QToolTip for marker label if hovered
+        
+        if marker_text:
+             QToolTip.showText(global_pos, marker_text.strip(), self.progress_slider)
+        else:
+             QToolTip.hideText()
+
         self.preview_popup.update_content(seconds, target_pos)
         if self.preview_popup.isHidden():
             self.preview_popup.show()
@@ -455,6 +592,9 @@ class VideoPlayerWidget(QWidget):
             # Load tracks info from DB and restore state
             QTimer.singleShot(100, lambda: self.load_subtitle_tracks(file_path))
             QTimer.singleShot(200, lambda: self.restore_subtitle_track(file_path))
+            
+            # Load markers
+            self.load_markers(file_path)
 
             if auto_play:
                 QTimer.singleShot(100, self._start_playback)
@@ -819,6 +959,64 @@ class VideoPlayerWidget(QWidget):
         except Exception as e:
             print(f"Error changing subtitle style: {e}")
 
+    # ===================== MARKERS =====================
+    def load_markers(self, file_path):
+        """Load markers from DB and update slider."""
+        if not self.db: return
+        self.markers = self.db.get_markers(file_path)
+        
+        # Update slider
+        duration = self.player.duration if self.player else 0
+        self.progress_slider.set_markers(self.markers, duration)
+
+    def add_marker(self):
+        """Add marker at current position."""
+        print("DEBUG: add_marker called") # DEBUG
+        if not self.player or not self.current_file:
+            print("DEBUG: No player or file") # DEBUG
+            return
+            
+        # Get current time
+        try:
+            pos = self.player.time_pos or 0
+            print(f"DEBUG: Current pos: {pos}") # DEBUG
+        except Exception as e:
+            print(f"DEBUG: Error getting time_pos: {e}") # DEBUG
+            pos = 0
+            
+        # Pause playback
+        was_playing = not self.player.pause
+        if was_playing:
+            self.player.pause = True
+            
+        try:
+            # Show dialog
+            print("DEBUG: Opening dialog...") # DEBUG
+            dlg = MarkerDialog(self, pos)
+            if dlg.exec():
+                label, color = dlg.get_data()
+                print(f"DEBUG: Dialog accepted, label: '{label}', color: '{color}'") # DEBUG
+                if label:
+                    # Save to DB
+                    if self.db:
+                        print(f"DEBUG: Saving to DB: {self.current_file}, {pos}, {label}, {color}") # DEBUG
+                        self.db.add_marker(self.current_file, pos, label, color)
+                        # Reload to update UI
+                        print("DEBUG: Reloading markers...") # DEBUG
+                        self.load_markers(self.current_file)
+                    else:
+                        print("DEBUG: Error - self.db is None") # DEBUG
+            else:
+                print("DEBUG: Dialog rejected") # DEBUG
+        except Exception as e:
+            import traceback
+            print(f"❌ CRASH in add_marker: {e}")
+            traceback.print_exc()
+        
+        # Resume if needed
+        if was_playing:
+            self.player.pause = False
+
     def set_subtitle_styles(self, color, border_color, scale):
         """Set initial subtitle styles."""
         self.sub_color = color
@@ -966,6 +1164,9 @@ class VideoPlayerWidget(QWidget):
 
     def duration_changed(self, duration_ms):
         self.progress_slider.setRange(0, duration_ms)
+        # Refresh markers now that we have duration
+        if hasattr(self, 'markers') and self.markers:
+            self.progress_slider.set_markers(self.markers, duration_ms / 1000.0)
 
     def restore_position(self):
         if self.saved_position > 0 and not self.position_restore_attempted:
