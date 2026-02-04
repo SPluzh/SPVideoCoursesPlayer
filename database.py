@@ -474,12 +474,15 @@ class DatabaseManager:
             print(f"Error deleting marker: {e}")
             return False
 
-    def update_marker(self, marker_id, label, color):
-        """Updates a marker's label and color."""
+    def update_marker(self, marker_id, label, color, position=None):
+        """Updates a marker's label, color, and optionally position."""
         try:
             with self.get_connection() as conn:
                 c = conn.cursor()
-                c.execute("UPDATE video_markers SET label = ?, color = ? WHERE id = ?", (label, color, marker_id))
+                if position is not None:
+                    c.execute("UPDATE video_markers SET label = ?, color = ?, position_seconds = ? WHERE id = ?", (label, color, position, marker_id))
+                else:
+                    c.execute("UPDATE video_markers SET label = ?, color = ? WHERE id = ?", (label, color, marker_id))
                 conn.commit()
                 return True
         except Exception as e:

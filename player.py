@@ -971,22 +971,23 @@ class VideoPlayerWidget(QWidget):
             default_label = f"{tr('player.default_marker_label') or 'Marker'} {marker_count + 1}"
             
             # Show dialog - Pass empty label to keep field clear
-            print(f"DEBUG: Opening dialog... Default label fallback: {default_label}") # DEBUG
-            dlg = MarkerDialog(self, pos, label="")
+            duration = self.progress_slider.maximum() / 1000.0
+            print(f"DEBUG: Opening dialog... Default label fallback: {default_label}, duration: {duration}") # DEBUG
+            dlg = MarkerDialog(self, pos, label="", max_duration=duration)
             if dlg.exec():
-                label, color = dlg.get_data()
+                label, color, new_pos = dlg.get_data()
                 
                 # Apply default if input is empty
                 if not label:
                     label = default_label
                 
-                print(f"DEBUG: Dialog accepted, label: '{label}', color: '{color}'") # DEBUG
+                print(f"DEBUG: Dialog accepted, label: '{label}', color: '{color}', pos: {new_pos}") # DEBUG
                 
                 if label:
                     # Save to DB
                     if self.db:
-                        print(f"DEBUG: Saving to DB: {self.current_file}, {pos}, {label}, {color}") # DEBUG
-                        self.db.add_marker(self.current_file, pos, label, color)
+                        print(f"DEBUG: Saving to DB: {self.current_file}, {new_pos}, {label}, {color}") # DEBUG
+                        self.db.add_marker(self.current_file, new_pos, label, color)
                         # Reload to update UI
                         print("DEBUG: Reloading markers...") # DEBUG
                         self.load_markers(self.current_file)
@@ -1019,12 +1020,13 @@ class VideoPlayerWidget(QWidget):
             self.player.pause = True
             
         try:
-            dlg = MarkerDialog(self, pos, label, color)
+            duration = self.progress_slider.maximum() / 1000.0
+            dlg = MarkerDialog(self, pos, label=label, color=color, max_duration=duration)
             dlg.setWindowTitle(tr('player.edit_marker_title') or "Edit Marker")
             if dlg.exec():
-                new_label, new_color = dlg.get_data()
-                if new_label:
-                    self.db.update_marker(m_id, new_label, new_color)
+                new_label, new_color, new_pos = dlg.get_data()
+                if new_label or new_pos != pos: # Allow saving even if label is empty but pos changed
+                    self.db.update_marker(m_id, new_label, new_color, position=new_pos)
                     self.load_markers(self.current_file)
         except Exception as e:
             print(f"Error editing marker: {e}")
