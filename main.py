@@ -161,6 +161,7 @@ class VideoCourseBrowser(QMainWindow):
         self.video_player.subtitle_style_changed.connect(self.save_subtitle_settings)
         self.video_player.next_video_requested.connect(self.play_next_video)
         self.video_player.prev_video_requested.connect(self.play_prev_video)
+        self.video_player.markers_changed.connect(self.on_markers_changed)
         self.video_player.toggle_fullscreen_requested.connect(self.toggle_fullscreen)
 
         # Apply initial subtitle settings
@@ -692,13 +693,33 @@ class VideoCourseBrowser(QMainWindow):
             if item.data(0, Qt.ItemDataRole.UserRole) == file_path:
                 data = item.data(0, Qt.ItemDataRole.UserRole + 2)
                 if data:
-                    filename, duration, resolution, file_size, _, thumbnail_path, thumbnails_list, _ = data
+                    filename, duration, resolution, file_size, _, thumbnail_path, thumbnails_list, _, marker_count = data
                     item.setData(0, Qt.ItemDataRole.UserRole + 2,
                                (filename, duration, resolution, file_size,
-                                percent, thumbnail_path, thumbnails_list, position))
+                                percent, thumbnail_path, thumbnails_list, position, marker_count))
                 break
             iterator += 1
 
+        self.course_tree.viewport().update()
+
+    def on_markers_changed(self, file_path):
+        """Update marker count in library when markers are added/removed."""
+        new_count = self.db.get_marker_count(file_path)
+        
+        iterator = QTreeWidgetItemIterator(self.course_tree)
+        while iterator.value():
+            item = iterator.value()
+            if item.data(0, Qt.ItemDataRole.UserRole) == file_path:
+                data = item.data(0, Qt.ItemDataRole.UserRole + 2)
+                if data:
+                    # Unpack existing data (tuple length 9 now)
+                    filename, duration, resolution, file_size, percent, thumb, thumbs, pos, _ = data
+                    # Update count
+                    item.setData(0, Qt.ItemDataRole.UserRole + 2,
+                                (filename, duration, resolution, file_size,
+                                 percent, thumb, thumbs, pos, new_count))
+                break
+            iterator += 1
         self.course_tree.viewport().update()
 
     def on_video_finished(self):
@@ -1359,7 +1380,8 @@ class VideoCourseBrowser(QMainWindow):
                 # Data for delegate
                 video_item.setData(0, Qt.ItemDataRole.UserRole + 2,
                                   (v['file_name'], v['duration'], v['resolution'], v['file_size'],
-                                   v['watched_percent'] or 0, v['thumbnail_path'], thumbnails_list, v['last_position'] or 0))
+                                   v['watched_percent'] or 0, v['thumbnail_path'], thumbnails_list, 
+                                   v['last_position'] or 0, v['marker_count'] or 0))
                 
                 video_item.setIcon(0, self.video_icon)
                 # Disable selection for video rows

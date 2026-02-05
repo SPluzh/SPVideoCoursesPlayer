@@ -328,7 +328,12 @@ class DatabaseManager:
                 folders = [dict(row) for row in c.fetchall()]
                 
                 # Get all videos
-                c.execute("SELECT * FROM video_files ORDER BY folder_path, track_number, file_name")
+                c.execute("""
+                    SELECT v.*, 
+                    (SELECT COUNT(*) FROM video_markers WHERE video_id = v.id) as marker_count
+                    FROM video_files v 
+                    ORDER BY v.folder_path, v.track_number, v.file_name
+                """)
                 videos = [dict(row) for row in c.fetchall()]
                 
                 return folders, videos
@@ -408,6 +413,22 @@ class DatabaseManager:
         except Exception as e:
             print(f"Error getting video progress: {e}")
         return None
+
+    def get_marker_count(self, file_path):
+        """Returns the number of markers for a given video file."""
+        try:
+            with self.get_connection() as conn:
+                c = conn.cursor()
+                # Get video id first
+                c.execute("SELECT id FROM video_files WHERE file_path = ?", (str(file_path),))
+                row = c.fetchone()
+                if row:
+                    video_id = row[0]
+                    c.execute("SELECT COUNT(*) FROM video_markers WHERE video_id = ?", (video_id,))
+                    return c.fetchone()[0]
+        except Exception as e:
+            print(f"Error getting marker count: {e}")
+        return 0
 
     def get_video_info(self, file_path):
         """Retrieves basic info for a video file."""

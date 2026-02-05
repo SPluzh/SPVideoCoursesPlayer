@@ -147,6 +147,7 @@ class VideoPlayerWidget(QWidget):
     subtitle_style_changed = pyqtSignal(str, object)
     next_video_requested = pyqtSignal()
     prev_video_requested = pyqtSignal()
+    markers_changed = pyqtSignal(str) # file_path
     toggle_fullscreen_requested = pyqtSignal()
 
     def __init__(self, parent=None):
@@ -1014,6 +1015,7 @@ class VideoPlayerWidget(QWidget):
                         # Reload to update UI
                         print("DEBUG: Reloading markers...") # DEBUG
                         self.load_markers(self.current_file)
+                        self.markers_changed.emit(self.current_file)
                     else:
                         print("DEBUG: Error - self.db is None") # DEBUG
             else:
@@ -1051,6 +1053,7 @@ class VideoPlayerWidget(QWidget):
                 if new_label or new_pos != pos: # Allow saving even if label is empty but pos changed
                     self.db.update_marker(m_id, new_label, new_color, position=new_pos)
                     self.load_markers(self.current_file)
+                    self.markers_changed.emit(self.current_file)
         except Exception as e:
             print(f"Error editing marker: {e}")
             
@@ -1107,6 +1110,7 @@ class VideoPlayerWidget(QWidget):
             if self.db:
                 self.db.delete_marker(marker_id)
                 self.load_markers(self.current_file)
+            self.markers_changed.emit(self.current_file)
 
     def set_subtitle_styles(self, color, border_color, scale):
         """Set initial subtitle styles."""

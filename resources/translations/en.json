@@ -266,7 +266,8 @@
         "watched": "✔ {watched}/{total}",
         "watched_label": "✔ Watched",
         "progress": "▶ {position} / {total}",
-        "progress_percent": "▶ {percent}%"
+        "progress_percent": "▶ {percent}%",
+        "markers": "🔖 {count}"
     },
     "about": {
         "title": "About",

@@ -136,7 +136,7 @@ class VideoItemDelegate(QStyledItemDelegate):
             painter.restore()
             return
 
-        filename, duration, resolution, file_size, watched_percent, thumbnail_path, thumbnails_list, last_position = data
+        filename, duration, resolution, file_size, watched_percent, thumbnail_path, thumbnails_list, last_position, marker_count = data
 
         display_width = self.config['display_width']
         display_height = self.config['display_height']
@@ -257,6 +257,8 @@ class VideoItemDelegate(QStyledItemDelegate):
             info_parts.append(resolution)
         if file_size:
             info_parts.append(self.config['format_size'](file_size))
+        if marker_count:
+            info_parts.append(tr('video_info.markers', count=marker_count))
 
         if info_parts:
             painter.setFont(self.video_info.font())
