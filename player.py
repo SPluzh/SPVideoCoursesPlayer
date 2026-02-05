@@ -11,6 +11,8 @@ from subtitle_popup import SubtitleButton
 from volume_popup import VolumeButton
 from preview_popup import PreviewPopup
 from marker_dialog import MarkerDialog
+from marker_gallery import MarkerGalleryWidget
+from thumbnail_provider import ThumbnailProvider
 
 ROOT_DIR = Path(__file__).parent
 RESOURCES_DIR = ROOT_DIR / "resources"
@@ -41,7 +43,10 @@ class ClickableSlider(QSlider):
             # print("DEBUG: ClickableSlider paintEvent start") # DEBUG
             super().paintEvent(event)
             
-            if not self.markers or self.duration <= 0:
+            # Ensure duration is a valid number
+            duration = self.duration if self.duration is not None else 0
+            
+            if not self.markers or duration <= 0:
                 # print("DEBUG: No markers or zero duration") # DEBUG
                 return
 
@@ -163,6 +168,10 @@ class VideoPlayerWidget(QWidget):
         self.sub_scale = 1.0
         self.markers = [] 
         
+        # Marker Gallery & Thumbnailing
+        self.thumb_provider = ThumbnailProvider(self)
+        self.thumb_provider.finished.connect(self._on_marker_thumbnail_ready)
+        self.marker_gallery = None # Created in setup_ui
         print("DEBUG: Calling setup_ui") # DEBUG
         self.setup_ui()
         print("DEBUG: Calling setup_mpv") # DEBUG
@@ -188,6 +197,13 @@ class VideoPlayerWidget(QWidget):
         self.video_widget.setMinimumHeight(300)
         self.video_widget.zoom_changed.connect(self.on_zoom_changed)
         container_layout.addWidget(self.video_widget, 1)
+
+        # Marker Gallery Overlay (Horizontal) - Independent window to avoid Airspace issue
+        self.marker_gallery = MarkerGalleryWidget(self)
+        self.marker_gallery.hide()
+        self.marker_gallery.seek_requested.connect(self._on_marker_gallery_seek)
+        self.marker_gallery.edit_requested.connect(self.edit_marker)
+        self.marker_gallery.delete_requested.connect(self.delete_marker)
 
         layout.addWidget(self.video_container, 1)
 
@@ -497,6 +513,8 @@ class VideoPlayerWidget(QWidget):
         """Set FFmpeg path for preview generation."""
         if hasattr(self, 'preview_popup'):
             self.preview_popup.ffmpeg_path = path
+        if hasattr(self, 'thumb_provider'):
+            self.thumb_provider.ffmpeg_path = path
 
     def load_video(self, file_path, saved_position=0, volume=100, auto_play=True):
         """
@@ -935,12 +953,17 @@ class VideoPlayerWidget(QWidget):
     # ===================== MARKERS =====================
     def load_markers(self, file_path):
         """Load markers from DB and update slider."""
-        if not self.db: return
-        self.markers = self.db.get_markers(file_path)
-        
-        # Update slider
-        duration = self.player.duration if self.player else 0
-        self.progress_slider.set_markers(self.markers, duration)
+        if self.db:
+            self.markers = self.db.get_markers(file_path)
+            self.progress_slider.set_markers(self.markers, self.player.duration if self.player else 0)
+            
+            # Update Gallery
+            if self.marker_gallery:
+                self.marker_gallery.set_markers(self.markers)
+                # Request thumbnails
+                if self.markers:
+                    for m in self.markers:
+                        self.thumb_provider.get_thumbnail(file_path, m['position_seconds'], m['id'])
 
     def add_marker(self, timestamp=None):
         """Add marker at specified position or current position."""
@@ -1034,6 +1057,41 @@ class VideoPlayerWidget(QWidget):
         if was_playing:
             self.player.pause = False
 
+    def toggle_marker_gallery(self):
+        """Toggle marker gallery visibility."""
+        print(f"DEBUG: toggle_marker_gallery, visible={self.marker_gallery.isVisible() if self.marker_gallery else 'None'}")
+        if not self.marker_gallery:
+            return
+        
+        if self.marker_gallery.isVisible():
+            self.marker_gallery.hide()
+        else:
+            self._update_gallery_geometry()
+            self.marker_gallery.show()
+            self.marker_gallery.raise_()
+            # Ensure markers are up to date and have thumbnails
+            if self.current_file and self.markers:
+                for m in self.markers:
+                    self.thumb_provider.get_thumbnail(self.current_file, m['position_seconds'], m['id'])
+
+    def _on_marker_thumbnail_ready(self, request_id, pixmap):
+        """Slot called when a marker thumbnail is generated."""
+        print(f"DEBUG: VideoPlayerWidget._on_marker_thumbnail_ready: req_id={request_id}")
+        if self.marker_gallery:
+            # request_id is marker_{id} or ts_{timestamp}
+            if request_id.startswith("marker_"):
+                m_id = int(request_id.replace("marker_", ""))
+                print(f"DEBUG: Updating gallery thumbnail for marker_id={m_id}")
+                self.marker_gallery.update_thumbnail(m_id, pixmap)
+            else:
+                print(f"DEBUG: Unknown request_id format: {request_id}")
+
+    def _on_marker_gallery_seek(self, seconds):
+        """Seek to marker position and hide gallery."""
+        if self.player:
+            self.player.time_pos = seconds
+            # self.marker_gallery.hide() # Optional: hide on seek? User didn't specify.
+            
     def delete_marker(self, marker_id):
         """Delete marker with confirmation."""
         from PyQt6.QtWidgets import QMessageBox
@@ -1354,3 +1412,36 @@ class VideoPlayerWidget(QWidget):
         self.volume_btn.update_texts()
         self.subtitle_btn.update_texts()
         self.play_btn.setToolTip(tr('player.play') if self.player and self.player.pause else tr('player.pause'))
+
+    def moveEvent(self, event):
+        """Keep gallery overlay in sync when window moves."""
+        super().moveEvent(event)
+        if hasattr(self, 'marker_gallery') and self.marker_gallery:
+            self._update_gallery_geometry()
+            QTimer.singleShot(0, self._update_gallery_geometry)
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        if hasattr(self, 'marker_gallery') and self.marker_gallery:
+            self._update_gallery_geometry()
+            QTimer.singleShot(0, self._update_gallery_geometry)
+
+    def _update_gallery_geometry(self):
+        if not self.marker_gallery:
+            return
+        
+        # Get coordinates of the WHOLE player widget
+        global_top_left = self.mapToGlobal(QPoint(0, 0))
+        
+        w = self.width()
+        h = self.marker_gallery.height()
+        total_h = self.height()
+        
+        # Position at the bottom of the player window with 10px margin
+        self.marker_gallery.setGeometry(
+            global_top_left.x(), 
+            global_top_left.y() + total_h - h - 10, # 10px margin from bottom
+            w, 
+            h
+        )
+        self.marker_gallery.raise_()

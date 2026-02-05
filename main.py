@@ -278,6 +278,8 @@ class VideoCourseBrowser(QMainWindow):
             self.toggle_fullscreen()
         elif action == "add_marker":
             self.video_player.add_marker()
+        elif action == "toggle_marker_gallery":
+            self.video_player.toggle_marker_gallery()
 
     def toggle_fullscreen(self):
         if self.isFullScreen():
@@ -602,6 +604,15 @@ class VideoCourseBrowser(QMainWindow):
         self.style().unpolish(self)
         self.style().polish(self)
         self.info_label.setText(tr('status.styles_reloaded'))
+
+    def moveEvent(self, event):
+        """Propagate move event to video player to update overlay positions."""
+        super().moveEvent(event)
+        if hasattr(self, 'video_player') and self.video_player:
+            # Direct call for immediate sync
+            self.video_player._update_gallery_geometry()
+            # Delayed call for robustness (Windows drag sync)
+            QTimer.singleShot(0, self.video_player._update_gallery_geometry)
 
     def close_db_connection(self):
         """Prepare for DB deletion: stop timers and release resources"""

@@ -109,6 +109,8 @@ class HotkeyManager(QObject):
             Qt.Key.Key_BracketLeft: "zoom_out",
             Qt.Key.Key_BracketRight: "zoom_in",
             Qt.Key.Key_B: "add_marker",
+            Qt.Key.Key_G: "toggle_marker_gallery",
+            
             
             # Fallback for Cyrillic layout (Russian)
             0x410: "toggle_fullscreen", # RU A (where F is)
@@ -123,6 +125,8 @@ class HotkeyManager(QObject):
             0x445: "zoom_out",          # RU H (where [ is)
             0x44a: "zoom_in",           # RU TVZ (where ] is)
             0x418: "add_marker",        # RU I (where B is)
+            0x41f: "toggle_marker_gallery", # RU P (where G is)
+            
             
             # Multimedia keys (local behavior)
             Qt.Key.Key_MediaPlay: "toggle_pause",
@@ -163,6 +167,7 @@ class HotkeyManager(QObject):
             0xDB: "zoom_out",          # [
             0xDD: "zoom_in",           # ]
             0x42: "add_marker",        # B
+            0x47: "toggle_marker_gallery", # G
         }
         
         # Start global listener thread
