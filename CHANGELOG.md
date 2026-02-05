@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.0]
+- **Markers**: Introduced a full-featured video marker system:
+    - **Visual Navigation**: Added a floating Marker Gallery (`G`) with screenshots and high-legibility time badges.
+    - **Customization**: Added support for 12 distinct marker colors.
+    - **Management**: Full control with the new Marker Dialog: edit labels, adjust time with precision (+/- buttons), and manual time entry.
+    - **Quick Actions**: Right-click markers in the slider or gallery to Edit or Delete instantly.
+
+
 ## [1.0.9]
 - **UI**: Enhanced the **Settings Dialog** with comprehensive icon support:
     - Added custom icons for **Add**, **Edit**, **Remove**, **Scan**, **Save**, and **Clear Data** buttons.

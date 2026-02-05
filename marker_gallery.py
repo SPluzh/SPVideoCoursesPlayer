@@ -29,7 +29,7 @@ class MarkerItem(QFrame):
         # Thumbnail Label
         self.thumb_label = QLabel()
         self.thumb_label.setFixedSize(170, 96) # 16:9 approx
-        self.thumb_label.setStyleSheet(f"background-color: #000000; border: 2px solid {self.color}; border-radius: 4px;")
+        self.thumb_label.setStyleSheet("background-color: #000000; border: 1px solid rgba(255, 255, 255, 30); border-radius: 4px;")
         self.thumb_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.thumb_label.setText("...")
         layout.addWidget(self.thumb_label)
@@ -65,7 +65,7 @@ class MarkerItem(QFrame):
         self.title_label.setStyleSheet(f"""
             background-color: rgba(30, 30, 30, 200);
             color: #eaeaea;
-            border: 1px solid rgba(255, 255, 255, 20);
+            border: 1px solid {self.color};
             border-radius: 4px;
             padding: 2px 6px;
             font-size: 11px;
@@ -82,7 +82,7 @@ class MarkerItem(QFrame):
             }}
             MarkerItem:hover {{
                 background-color: rgba(60, 60, 60, 220);
-                border: 1px solid {self.color};
+                border: 1px solid rgba(255, 255, 255, 80);
             }}
         """)
 
