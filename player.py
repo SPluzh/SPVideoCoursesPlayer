@@ -100,41 +100,48 @@ class ClickableSlider(QSlider):
 
     def contextMenuEvent(self, event):
         """Show context menu for markers."""
-        if not self.markers or self.duration <= 0:
-            return
+        try:
+            duration = self.duration if self.duration is not None else 0
+            if duration <= 0 or self.width() <= 0:
+                return
 
-        w = self.width()
-        click_x = event.pos().x()
-        click_ratio = click_x / w
-        click_sec = click_ratio * self.duration
-        
-        # Look for nearby marker (tolerance: 10 pixels)
-        tolerance_sec = (10 / w) * self.duration if w > 0 else 2
-        
-        target_marker = None
-        for m in self.markers:
-            if abs(m.get('position_seconds', 0) - click_sec) < tolerance_sec:
-                target_marker = m
-                break
-        
-        menu = QMenu(self)
-        add_action = menu.addAction(tr('player.add_marker_title') or "Add Marker")
-        
-        edit_action = None
-        delete_action = None
-        
-        if target_marker:
-            menu.addSeparator()
-            edit_action = menu.addAction(tr('player.edit_marker') or "Edit Marker")
-            delete_action = menu.addAction(tr('player.delete_marker') or "Delete Marker")
+            w = self.width()
+            click_x = event.pos().x()
+            click_ratio = click_x / w
+            click_sec = click_ratio * duration
             
-        action = menu.exec(event.globalPos())
-        if action == add_action:
-            self.add_marker_requested.emit(click_sec)
-        elif edit_action and action == edit_action:
-            self.marker_edit_requested.emit(target_marker)
-        elif delete_action and action == delete_action:
-            self.marker_delete_requested.emit(target_marker.get('id'))
+            # Look for nearby marker (tolerance: 10 pixels)
+            tolerance_sec = (10 / w) * self.duration
+            
+            target_marker = None
+            markers = self.markers if self.markers is not None else []
+            for m in markers:
+                if abs(m.get('position_seconds', 0) - click_sec) < tolerance_sec:
+                    target_marker = m
+                    break
+            
+            menu = QMenu(self)
+            add_action = menu.addAction(tr('player.add_marker_title') or "Add Marker")
+            
+            edit_action = None
+            delete_action = None
+            
+            if target_marker:
+                menu.addSeparator()
+                edit_action = menu.addAction(tr('player.edit_marker') or "Edit Marker")
+                delete_action = menu.addAction(tr('player.delete_marker') or "Delete Marker")
+                
+            action = menu.exec(event.globalPos())
+            if action == add_action:
+                self.add_marker_requested.emit(click_sec)
+            elif edit_action and action == edit_action:
+                self.marker_edit_requested.emit(target_marker)
+            elif delete_action and action == delete_action:
+                self.marker_delete_requested.emit(target_marker.get('id'))
+        except Exception as e:
+            print(f"❌ Error in ClickableSlider.contextMenuEvent: {e}")
+            import traceback
+            traceback.print_exc()
 
 
 class VideoPlayerWidget(QWidget):
@@ -1259,9 +1266,8 @@ class VideoPlayerWidget(QWidget):
 
     def duration_changed(self, duration_ms):
         self.progress_slider.setRange(0, duration_ms)
-        # Refresh markers now that we have duration
-        if hasattr(self, 'markers') and self.markers:
-            self.progress_slider.set_markers(self.markers, duration_ms / 1000.0)
+        # Refresh markers and ensure duration is synced to slider for context menu
+        self.progress_slider.set_markers(self.markers if hasattr(self, 'markers') else [], duration_ms / 1000.0)
 
     def restore_position(self):
         if self.saved_position > 0 and not self.position_restore_attempted:

@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.1]
+- **Library**: Added marker counts to the video course list:
+    - Displays the number of markers next to video resolution and file size with a 🔖 icon.
+
 ## [1.1.0]
 - **Markers**: Introduced a full-featured video marker system:
     - **Visual Navigation**: Added a floating Marker Gallery (`G`) with screenshots and high-legibility time badges.
