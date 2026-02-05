@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.2]
+- **Favorites**: Added "Add to Favorites" functionality:
+    - Toggle favorite status via context menu.
+    - Added Heart icon (♥) to the top-left of video thumbnails.
+- **Tags**: Implemented a comprehensive tagging system:
+    - New **Tags Dialog** to create, assign, and delete custom tags with colors.
+    - Tags are displayed as colored badges on video items.
+    - Updated Search to support filtering by tag names.
+
 ## [1.1.1]
 - **Library**: Added marker counts to the video course list:
     - Displays the number of markers next to video resolution and file size with a 🔖 icon.
