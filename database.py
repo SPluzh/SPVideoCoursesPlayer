@@ -129,6 +129,26 @@ class DatabaseManager:
                 )
             """)
 
+            # Tags table
+            c.execute("""
+                CREATE TABLE IF NOT EXISTS tags (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name TEXT UNIQUE NOT NULL,
+                    color TEXT DEFAULT '#3498db'
+                )
+            """)
+
+            # Video Tags Junction table
+            c.execute("""
+                CREATE TABLE IF NOT EXISTS video_tags (
+                    video_id INTEGER NOT NULL,
+                    tag_id INTEGER NOT NULL,
+                    FOREIGN KEY(video_id) REFERENCES video_files(id) ON DELETE CASCADE,
+                    FOREIGN KEY(tag_id) REFERENCES tags(id) ON DELETE CASCADE,
+                    PRIMARY KEY(video_id, tag_id)
+                )
+            """)
+
             # Indices
             c.execute("CREATE INDEX IF NOT EXISTS idx_parent_path ON folders(parent_path)")
             c.execute("CREATE INDEX IF NOT EXISTS idx_folder_path ON video_files(folder_path)")
@@ -153,8 +173,12 @@ class DatabaseManager:
                 c.execute("ALTER TABLE video_files ADD COLUMN selected_audio_id INTEGER DEFAULT NULL")
             if 'subtitle_track_count' not in columns:
                 c.execute("ALTER TABLE video_files ADD COLUMN subtitle_track_count INTEGER DEFAULT 0")
+            if 'is_favorite' not in columns:
+                c.execute("ALTER TABLE video_files ADD COLUMN is_favorite INTEGER DEFAULT 0")
             if 'selected_subtitle_id' not in columns:
                 c.execute("ALTER TABLE video_files ADD COLUMN selected_subtitle_id INTEGER DEFAULT NULL")
+            if 'is_favorite' not in columns:
+                c.execute("ALTER TABLE video_files ADD COLUMN is_favorite INTEGER DEFAULT 0")
 
             # Migration for video_markers
             c.execute("PRAGMA table_info(video_markers)")
@@ -335,6 +359,27 @@ class DatabaseManager:
                     ORDER BY v.folder_path, v.track_number, v.file_name
                 """)
                 videos = [dict(row) for row in c.fetchall()]
+
+                # Get all tags for all videos to minimize queries
+                c.execute("""
+                    SELECT vt.video_id, t.id, t.name, t.color 
+                    FROM video_tags vt 
+                    JOIN tags t ON vt.tag_id = t.id
+                """)
+                tags_rows = c.fetchall()
+                
+                # Map tags by video_id
+                tags_map = {}
+                for row in tags_rows:
+                    vid = row['video_id']
+                    tag = {'id': row['id'], 'name': row['name'], 'color': row['color']}
+                    if vid not in tags_map:
+                        tags_map[vid] = []
+                    tags_map[vid].append(tag)
+                
+                # Attach tags to videos
+                for video in videos:
+                    video['tags'] = tags_map.get(video['id'], [])
                 
                 return folders, videos
         except Exception as e:
@@ -521,3 +566,109 @@ class DatabaseManager:
                 conn.execute("VACUUM")
         except:
             pass
+
+    # ===================== FAVORITES & TAGS =====================
+    def toggle_favorite(self, file_path):
+        """Toggles the is_favorite status of a video."""
+        try:
+            with self.get_connection() as conn:
+                c = conn.cursor()
+                # Get current status
+                c.execute("SELECT is_favorite FROM video_files WHERE file_path = ?", (str(file_path),))
+                row = c.fetchone()
+                if row:
+                    new_status = 0 if row[0] else 1
+                    c.execute("UPDATE video_files SET is_favorite = ? WHERE file_path = ?", (new_status, str(file_path)))
+                    conn.commit()
+                    return new_status == 1
+        except Exception as e:
+            print(f"Error toggling favorite: {e}")
+        return False
+
+    def get_tags(self):
+        """Retrieves all available tags."""
+        try:
+            with self.get_connection() as conn:
+                conn.row_factory = sqlite3.Row
+                c = conn.cursor()
+                c.execute("SELECT * FROM tags ORDER BY name")
+                return [dict(row) for row in c.fetchall()]
+        except Exception as e:
+            print(f"Error getting tags: {e}")
+            return []
+
+    def create_tag(self, name, color="#3498db"):
+        """Creates a new tag."""
+        try:
+            with self.get_connection() as conn:
+                c = conn.cursor()
+                c.execute("INSERT INTO tags (name, color) VALUES (?, ?)", (name, color))
+                conn.commit()
+                return c.lastrowid
+        except sqlite3.IntegrityError:
+            return None # Tag likely exists
+        except Exception as e:
+            print(f"Error creating tag: {e}")
+            return None
+
+    def delete_tag(self, tag_id):
+        """Deletes a tag completely."""
+        try:
+            with self.get_connection() as conn:
+                c = conn.cursor()
+                c.execute("DELETE FROM tags WHERE id = ?", (tag_id,))
+                conn.commit()
+                return True
+        except Exception as e:
+            print(f"Error deleting tag: {e}")
+            return False
+
+    def add_tag_to_video(self, file_path, tag_id):
+        """Associates a tag with a video."""
+        try:
+            with self.get_connection() as conn:
+                c = conn.cursor()
+                c.execute("SELECT id FROM video_files WHERE file_path = ?", (str(file_path),))
+                row = c.fetchone()
+                if row:
+                    video_id = row[0]
+                    c.execute("INSERT OR IGNORE INTO video_tags (video_id, tag_id) VALUES (?, ?)", (video_id, tag_id))
+                    conn.commit()
+                    return True
+        except Exception as e:
+            print(f"Error adding tag to video: {e}")
+            return False
+
+    def remove_tag_from_video(self, file_path, tag_id):
+        """Removes a tag from a video."""
+        try:
+            with self.get_connection() as conn:
+                c = conn.cursor()
+                c.execute("SELECT id FROM video_files WHERE file_path = ?", (str(file_path),))
+                row = c.fetchone()
+                if row:
+                    video_id = row[0]
+                    c.execute("DELETE FROM video_tags WHERE video_id = ? AND tag_id = ?", (video_id, tag_id))
+                    conn.commit()
+                    return True
+        except Exception as e:
+            print(f"Error removing tag from video: {e}")
+            return False
+
+    def get_video_tags(self, file_path):
+        """Gets all tags for a specific video."""
+        try:
+            with self.get_connection() as conn:
+                conn.row_factory = sqlite3.Row
+                c = conn.cursor()
+                c.execute("""
+                    SELECT t.* FROM tags t
+                    JOIN video_tags vt ON t.id = vt.tag_id
+                    JOIN video_files v ON vt.video_id = v.id
+                    WHERE v.file_path = ?
+                    ORDER BY t.name
+                """, (str(file_path),))
+                return [dict(row) for row in c.fetchall()]
+        except Exception as e:
+            print(f"Error getting video tags: {e}")
+            return []

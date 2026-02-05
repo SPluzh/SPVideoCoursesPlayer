@@ -54,6 +54,7 @@ from placeholders import draw_video_placeholder, draw_library_placeholder
 from player import VideoPlayerWidget
 from library import HoverTreeWidget, VideoItemDelegate
 from hotkeys import HotkeyManager
+from tags_dialog import TagsDialog
 
 
 
@@ -693,10 +694,17 @@ class VideoCourseBrowser(QMainWindow):
             if item.data(0, Qt.ItemDataRole.UserRole) == file_path:
                 data = item.data(0, Qt.ItemDataRole.UserRole + 2)
                 if data:
-                    filename, duration, resolution, file_size, _, thumbnail_path, thumbnails_list, _, marker_count = data
+                    # Handle new data fields safely
+                    if len(data) >= 11:
+                        filename, duration, resolution, file_size, _, thumbnail_path, thumbnails_list, _, marker_count, is_favorite, tags = data[:11]
+                    else:
+                        filename, duration, resolution, file_size, _, thumbnail_path, thumbnails_list, _, marker_count = data
+                        is_favorite = 0
+                        tags = []
+                        
                     item.setData(0, Qt.ItemDataRole.UserRole + 2,
                                (filename, duration, resolution, file_size,
-                                percent, thumbnail_path, thumbnails_list, position, marker_count))
+                                percent, thumbnail_path, thumbnails_list, position, marker_count, is_favorite, tags))
                 break
             iterator += 1
 
@@ -712,12 +720,18 @@ class VideoCourseBrowser(QMainWindow):
             if item.data(0, Qt.ItemDataRole.UserRole) == file_path:
                 data = item.data(0, Qt.ItemDataRole.UserRole + 2)
                 if data:
-                    # Unpack existing data (tuple length 9 now)
-                    filename, duration, resolution, file_size, percent, thumb, thumbs, pos, _ = data
+                    # Handle new data fields safely
+                    if len(data) >= 11:
+                        filename, duration, resolution, file_size, percent, thumb, thumbs, pos, _, is_favorite, tags = data[:11]
+                    else:
+                        filename, duration, resolution, file_size, percent, thumb, thumbs, pos, _ = data
+                        is_favorite = 0
+                        tags = []
+                        
                     # Update count
                     item.setData(0, Qt.ItemDataRole.UserRole + 2,
                                 (filename, duration, resolution, file_size,
-                                 percent, thumb, thumbs, pos, new_count))
+                                 percent, thumb, thumbs, pos, new_count, is_favorite, tags))
                 break
             iterator += 1
         self.course_tree.viewport().update()
@@ -850,6 +864,22 @@ class VideoCourseBrowser(QMainWindow):
 
             reset_action = menu.addAction(self.icons.get('context_mark_unread', QIcon()), tr('context_menu.reset_progress'))
             reset_action.triggered.connect(lambda: self.reset_video_progress(item))
+            
+            menu.addSeparator()
+
+            # Favorites & Tags
+            is_fav = False
+            data = item.data(0, Qt.ItemDataRole.UserRole + 2)
+            if data and len(data) >= 10:
+                is_fav = bool(data[9]) # is_favorite at index 9
+
+            fav_text = tr('context_menu.remove_favorite') if is_fav else tr('context_menu.add_favorite')
+            # Using 'star' or similar icon if available, for now reusing existing or none
+            fav_action = menu.addAction(fav_text)
+            fav_action.triggered.connect(lambda: self.toggle_favorite(item))
+
+            tag_action = menu.addAction(tr('context_menu.edit_tags') or "Edit Tags...")
+            tag_action.triggered.connect(lambda: self.edit_tags(item))
 
             menu.addSeparator()
             open_dir_action = menu.addAction(self.icons.get('context_open_folder', QIcon()), tr('context_menu.open_directory'))
@@ -942,6 +972,39 @@ class VideoCourseBrowser(QMainWindow):
 
         except Exception as e:
             print(f"Error setting audio track: {e}")
+
+    def toggle_favorite(self, item):
+        """Toggle favorite status for item."""
+        file_path = item.data(0, Qt.ItemDataRole.UserRole)
+        if self.db.toggle_favorite(file_path):
+            # Refresh this item's data
+            # We can reload courses or just update this item
+            # Updating item is faster
+            data = item.data(0, Qt.ItemDataRole.UserRole + 2)
+            if data and len(data) >= 11:
+                lst = list(data)
+                lst[9] = 1 if not lst[9] else 0 # Toggle
+                item.setData(0, Qt.ItemDataRole.UserRole + 2, tuple(lst))
+            else:
+                self.load_courses() # Fallback
+            self.course_tree.viewport().update()
+
+    def edit_tags(self, item):
+        """Open tags dialog."""
+        file_path = item.data(0, Qt.ItemDataRole.UserRole)
+        dialog = TagsDialog(self, self.db, file_path)
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            # We need to refresh the tags on the item
+            new_tags = self.db.get_video_tags(file_path)
+            data = item.data(0, Qt.ItemDataRole.UserRole + 2)
+            if data and len(data) >= 11:
+                lst = list(data)
+                lst[10] = new_tags
+                item.setData(0, Qt.ItemDataRole.UserRole + 2, tuple(lst))
+                self.course_tree.viewport().update()
+            else:
+                self.load_courses()
+
 
     def item_double_clicked(self, item):
         item_type = item.data(0, Qt.ItemDataRole.UserRole + 1)
@@ -1378,10 +1441,15 @@ class VideoCourseBrowser(QMainWindow):
                         pass
 
                 # Data for delegate
+                # Tuple structure:
+                # 0:filename, 1:duration, 2:resolution, 3:file_size,
+                # 4:watched_percent, 5:thumbnail_path, 6:thumbnails_list, 
+                # 7:last_position, 8:marker_count, 9:is_favorite, 10:tags
                 video_item.setData(0, Qt.ItemDataRole.UserRole + 2,
                                   (v['file_name'], v['duration'], v['resolution'], v['file_size'],
                                    v['watched_percent'] or 0, v['thumbnail_path'], thumbnails_list, 
-                                   v['last_position'] or 0, v['marker_count'] or 0))
+                                   v['last_position'] or 0, v['marker_count'] or 0,
+                                   v.get('is_favorite', 0), v.get('tags', [])))
                 
                 video_item.setIcon(0, self.video_icon)
                 # Disable selection for video rows
@@ -1425,7 +1493,20 @@ class VideoCourseBrowser(QMainWindow):
     def _apply_filter(self, item, query, parent_matches=False):
         """Recursively apply filter to item and children."""
         item_text = item.text(0).lower()
-        item_matches = query in item_text
+        
+        # Extended search: check tags
+        tag_match = False
+        item_type = item.data(0, Qt.ItemDataRole.UserRole + 1)
+        if item_type == 'video':
+            data = item.data(0, Qt.ItemDataRole.UserRole + 2)
+            if data and len(data) >= 11:
+                tags = data[10]
+                for tag in tags:
+                    if query in tag['name'].lower():
+                        tag_match = True
+                        break
+
+        item_matches = (query in item_text) or tag_match
         
         # If parent matches, all children are shown
         actual_matches = item_matches or parent_matches

@@ -119,7 +119,10 @@
         "no_videos_title": "Library is empty"
     },
     "dialog": {
-        "select_directory": "Select Courses Directory"
+        "select_directory": "Select Courses Directory",
+        "confirm": "Confirmation",
+        "save": "Save",
+        "cancel": "Cancel"
     },
     "scan_dialog": {
         "title": "Scanning...",
@@ -286,7 +289,18 @@
         "open_directory": "Open Directory",
         "play_all": "Play All",
         "mark_all_watched": "Mark All as Watched",
-        "reset_all_progress": "Reset All Progress"
+        "reset_all_progress": "Reset All Progress",
+        "add_favorite": "Add to Favorites",
+        "remove_favorite": "Remove from Favorites",
+        "edit_tags": "Edit Tags..."
+    },
+    "tags": {
+        "title": "Manage Tags",
+        "new_tag_name": "New Tag Name",
+        "add_btn": "Add",
+        "select_color": "Select Color",
+        "delete": "Delete Tag",
+        "confirm_delete": "Are you sure you want to delete this tag?"
     },
     "error": {
         "title": "Error",
