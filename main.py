@@ -807,7 +807,7 @@ class VideoCourseBrowser(QMainWindow):
             "menu_scan", "menu_settings", "menu_reload", "menu_about",
             "context_open_folder", "context_mark_read", "context_mark_unread",
             "context_play", "app_icon", "screenshot", "next_frame", "prev_frame",
-            "volume_hight", "add"
+            "volume_hight", "add", "context_favorite_on", "context_favorite_off", "context_tags"
         ]
         for name in icon_names:
             icon_path = RESOURCES_DIR / "icons" / f"{name}.png"
@@ -874,11 +874,38 @@ class VideoCourseBrowser(QMainWindow):
                 is_fav = bool(data[9]) # is_favorite at index 9
 
             fav_text = tr('context_menu.remove_favorite') if is_fav else tr('context_menu.add_favorite')
-            # Using 'star' or similar icon if available, for now reusing existing or none
-            fav_action = menu.addAction(fav_text)
+            fav_icon = self.icons.get('context_favorite_off') if is_fav else self.icons.get('context_favorite_on')
+            
+            fav_action = menu.addAction(fav_icon, fav_text)
             fav_action.triggered.connect(lambda: self.toggle_favorite(item))
 
-            tag_action = menu.addAction(tr('context_menu.edit_tags') or "Edit Tags...")
+            tags_menu = menu.addMenu(self.icons.get('context_tags', QIcon()), tr('context_menu.tags') or "Tags")
+            
+            # Fetch all available tags
+            all_tags = self.db.get_tags()
+            
+            # Get current video tags
+            current_tag_ids = set()
+            if data and len(data) >= 11:
+                current_tags = data[10]
+                current_tag_ids = {t['id'] for t in current_tags}
+            
+            for tag in all_tags:
+                tag_action = tags_menu.addAction(tag['name'])
+                tag_action.setCheckable(True)
+                tag_action.setChecked(tag['id'] in current_tag_ids)
+                
+                # Add color icon
+                color_hex = tag['color'] if tag['color'] else '#3498db'
+                pixmap = QPixmap(12, 12)
+                pixmap.fill(QColor(color_hex))
+                tag_action.setIcon(QIcon(pixmap))
+                
+                tag_action.triggered.connect(lambda checked, t=tag: self.toggle_video_tag_from_menu(item, t, checked))
+                
+            tags_menu.addSeparator()
+
+            tag_action = tags_menu.addAction(tr('context_menu.edit_tags') or "Edit Tags...")
             tag_action.triggered.connect(lambda: self.edit_tags(item))
 
             menu.addSeparator()
@@ -1004,6 +1031,37 @@ class VideoCourseBrowser(QMainWindow):
                 self.course_tree.viewport().update()
             else:
                 self.load_courses()
+
+    def toggle_video_tag_from_menu(self, item, tag, checked):
+        """Toggle a tag on a video from the context menu."""
+        file_path = item.data(0, Qt.ItemDataRole.UserRole)
+        
+        if checked:
+            success = self.db.add_tag_to_video(file_path, tag['id'])
+        else:
+            success = self.db.remove_tag_from_video(file_path, tag['id'])
+            
+        if success:
+            # Update item data
+            data = item.data(0, Qt.ItemDataRole.UserRole + 2)
+            if data and len(data) >= 11:
+                lst = list(data)
+                current_tags = list(lst[10]) # Copy the list of tags
+                
+                if checked:
+                    # Add if not exists (shouldn't exist if checked was false before)
+                    if not any(t['id'] == tag['id'] for t in current_tags):
+                        current_tags.append(tag)
+                else:
+                    # Remove
+                    current_tags = [t for t in current_tags if t['id'] != tag['id']]
+                
+                # Update list in tuple
+                lst[10] = current_tags
+                item.setData(0, Qt.ItemDataRole.UserRole + 2, tuple(lst))
+                self.course_tree.viewport().update()
+            else:
+                self.load_courses() # Fallback
 
 
     def item_double_clicked(self, item):

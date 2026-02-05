@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.3]
+- **Tags**: Improved tag management in the context menu:
+    - Added "Tags" submenu to quickly add or remove tags from videos.
+    - Context menu items now display the tag's color.
+- **Favorites**: Enhanced favorite management:
+    - Added valid icons for "Add to Favorites" and "Remove from Favorites".
+
 ## [1.1.2]
 - **Favorites**: Added "Add to Favorites" functionality:
     - Toggle favorite status via context menu.

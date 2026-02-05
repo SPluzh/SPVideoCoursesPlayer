@@ -292,7 +292,8 @@
         "reset_all_progress": "Reset All Progress",
         "add_favorite": "Add to Favorites",
         "remove_favorite": "Remove from Favorites",
-        "edit_tags": "Edit Tags..."
+        "edit_tags": "Edit Tags...",
+        "tags": "Tags"
     },
     "tags": {
         "title": "Manage Tags",

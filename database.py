@@ -580,7 +580,7 @@ class DatabaseManager:
                     new_status = 0 if row[0] else 1
                     c.execute("UPDATE video_files SET is_favorite = ? WHERE file_path = ?", (new_status, str(file_path)))
                     conn.commit()
-                    return new_status == 1
+                    return True
         except Exception as e:
             print(f"Error toggling favorite: {e}")
         return False
