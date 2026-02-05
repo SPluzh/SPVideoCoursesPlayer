@@ -40,7 +40,7 @@ def check_key_in_translations(key, translations):
     return True
 
 def main():
-    # Assuming the script is in SPVideoCoursesPlayer/snippets/
+    # Assuming the script is in SPVideoCoursesPlayer/tests/
     script_path = Path(__file__).resolve()
     project_root = script_path.parent.parent
     translations_dir = project_root / 'resources' / 'translations'

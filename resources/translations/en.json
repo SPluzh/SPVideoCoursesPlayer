@@ -101,7 +101,8 @@
         "edit_marker_title": "Edit Marker",
         "delete_marker_title": "Delete Marker",
         "delete_marker_confirm": "Are you sure you want to delete this marker?",
-        "default_marker_label": "Marker"
+        "default_marker_label": "Marker",
+        "no_markers": "No markers found"
     },
     "status": {
         "ready": "Ready",

@@ -101,7 +101,8 @@
         "edit_marker_title": "Редактирование метки",
         "delete_marker_title": "Удаление метки",
         "delete_marker_confirm": "Вы уверены, что хотите удалить эту метку?",
-        "default_marker_label": "Метка"
+        "default_marker_label": "Метка",
+        "no_markers": "Маркеры не найдены"
     },
     "status": {
         "ready": "Готов",

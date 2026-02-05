@@ -173,9 +173,22 @@ class MarkerGalleryWidget(QFrame):
             
         if not sorted_markers:
             lbl = QLabel(tr('player.no_markers') or "No markers found")
-            lbl.setStyleSheet("color: #888; font-style: italic;")
+            lbl.setStyleSheet("""
+                background-color: rgba(0, 0, 0, 100);
+                color: #aaaaaa;
+                border-radius: 6px;
+                padding: 10px 20px;
+                font-size: 13px;
+                border: 1px solid rgba(255, 255, 255, 20);
+            """)
             lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            self.content_layout.insertWidget(0, lbl)
+            # Center the label in the layout
+            container = QWidget()
+            vbox = QVBoxLayout(container)
+            vbox.addStretch()
+            vbox.addWidget(lbl, 0, Qt.AlignmentFlag.AlignCenter)
+            vbox.addStretch()
+            self.content_layout.insertWidget(0, container)
 
     def update_thumbnail(self, marker_id, pixmap):
         """Update thumbnail for a specific marker."""
