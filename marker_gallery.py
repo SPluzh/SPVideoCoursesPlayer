@@ -118,7 +118,7 @@ class MarkerGalleryWidget(QFrame):
         self.setWindowFlags(Qt.WindowType.ToolTip | Qt.WindowType.FramelessWindowHint | Qt.WindowType.WindowDoesNotAcceptFocus)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         self.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-        self.setFixedHeight(180)
+        self.setFixedHeight(200)
         self.setStyleSheet("""
             MarkerGalleryWidget {
                 background-color: rgba(10, 10, 10, 150);
@@ -128,7 +128,7 @@ class MarkerGalleryWidget(QFrame):
         """)
         
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(10, 5, 10, 5)
+        layout.setContentsMargins(10, 5, 10, 25)
         
         # Scroll Area
         self.scroll = QScrollArea()

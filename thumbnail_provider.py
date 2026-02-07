@@ -11,7 +11,7 @@ class ThumbnailProvider(QObject):
     def __init__(self, parent=None, ffmpeg_path=None):
         super().__init__(parent)
         self.ffmpeg_path = ffmpeg_path
-        self.cache_dir = Path("resources/cache/marker_thumbs")
+        self.cache_dir = Path(__file__).parent / "data" / "marker_thumbs"
         self.cache_dir.mkdir(parents=True, exist_ok=True)
         self.process = QProcess()
         self.process.finished.connect(self._on_finished)
