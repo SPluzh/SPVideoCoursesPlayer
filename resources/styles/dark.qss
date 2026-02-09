@@ -705,3 +705,96 @@ QGroupBox::title {
     background-color: #444444; /* Should match the dialog background */
     color: #eaeaea;
 }
+
+/* ============================================================
+   FOLDER STATS DIALOG
+   ============================================================ */
+
+QDialog#FolderStatsDialog {
+    background-color: #444444;
+}
+
+#FolderStatsDialog QLabel {
+    font-family: 'Segoe UI', Arial, sans-serif;
+}
+
+/* Cards/Containers */
+#FolderStatsDialog QFrame {
+    background-color: #373737;
+    border-radius: 5px;
+}
+
+/* Specific Labels */
+#FolderStatsDialog QLabel#StatsTitle {
+    font-size: 18px; 
+    font-weight: bold; 
+    color: #ffffff;
+}
+
+#FolderStatsDialog QLabel#StatsSubtitle {
+    font-size: 13px; 
+    color: #a0a0a0;
+}
+
+#FolderStatsDialog QLabel#StatsLabel {
+    font-size: 13px; 
+    color: #a0a0a0;
+}
+
+#FolderStatsDialog QLabel#StatsValue {
+    font-size: 13px; 
+    font-weight: bold; 
+    color: #eaeaea;
+}
+
+/* Legend */
+#FolderStatsDialog QLabel#LegendLabel {
+    color: #a0a0a0; 
+    font-size: 11px;
+}
+
+/* Progress Bar */
+#FolderStatsDialog QProgressBar#FolderStatsProgressBar {
+    border: none;
+    background-color: #444444;
+    border-radius: 5px;
+    text-align: center;
+}
+
+#FolderStatsDialog QProgressBar#FolderStatsProgressBar::chunk {
+    background-color: #018574;
+    border-radius: 5px;
+}
+
+/* Header Labels */
+#FolderStatsDialog QLabel#ProgressLabel {
+    font-weight: bold;
+    font-size: 14px;
+    color: #eaeaea;
+}
+
+/* Vertical Separator Line */
+#FolderStatsDialog QFrame#StatsSeparator {
+    background-color: #555555;
+}
+
+/* Legend Dot */
+#FolderStatsDialog QLabel#LegendDot {
+    font-size: 16px;
+}
+
+/* Status Properties for Coloring */
+QLabel[status="watched"] { color: #2ecc71; }
+QLabel[status="in_progress"] { color: #f1c40f; }
+QLabel[status="unwatched"] { color: #ff6b6b; }
+QLabel[status="default"] { color: #eaeaea; }
+
+/* Donut Chart Colors */
+DonutChart {
+    qproperty-watchedColor: #2ecc71;
+    qproperty-inProgressColor: #f1c40f;
+    qproperty-unwatchedColor: #ff6b6b;
+    qproperty-holeColor: #373737;     /* Matches card background */
+    qproperty-centerTextColor: #ffffff;
+}
+

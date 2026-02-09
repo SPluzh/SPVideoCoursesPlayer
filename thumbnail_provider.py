@@ -42,6 +42,14 @@ class ThumbnailProvider(QObject):
         self._generate(video_path, timestamp, cache_path, file_id)
         return None
 
+    def stop(self):
+        """Stop current generation and clear queue."""
+        self.queue.clear()
+        if self.process.state() != QProcess.ProcessState.NotRunning:
+            self.process.kill()
+            self.process.waitForFinished(100)
+        self.current_request = None
+
     def _generate(self, video_path, timestamp, cache_path, request_id):
         if self.process.state() != QProcess.ProcessState.NotRunning:
             print(f"DEBUG: ThumbnailProvider busy, queueing {request_id}")

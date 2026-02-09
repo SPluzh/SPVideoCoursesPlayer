@@ -488,6 +488,71 @@ class DatabaseManager:
             print(f"Error getting video info: {e}")
         return None
 
+    def get_folder_statistics(self, folder_path):
+        """
+        Calculates statistics for a folder (recursive).
+        Returns a dict with:
+        - total_videos, watched_videos, in_progress_videos, unwatched_videos
+        - total_duration, watched_duration, remaining_duration
+        - progress_percent
+        """
+        try:
+            with self.get_connection() as conn:
+                c = conn.cursor()
+                
+                # Use LIKE query to match folder and all subfolders
+                # Ensure folder_path ends with separator or match exact
+                # We need to escape special characters for LIKE
+                escaped_path = str(folder_path).replace('%', '\\%').replace('_', '\\_')
+                
+                # Windows paths use backslashes, check if we need to handle that specifically for SQLite
+                # The paths in DB seem to be stored as is. 
+                # Let's assume standard path separator behavior.
+                
+                c.execute("""
+                    SELECT 
+                        COUNT(*) as total_videos,
+                        SUM(CASE WHEN watched_percent >= 90 THEN 1 ELSE 0 END) as watched,
+                        SUM(CASE WHEN watched_percent > 0 AND watched_percent < 90 THEN 1 ELSE 0 END) as in_progress,
+                        SUM(CASE WHEN watched_percent = 0 THEN 1 ELSE 0 END) as unwatched,
+                        SUM(duration) as total_duration,
+                        SUM(CASE 
+                            WHEN watched_percent >= 90 THEN duration 
+                            ELSE last_position 
+                        END) as watched_duration
+                    FROM video_files 
+                    WHERE folder_path = ? OR folder_path LIKE ? ESCAPE '\\'
+                """, (str(folder_path), f"{escaped_path}\\%"))
+                
+                row = c.fetchone()
+                if not row:
+                    return None
+                    
+                total_videos = row[0] or 0
+                watched = row[1] or 0
+                in_progress = row[2] or 0
+                unwatched = row[3] or 0
+                total_duration = row[4] or 0
+                watched_duration = row[5] or 0
+                
+                remaining_duration = max(0, total_duration - watched_duration)
+                progress_percent = (watched_duration / total_duration * 100) if total_duration > 0 else 0
+                
+                return {
+                    'total_videos': total_videos,
+                    'watched_videos': watched,
+                    'in_progress_videos': in_progress,
+                    'unwatched_videos': unwatched,
+                    'total_duration': total_duration,
+                    'watched_duration': watched_duration,
+                    'remaining_duration': remaining_duration,
+                    'progress_percent': int(progress_percent)
+                }
+                
+        except Exception as e:
+            print(f"Error calculating folder stats: {e}")
+            return None
+
     # ===================== MARKERS =====================
     def add_marker(self, file_path, position_seconds, label, color="#FFD700"):
         """Adds a new marker for the video."""

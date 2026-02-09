@@ -48,6 +48,7 @@ import re
 from translator import tr, Translator
 from about_dialog import AboutDialog
 from settings_dialog import SettingsDialog, ScanProgressDialog
+from folder_stats_dialog import FolderStatsDialog
 from subtitle_popup import SubtitlePopup, SubtitleButton
 from volume_popup import VolumePopup, VolumeButton
 from placeholders import draw_video_placeholder, draw_library_placeholder
@@ -1048,7 +1049,13 @@ class VideoCourseBrowser(QMainWindow):
 
             menu.addSeparator()
 
+            stats_action = menu.addAction(self.icons.get('menu_about', QIcon()), tr('context_menu.folder_stats'))
+            stats_action.triggered.connect(lambda: self.show_folder_stats(item))
+
+            menu.addSeparator()
+
             play_all_action = menu.addAction(self.icons.get('context_play', QIcon()), tr('context_menu.play_all'))
+
             play_all_action.triggered.connect(lambda: self.play_folder(item))
 
             mark_all_action = menu.addAction(self.icons.get('context_mark_read', QIcon()), tr('context_menu.mark_all_watched'))
@@ -1058,6 +1065,20 @@ class VideoCourseBrowser(QMainWindow):
             reset_all_action.triggered.connect(lambda: self.reset_folder_progress(item))
 
         menu.exec(self.course_tree.viewport().mapToGlobal(pos))
+
+    def show_folder_stats(self, item):
+        """Shows statistics for the selected folder/course."""
+        folder_path = item.data(0, Qt.ItemDataRole.UserRole)
+        
+        # We allow showing stats even if the folder doesn't exist on disk,
+        # as long as it exists in the database.
+        
+        stats = self.db.get_folder_statistics(folder_path)
+        if stats:
+            dialog = FolderStatsDialog(stats, item.text(0), self)
+            dialog.exec()
+        else:
+            QMessageBox.warning(self, tr('status.error'), tr('error.folder_not_found', folder=folder_path))
 
     # ADDED: Context menu audio track methods
     def populate_audio_submenu(self, menu, filepath, item):

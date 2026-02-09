@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.2]
+- **Feature**: Added **Course Statistics** window:
+    - **Info**: Displays detailed course information (video counts, time statistics).
+
 ## [1.2.1]
 - **Performance**: Completely rewrote preview thumbnails using `libmpv` (replaced FFmpeg QProcess):
     - **Instant Previews**: Reduced thumbnail generation latency from ~150ms to ~30ms.

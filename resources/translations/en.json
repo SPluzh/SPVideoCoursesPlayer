@@ -128,7 +128,8 @@
         "select_directory": "Select Courses Directory",
         "confirm": "Confirmation",
         "save": "Save",
-        "cancel": "Cancel"
+        "cancel": "Cancel",
+        "close": "Close"
     },
     "scan_dialog": {
         "title": "Scanning...",
@@ -299,7 +300,8 @@
         "add_favorite": "Add to Favorites",
         "remove_favorite": "Remove from Favorites",
         "edit_tags": "Edit Tags...",
-        "tags": "Tags"
+        "tags": "Tags",
+        "folder_stats": "Course Statistics"
     },
     "tags": {
         "title": "Manage Tags",
@@ -313,5 +315,16 @@
         "title": "Error",
         "folder_not_found": "Folder not found: {folder}",
         "folder_path_unknown": "Unknown folder path"
+    },
+    "stats": {
+        "title": "Statistics: {name}",
+        "total": "Total",
+        "watched": "Watched",
+        "in_progress": "In Progress",
+        "unwatched": "Unwatched",
+        "remaining": "Remaining",
+        "total_time": "Total Time",
+        "watched_time": "Watched",
+        "progress": "Progress"
     }
 }

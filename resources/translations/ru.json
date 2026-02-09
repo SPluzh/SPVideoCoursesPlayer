@@ -128,7 +128,8 @@
         "select_directory": "Выберите директорию с курсами",
         "confirm": "Подтверждение",
         "save": "Сохранить",
-        "cancel": "Отмена"
+        "cancel": "Отмена",
+        "close": "Закрыть"
     },
     "scan_dialog": {
         "title": "Сканирование...",
@@ -299,7 +300,8 @@
         "add_favorite": "Добавить в избранное",
         "remove_favorite": "Убрать из избранного",
         "edit_tags": "Редактировать теги...",
-        "tags": "Теги"
+        "tags": "Теги",
+        "folder_stats": "Статистика курса"
     },
     "tags": {
         "title": "Управление тегами",
@@ -313,5 +315,16 @@
         "title": "Ошибка",
         "folder_not_found": "Папка не найдена: {folder}",
         "folder_path_unknown": "Неизвестный путь к папке"
+    },
+    "stats": {
+        "title": "Статистика: {name}",
+        "total": "Всего",
+        "watched": "Просмотрено",
+        "in_progress": "В процессе",
+        "unwatched": "Не начато",
+        "remaining": "Осталось",
+        "total_time": "Общее время",
+        "watched_time": "Просмотрено",
+        "progress": "Прогресс"
     }
 }
