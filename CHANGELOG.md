@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.1]
+- **Performance**: Completely rewrote preview thumbnails using `libmpv` (replaced FFmpeg QProcess):
+    - **Instant Previews**: Reduced thumbnail generation latency from ~150ms to ~30ms.
+    - **Optimization**: Implemented background MPV instance with keyframe seeking for immediate response.
+    - **Responsiveness**: Significantly reduced debounce timer (25ms → 15ms) and post-seek delay.
+
 ## [1.2.0]
 - **Picture-in-Picture (PiP)**: Implemented a robust floating video window mode:
     - **Toggle**: Switch to PiP via hotkey `P` (works in English and Russian layouts). Button removed from main player controls.

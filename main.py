@@ -1728,6 +1728,15 @@ class VideoCourseBrowser(QMainWindow):
         self.save_window_state()
         if hasattr(self, 'hotkey_manager'):
             self.hotkey_manager.stop()
+        
+        # Cleanup player resources
+        if hasattr(self, 'video_player') and self.video_player:
+            try:
+                self.video_player.cleanup()
+            except Exception as e:
+                print(f"Error cleaning up video player: {e}")
+
+        self.close_db_connection()
         self.taskbar_progress.clear()
         event.accept()
 

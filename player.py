@@ -188,6 +188,24 @@ class VideoPlayerWidget(QWidget):
         self.setup_mpv()
         print("DEBUG: VideoPlayerWidget init done") # DEBUG
 
+    def cleanup(self):
+        """Cleanup resources."""
+        print("DEBUG: VideoPlayerWidget cleanup called")
+        if hasattr(self, 'preview_popup'):
+            self.preview_popup.cleanup()
+            
+        # Stop thumbnail provider
+        if hasattr(self, 'thumb_provider'):
+            self.thumb_provider.stop()
+
+        # Shutdown main player
+        if self.player:
+            try:
+                self.player.terminate()
+            except Exception as e:
+                print(f"Error terminating player: {e}")
+            self.player = None
+
     def setup_ui(self):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)

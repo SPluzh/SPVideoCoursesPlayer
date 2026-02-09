@@ -1,15 +1,17 @@
 
 import sys
 import os
+import tempfile
 from pathlib import Path
 from PyQt6.QtWidgets import QWidget, QLabel, QVBoxLayout
-from PyQt6.QtCore import Qt, QProcess, QTimer, QSize, QPoint
-from PyQt6.QtGui import QPixmap, QColor, QPainter, QBrush
+from PyQt6.QtCore import Qt, QTimer, QSize, QPoint
+from PyQt6.QtGui import QPixmap
 
 class PreviewPopup(QWidget):
     """
     A popup widget that displays a timestamp and a video thumbnail
     when hovering over the seek slider.
+    Optimized to use libmpv for fast seeking and thumbnail generation.
     """
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -59,33 +61,70 @@ class PreviewPopup(QWidget):
 
         # State
         self.current_video_path = None
-        self.cache = {} # Simple cache {timestamp_sec: QPixmap}
+        self.cache = {} # {timestamp_sec: QPixmap}
+        self.pending_time = None
         
-        # FFmpeg Process
-        self.process = QProcess()
-        self.process.readyReadStandardOutput.connect(self._handle_process_output)
-        self.process.finished.connect(self._handle_process_finished)
+        # MPV instance for preview
+        self.preview_mpv = None
+        
+        # Temp dir for screenshots
+        self._temp_dir = Path(tempfile.gettempdir()) / "spvideoplayer_preview"
+        try:
+            self._temp_dir.mkdir(exist_ok=True)
+        except Exception as e:
+            print(f"Error creating temp dir for previews: {e}")
         
         # Debounce Timer
         self.debounce_timer = QTimer()
         self.debounce_timer.setSingleShot(True)
-        self.debounce_timer.setInterval(50) # Faster response (50ms)
+        self.debounce_timer.setInterval(15) # Optimized: 15ms
         self.debounce_timer.timeout.connect(self._fetch_frame)
         
-        self.pending_time = None
         self.resources_dir = Path(__file__).parent / "resources"
-        self.ffmpeg_path = None
+        self.ffmpeg_path = None # Kept for compatibility if external ffmpeg logic is ever needed, but unused now
 
     def set_video(self, file_path):
-        """Update current video path and clear cache."""
+        """Update current video path, clear cache, and load into preview MPV."""
         if self.current_video_path != file_path:
             self.current_video_path = file_path
             self.cache.clear()
+            
+            # Initialize MPV if needed
+            self._init_preview_mpv()
+            
+            if self.preview_mpv:
+                try:
+                    self.preview_mpv.loadfile(file_path)
+                except Exception as e:
+                    print(f"Preview MPV loadfile error: {e}")
+
+    def _init_preview_mpv(self):
+        """Initialize the hidden MPV instance for previews."""
+        if self.preview_mpv is not None:
+            return
+            
+        try:
+            import mpv
+            self.preview_mpv = mpv.MPV(
+                vo='null',           # No video output to screen (headless)
+                ao='null',           # No audio output
+                pause=True,          # Always paused
+                keep_open=True,
+                hwdec='auto-safe',   # Hardware acceleration
+                sid='no',            # No subtitles
+                video_sync='audio',
+                hr_seek='yes',       # Precise seeking
+                demuxer_max_bytes='30MiB', # Buffer for fast seeking
+            )
+            # print("Preview MPV initialized")
+        except Exception as e:
+            print(f"Failed to create preview MPV: {e}")
+            self.preview_mpv = None
 
     def update_content(self, seconds, global_pos):
         """Update popup content and position."""
-        # 1. Update Time
-        seconds = max(0, seconds) # Clamp to 0
+        # 1. Update Time Label
+        seconds = max(0, seconds)
         m, s = divmod(seconds, 60)
         h, m = divmod(m, 60)
         if h > 0:
@@ -95,13 +134,12 @@ class PreviewPopup(QWidget):
         self.time_label.setText(time_str)
         
         # 2. Position
-        # Position above cursor, centered horizontally
         popup_width = self.width()
         popup_height = self.height()
         x = global_pos.x() - popup_width // 2
         y = global_pos.y() - popup_height - 15 # 15px margin
         
-        # Keep within screen bounds (roughly)
+        # Keep within screen bounds
         screen = self.screen()
         if screen:
             geo = screen.availableGeometry()
@@ -111,80 +149,102 @@ class PreviewPopup(QWidget):
         self.move(x, y)
         
         # 3. Schedule Frame Extraction
-        # Round to nearest second for caching efficiency
-        time_key = int(seconds) 
+        # Round to nearest second for better caching speed (Level 1 Optimization)
+        time_key = int(seconds)
         
         if time_key in self.cache:
             self.display_pixmap(self.cache[time_key])
             self.debounce_timer.stop()
         else:
-            # Show placeholder or loading if not cached
-            # Only trigger if we settled on a new time
-            if self.process.state() == QProcess.ProcessState.NotRunning:
-                self.pending_time = time_key
-                self.debounce_timer.start()
-            else:
-                # If busy, update pending and restart debounce
-                self.pending_time = time_key
-                self.debounce_timer.start()
+            self.pending_time = time_key
+            self.debounce_timer.start()
 
     def _fetch_frame(self):
-        if not self.current_video_path or self.pending_time is None:
+        """Seek and capture frame using MPV."""
+        if not self.preview_mpv or self.pending_time is None:
             return
-
-        # Check cache again just in case
-        if self.pending_time in self.cache:
-            self.display_pixmap(self.cache[self.pending_time])
-            return
-
-        # Kill existing process if running (though we try to avoid overlap)
-        if self.process.state() != QProcess.ProcessState.NotRunning:
-            self.process.kill()
-            self.process.waitForFinished(100)
-
-        # Build FFmpeg command
-        # Extract 1 frame at specific time
-        # Output to stdout as BMP (fastest for QPixmap to read from data) or JPEG
-        ffmpeg_exe = self._resolve_ffmpeg()
-        if not ffmpeg_exe:
-            self.thumb_label.setText("FFmpeg missing")
-            return
-
-        args = [
-            "-ss", str(self.pending_time),
-            "-i", self.current_video_path,
-            "-vframes", "1",
-            "-vf", "scale=200:-1",
-            "-f", "image2pipe",
-            "-vcodec", "mjpeg",
-            "-q:v", "2", # Lower quality for speed (2-31)
-            "-threads", "1", # Restrict threads to avoid cpu spike
-            "-" # Pipe output
-        ]
+            
+        time_key = self.pending_time
         
-        self.process_data = bytearray() # Reset buffer
-        self.process.start(str(ffmpeg_exe), args)
+        # Double check cache
+        if time_key in self.cache:
+            self.display_pixmap(self.cache[time_key])
+            return
+        
+        try:
+            # Level 1 Optimization: Keyframe seek (faster but less precise)
+            self.preview_mpv.seek(time_key, 'absolute+keyframes')
+            
+            # Level 1 Optimization: Reduced wait time (5ms)
+            QTimer.singleShot(5, lambda: self._capture_frame(time_key))
+            
+        except Exception as e:
+            print(f"Preview seek error: {e}")
 
-    def _handle_process_output(self):
-        data = self.process.readAllStandardOutput()
-        self.process_data.extend(data)
-
-    def _handle_process_finished(self):
-        if len(self.process_data) > 0:
-            pixmap = QPixmap()
-            if pixmap.loadFromData(self.process_data, "JPG"):
-                self.cache[self.pending_time] = pixmap
-                self.display_pixmap(pixmap)
+    def _capture_frame(self, time_key):
+        """Capture screenshot to temp file and load it."""
+        if not self.preview_mpv:
+            return
+            
+        # Ensure we are capturing for the time that was requested
+        # (Though logic flow suggests we are fine)
+        
+        try:
+            temp_path = self._temp_dir / f"preview_{hash(self.current_video_path)}_{time_key:.1f}.jpg"
+            
+            # If file exists from previous run/session (unlikely due to cleanup, but possible), reuse it? 
+            # Better to overwrite to ensure correctness.
+            # MPV screenshot_to_file overwrites.
+            
+            self.preview_mpv.screenshot_to_file(
+                str(temp_path), 
+                includes='video'
+            )
+            
+            if temp_path.exists():
+                pixmap = QPixmap(str(temp_path))
+                if not pixmap.isNull():
+                    # Scale to fit label
+                    scaled = pixmap.scaled(
+                        200, 112,
+                        Qt.AspectRatioMode.KeepAspectRatio,
+                        Qt.TransformationMode.SmoothTransformation
+                    )
+                    self.cache[time_key] = scaled
+                    self.display_pixmap(scaled)
+                else:
+                    self.thumb_label.setText("No Preview")
+                
+                # Copy is in memory (QPixmap), delete file
+                try:
+                    temp_path.unlink(missing_ok=True)
+                except:
+                    pass
             else:
-                self.thumb_label.setText("Prepare failed")
-        self.process_data = bytearray()
+                 self.thumb_label.setText("...")
+                
+        except Exception as e:
+            print(f"Preview capture error: {e}")
 
     def display_pixmap(self, pixmap):
         self.thumb_label.setPixmap(pixmap)
         
-    def _resolve_ffmpeg(self):
-        if self.ffmpeg_path:
-             path = Path(str(self.ffmpeg_path))
-             if path.exists():
-                 return path
-        return None
+    def cleanup(self):
+        """Release resources."""
+        if self.preview_mpv:
+            try:
+                self.preview_mpv.terminate()
+            except:
+                pass
+            self.preview_mpv = None
+        
+        # Clean temp folder
+        if self._temp_dir.exists():
+            try:
+                for f in self._temp_dir.glob("preview_*.jpg"):
+                    try:
+                        f.unlink(missing_ok=True)
+                    except:
+                        pass
+            except Exception as e:
+                print(f"Error cleaning temp dir: {e}")
