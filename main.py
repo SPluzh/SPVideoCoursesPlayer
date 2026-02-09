@@ -55,6 +55,7 @@ from player import VideoPlayerWidget
 from library import HoverTreeWidget, VideoItemDelegate
 from hotkeys import HotkeyManager
 from tags_dialog import TagsDialog
+from floating_player import FloatingVideoWindow
 
 
 
@@ -86,6 +87,7 @@ class VideoCourseBrowser(QMainWindow):
         self.load_icons()
 
         self.taskbar_progress = TaskbarProgress()
+        self.pip_geometry = None
 
         self.create_menu_bar()
 
@@ -163,7 +165,13 @@ class VideoCourseBrowser(QMainWindow):
         self.video_player.next_video_requested.connect(self.play_next_video)
         self.video_player.prev_video_requested.connect(self.play_prev_video)
         self.video_player.markers_changed.connect(self.on_markers_changed)
+        self.video_player.markers_changed.connect(self.on_markers_changed)
         self.video_player.toggle_fullscreen_requested.connect(self.toggle_fullscreen)
+        self.video_player.pip_mode_requested.connect(self.enter_pip_mode)
+        self.video_player.pip_exit_requested.connect(self.exit_pip_mode)
+        
+        self.floating_window_active = False
+        self.floating_window = None
 
         # Apply initial subtitle settings
         self.video_player.set_subtitle_styles(self.sub_color, self.sub_border_color, self.sub_scale)
@@ -282,6 +290,8 @@ class VideoCourseBrowser(QMainWindow):
             self.video_player.add_marker()
         elif action == "toggle_marker_gallery":
             self.video_player.toggle_marker_gallery()
+        elif action == "toggle_pip":
+            self.toggle_pip_mode()
 
     def toggle_fullscreen(self):
         if self.isFullScreen():
@@ -438,6 +448,13 @@ class VideoCourseBrowser(QMainWindow):
                     self.video_player.speed_slider.setValue(speed_value)
                 except Exception as e:
                     print(f"Error restoring playback speed: {e}")
+                    
+            if config.has_option('Window', 'pip_geometry'):
+                try:
+                    pip_geo_hex = config.get('Window', 'pip_geometry')
+                    self.pip_geometry = QByteArray.fromHex(bytes(pip_geo_hex, 'utf-8'))
+                except Exception as e:
+                    print(f"Error restoring PiP geometry: {e}")
         else:
             self.resize(self.window_width, self.window_height)
         
@@ -468,6 +485,15 @@ class VideoCourseBrowser(QMainWindow):
 
         splitter_state = self.splitter.saveState().toHex().data().decode('utf-8')
         config['Window']['splitter_state'] = splitter_state
+        
+        # Save PiP geometry
+        # If PiP is active, get current geometry
+        if self.floating_window and self.floating_window.isVisible():
+            self.pip_geometry = self.floating_window.saveGeometry()
+            
+        if self.pip_geometry:
+            pip_geo_str = self.pip_geometry.toHex().data().decode('utf-8')
+            config['Window']['pip_geometry'] = pip_geo_str
 
         config['Window']['is_maximized'] = str(self.isMaximized())
 
@@ -560,6 +586,13 @@ class VideoCourseBrowser(QMainWindow):
         frame_back_action.setShortcut(',')
         frame_back_action.triggered.connect(lambda: self.handle_player_action("frame_back"))
         tools_menu.addAction(frame_back_action)
+
+        tools_menu.addSeparator()
+
+        pip_action = QAction(self.icons.get('pip', QIcon()), tr('player.tooltip_pip'), self)
+        pip_action.setShortcut('P')
+        pip_action.triggered.connect(self.toggle_pip_mode)
+        tools_menu.addAction(pip_action)
 
         # [View] Menu
         view_menu = menubar.addMenu(tr('menu.view'))
@@ -799,6 +832,103 @@ class VideoCourseBrowser(QMainWindow):
         if isinstance(delegate, VideoItemDelegate):
             delegate.is_paused = is_paused
             self.course_tree.viewport().update()
+
+            self.course_tree.viewport().update()
+
+    def toggle_pip_mode(self):
+        """Toggle Picture-in-Picture mode."""
+        print("DEBUG: toggle_pip_mode called")
+        if self.floating_window and self.floating_window.isVisible():
+            print("DEBUG: Floating window visible, exiting PiP")
+            self.exit_pip_mode()
+        else:
+            print("DEBUG: Floating window not visible/exists, entering PiP")
+            self.enter_pip_mode()
+
+    def enter_pip_mode(self):
+        """Enter Picture-in-Picture mode."""
+        print("DEBUG: enter_pip_mode start")
+        if self.floating_window and self.floating_window.isVisible():
+            print("DEBUG: Already in PiP mode, ignoring")
+            return
+            
+        if not self.video_player.current_file:
+            print("DEBUG: No current file, cannot enter PiP")
+            return
+            
+        try:
+            # 2. Detach video widget
+            print("DEBUG: Detaching video widget...")
+            video_widget = self.video_player.detach_video_widget()
+            print(f"DEBUG: Detached widget: {video_widget}")
+            
+            # 3. Create floating window
+            print("DEBUG: Creating FloatingVideoWindow...")
+            self.floating_window = FloatingVideoWindow(video_widget)
+            print("DEBUG: Connecting pip_exit_requested...")
+            self.floating_window.pip_exit_requested.connect(self.exit_pip_mode)
+            print("DEBUG: Showing floating window...")
+            if self.pip_geometry:
+                self.floating_window.restoreGeometry(self.pip_geometry)
+            self.floating_window.show()
+            
+            self.floating_window_active = True
+            
+            # 4. Hide main window
+            print("DEBUG: Hiding main window...")
+            self.hide()
+            
+            # Swap taskbar progress to PiP window (after show, so HWND is set)
+            if self.floating_window.taskbar_progress._initialized:
+                self.video_player.taskbar_progress = self.floating_window.taskbar_progress
+            print("DEBUG: enter_pip_mode finished")
+            
+        except Exception as e:
+            print(f"ERROR in enter_pip_mode: {e}")
+            import traceback
+            traceback.print_exc()
+
+    def exit_pip_mode(self):
+        """Exit Picture-in-Picture mode."""
+        print("DEBUG: exit_pip_mode start")
+        if not self.floating_window:
+            print("DEBUG: No floating window to exit")
+            return
+
+        try:
+            # 1. Get widget back
+            print("DEBUG: Getting video widget back...")
+            video_widget = self.floating_window.video_widget
+            if not video_widget:
+                 print("ERROR: Floating window has no video widget!")
+            
+            print("DEBUG: Reattaching video widget...")
+            self.video_player.reattach_video_widget(video_widget)
+            
+            # 2. Destroy floating window
+            if self.floating_window:
+                self.pip_geometry = self.floating_window.saveGeometry()
+                print("DEBUG: Closing floating window...")
+                self.floating_window.close()
+                self.floating_window = None
+            self.floating_window_active = False
+            
+            # 3. Show main window
+            print("DEBUG: Showing main window...")
+            
+            # Restore taskbar progress to main window
+            self.video_player.taskbar_progress = self.taskbar_progress
+            
+            self.show()
+            self.raise_()
+            self.activateWindow()
+            print("DEBUG: exit_pip_mode finished")
+            
+        except Exception as e:
+            print(f"ERROR in exit_pip_mode: {e}")
+            import traceback
+            traceback.print_exc()
+
 
     def load_icons(self):
         self.icons = {}
@@ -1654,3 +1784,5 @@ def main():
 
 if __name__ == '__main__':
     main()
+
+

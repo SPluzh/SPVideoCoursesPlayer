@@ -156,6 +156,8 @@ class VideoPlayerWidget(QWidget):
     prev_video_requested = pyqtSignal()
     markers_changed = pyqtSignal(str) # file_path
     toggle_fullscreen_requested = pyqtSignal()
+    pip_mode_requested = pyqtSignal()
+    pip_exit_requested = pyqtSignal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -221,7 +223,7 @@ class VideoPlayerWidget(QWidget):
         panel_layout.setContentsMargins(0, 5, 0, 0)
 
         self.icons = {}
-        for name in ["play", "pause", "next", "prev"]:
+        for name in ["play", "pause", "next", "prev", "pip"]:
             path = RESOURCES_DIR / "icons" / f"{name}.png"
             if path.exists():
                 self.icons[name] = QIcon(str(path))
@@ -269,7 +271,8 @@ class VideoPlayerWidget(QWidget):
         panel_layout.addWidget(self.time_label)
 
 
-        # Subtitle button: Left click - select, Right click - toggle
+
+
         self.subtitle_btn = SubtitleButton()
         self.subtitle_btn.subtitleToggled.connect(self.toggle_subtitles)
         self.subtitle_btn.subtitleChanged.connect(self.change_subtitle_track)
@@ -827,10 +830,39 @@ class VideoPlayerWidget(QWidget):
                 else:
                     print(f"❌ External file not found: {audio_file_path}")
 
+
         except Exception as e:
             print(f"❌ Restore error: {e}")
             import traceback
             traceback.print_exc()
+
+    def detach_video_widget(self):
+        """Detach video widget for PiP mode."""
+        print("DEBUG: detach_video_widget called")
+        # Included in layout?
+        if self.video_widget.parent() == self.video_container:
+             print("DEBUG: Removing video_widget from video_container layout")
+             self.video_container.layout().removeWidget(self.video_widget)
+        
+        # The widget will be reparented by FloatingVideoWindow
+        self.video_widget.setParent(None)
+        self.video_widget.show() # Ensure it's not hidden
+        return self.video_widget
+
+    def reattach_video_widget(self, widget):
+        """Reattach video widget after PiP mode."""
+        print("DEBUG: reattach_video_widget called")
+        if widget != self.video_widget:
+            print("ERROR: trying to reattach different widget")
+            return
+            
+        # Add back to our layout
+        print("DEBUG: Adding video_widget back to container layout")
+        self.video_container.layout().addWidget(self.video_widget)
+        # Ensure it is visible and has focus if needed
+        self.video_widget.show()
+        self.video_widget.setFocus()
+        print("DEBUG: reattach_video_widget finished")
 
     # ===================== SUBTITLES =====================
     def load_subtitle_tracks(self, filepath):

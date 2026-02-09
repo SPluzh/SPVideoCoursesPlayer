@@ -110,6 +110,7 @@ class HotkeyManager(QObject):
             Qt.Key.Key_BracketRight: "zoom_in",
             Qt.Key.Key_B: "add_marker",
             Qt.Key.Key_G: "toggle_marker_gallery",
+            Qt.Key.Key_P: "toggle_pip",
             
             
             # Fallback for Cyrillic layout (Russian)
@@ -126,6 +127,7 @@ class HotkeyManager(QObject):
             0x44a: "zoom_in",           # RU TVZ (where ] is)
             0x418: "add_marker",        # RU I (where B is)
             0x41f: "toggle_marker_gallery", # RU P (where G is)
+            0x417: "toggle_pip",        # RU Z (where P is)
             
             
             # Multimedia keys (local behavior)
@@ -167,6 +169,8 @@ class HotkeyManager(QObject):
             0xDB: "zoom_out",          # [
             0xDD: "zoom_in",           # ]
             0x42: "add_marker",        # B
+            0x47: "toggle_marker_gallery", # G
+            0x50: "toggle_pip",        # P
             0x47: "toggle_marker_gallery", # G
         }
         

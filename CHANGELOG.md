@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.0]
+- **Picture-in-Picture (PiP)**: Implemented a robust floating video window mode:
+    - **Toggle**: Switch to PiP via hotkey `P` (works in English and Russian layouts). Button removed from main player controls.
+    - **Window Control**: 
+        - Resizable with aspect ratio enforcement (16:9).
+        - Draggable by right-click anywhere on the window.
+        - Close button appears on hover.
+    
 ## [1.1.3]
 - **Tags**: Improved tag management in the context menu:
     - Added "Tags" submenu to quickly add or remove tags from videos.
