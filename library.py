@@ -454,6 +454,7 @@ class HoverTreeWidget(QTreeWidget):
         self.current_hover_index = None
         self.thumbnail_frame = 0
         self.animation_interval = 500
+        self.mouse_pos = None
 
     def set_animation_interval(self, interval):
         self.animation_interval = interval
@@ -461,6 +462,7 @@ class HoverTreeWidget(QTreeWidget):
     def mouseMoveEvent(self, event):
         try:
             # print(f"DEBUG: mouseMoveEvent {event.pos()}")
+            self.mouse_pos = event.pos()
             super().mouseMoveEvent(event)
             index = self.indexAt(event.pos())
 

@@ -34,6 +34,7 @@ libmpv.version
 
 # Serena
 .serena/
+.gemini/
 
 # Documentation
 gemini.md
