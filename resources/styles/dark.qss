@@ -1,13 +1,55 @@
 /* ============================================================
+   ПЕРЕМЕННЫЕ ЦВЕТОВ
+   ============================================================ */
+@bg-main: #444444;
+@bg-dark: #373737;
+@bg-darker: #2c2c2c;
+@bg-hover: #4a4a4a;
+@bg-disabled: #2a2a2a;
+@bg-console: #1e1e1e;
+@bg-overlay: rgba(0, 0, 0, 180);
+@bg-progress: rgba(50, 50, 50, 200);
+
+@text-main: #eaeaea;
+@text-light: #ffffff;
+@text-meta: #a0a0a0;
+@text-muted: #666666;
+@text-item: #e0e0e0;
+@text-delegate: #CCCCCC;
+@text-console: #d4d4d4;
+@text-info: rgb(200, 200, 200);
+
+@accent: #018574;
+@accent-hover: #02a58a;
+@accent-pressed: #00634d;
+
+@border: #808080;
+@border-light: #a0a0a0;
+@border-item: rgb(60, 60, 60);
+@border-muted: rgb(100, 100, 100);
+
+@status-ok: #4ecca3;
+@status-error: #ff6b6b;
+@status-warning: #f9ca24;
+
+@chart-watched: #2ecc71;
+@chart-progress: #f1c40f;
+@chart-unwatched: #ff6b6b;
+
+@progress-fill: rgb(76, 175, 80);
+@color-inactive: rgba(150, 150, 150, 180);
+@separator-color: #555555;
+
+/* ============================================================
    ОСНОВНОЕ ОКНО И ВИДЖЕТЫ
    ============================================================ */
 
 QMainWindow {
-    background-color: #444444;
+    background-color: @bg-main;
 }
 
 QWidget {
-    color: #eaeaea;
+    color: @text-main;
     font-family: 'Segoe UI', Arial, sans-serif;
     font-size: 13px;
     border-radius: 3px;
@@ -18,8 +60,8 @@ QWidget {
    ============================================================ */
 
 QStatusBar {
-    background-color: #373737;
-    color: #eaeaea;
+    background-color: @bg-dark;
+    color: @text-main;
 }
 
 QStatusBar QLabel {
@@ -28,25 +70,25 @@ QStatusBar QLabel {
 }
 
 QPushButton {
-    background-color: #373737;
-    border: 1px solid #808080;
+    background-color: @bg-dark;
+    border: 1px solid @border;
     padding: 6px;
     font-weight: 500;
     min-height: 16px;
 }
 
 QPushButton:hover {
-    background-color: #018574;
-    border-color: #018574;
+    background-color: @accent;
+    border-color: @accent;
 }
 
 QPushButton:pressed {
-    background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #00634d, stop:1 #018574);
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 @accent-pressed, stop:1 @accent);
 }
 
 QPushButton:disabled {
-    background-color: #2a2a2a;
-    color: #666666;
+    background-color: @bg-disabled;
+    color: @text-muted;
 }
 
 /* Кнопка Play/Pause */
@@ -59,25 +101,25 @@ QPushButton#playBtn {
    ============================================================ */
 
 QLineEdit {
-    background-color: #373737;
-    border: 1px solid #808080;
+    background-color: @bg-dark;
+    border: 1px solid @border;
     padding: 6px;
     min-height: 16px;
-    color: #eaeaea;
-    selection-background-color: #018574;
+    color: @text-main;
+    selection-background-color: @accent;
 }
 
 QLineEdit:focus {
-    border-color: #018574;
-    background-color: #373737;
+    border-color: @accent;
+    background-color: @bg-dark;
 }
 
 QLineEdit:hover {
-    border-color: #a0a0a0;
+    border-color: @border-light;
 }
 
 QLineEdit::placeholder {
-    color: #666666;
+    color: @text-muted;
 }
 
 /* ============================================================
@@ -85,8 +127,8 @@ QLineEdit::placeholder {
    ============================================================ */
 
 QListWidget {
-    background-color: #444444;
-    border: 1px solid #808080;
+    background-color: @bg-main;
+    border: 1px solid @border;
     /*padding: 5px;*/
     outline: none;
     /* Отключаем стандартную рамку фокуса */
@@ -96,7 +138,7 @@ QListWidget {
 /* Убираем пунктирную рамку фокуса */
 QListWidget:focus {
     outline: none;
-    border: 1px solid #018574;  /* Опционально: подсветка границы */
+    border: 1px solid @accent;  /* Опционально: подсветка границы */
 }
 
 QListWidget::item {
@@ -107,42 +149,42 @@ QListWidget::item {
 /* --- Обычное состояние --- */
 QListWidget::item {
     background-color: transparent;
-    color: #e0e0e0;
+    color: @text-item;
 }
 
 /* --- Наведение --- */
 QListWidget::item:hover {
-    background-color: #4a4a4a;
-    color: #ffffff;
+    background-color: @bg-hover;
+    color: @text-light;
 }
 
 /* --- Выделение С фокусом --- */
 QListWidget::item:selected:active {
-    background-color: #018574;
-    color: #ffffff;
+    background-color: @accent;
+    color: @text-light;
 }
 
 /* --- Выделение БЕЗ фокуса (КЛЮЧЕВОЕ!) --- */
 QListWidget::item:selected:!active {
-    background-color: #018574;  /* Сохраняем тот же цвет */
+    background-color: @accent;  /* Сохраняем тот же цвет */
 }
 
 /* --- Наведение на выделенный С фокусом --- */
 QListWidget::item:selected:active:hover {
-    background-color: #02a58a;
-    color: #ffffff;
+    background-color: @accent-hover;
+    color: @text-light;
 }
 
 /* --- Наведение на выделенный БЕЗ фокуса --- */
 QListWidget::item:selected:!active:hover {
-    background-color: #02a58a;
-    color: #ffffff;
+    background-color: @accent-hover;
+    color: @text-light;
 }
 
 /* --- Отключённый элемент --- */
 QListWidget::item:disabled {
     background-color: transparent;
-    color: #666666;
+    color: @text-muted;
 }
 
 /* ============================================================
@@ -151,8 +193,8 @@ QListWidget::item:disabled {
 
 /* QTreeWidget — выделение сохраняется при потере фокуса */
 QTreeWidget {
-    background-color: #444444;
-    border: 1px solid #808080;
+    background-color: @bg-main;
+    border: 1px solid @border;
     /*padding: 5px;*/
     outline: none;
     show-decoration-selected: 1;
@@ -168,30 +210,30 @@ HoverTreeWidget {
 QTreeWidget::item {
     /*padding: 5px;*/
     background-color: transparent;
-    color: #e0e0e0;
+    color: @text-item;
 }
 
 /* Hover */
 QTreeWidget::item:hover {
-    background-color: #4a4a4a;
-    color: #ffffff;
+    background-color: @bg-hover;
+    color: @text-light;
 }
 
 /* СИСТЕМНОЕ выделение АКТИВНОЕ (есть фокус) */
 QTreeWidget::item:selected:active {
-    background-color: #018574;
-    color: #ffffff;
+    background-color: @accent;
+    color: @text-light;
 }
 
 /* СИСТЕМНОЕ выделение НЕАКТИВНОЕ (потерян фокус) — ТОТ ЖЕ ЦВET */
 QTreeWidget::item:selected:!active {
-    background-color: #018574;
+    background-color: @accent;
 }
 
 /* Программное выделение (текущая книга) — приоритет */
 QTreeWidget::item[playing="true"] {
-    background-color: #018574 !important;
-    color: #ffffff !important;
+    background-color: @accent !important;
+    color: @text-light !important;
 }
 
 
@@ -200,36 +242,36 @@ QTreeWidget::item[playing="true"] {
    ============================================================ */
 
 QSlider::groove:horizontal {
-    background: #808080;
+    background: @border;
     height: 10px;
 }
 
 QSlider::handle:horizontal {
-    background: #018574;
+    background: @accent;
     width: 16px;
     height: 16px;
     margin: -5px 0;
-    border: 2px solid #373737;
+    border: 2px solid @bg-dark;
 }
 
 QSlider::handle:horizontal:hover {
-    background: #02a58a;
+    background: @accent-hover;
 }
 
 QSlider::handle:horizontal:pressed {
-    background: #00634d;
+    background: @accent-pressed;
 }
 
 QSlider::sub-page:horizontal {
-    background-color: #018574;
+    background-color: @accent;
 }
 
 QSlider::add-page:horizontal {
-    background: #808080;
+    background: @border;
 }
 
 QSlider#speedSlider::sub-page:horizontal {
-    background-color: #808080;
+    background-color: @border;
 }
 
 /* ============================================================
@@ -237,16 +279,16 @@ QSlider#speedSlider::sub-page:horizontal {
    ============================================================ */
 
 QProgressBar {
-    background-color: #373737;
-    border: 1px solid #808080;
+    background-color: @bg-dark;
+    border: 1px solid @border;
     border-radius: 3px;
     text-align: center;
-    color: white;
+    color: @text-light;
     font-weight: bold;
 }
 
 QProgressBar::chunk {
-    background-color: #018574;
+    background-color: @accent;
 }
 
 #scanProgressBar {
@@ -255,11 +297,11 @@ QProgressBar::chunk {
 }
 
 #scanConsole {
-    background-color: #1e1e1e;
-    color: #d4d4d4;
+    background-color: @bg-console;
+    color: @text-console;
     font-family: Consolas, monospace;
     font-size: 11px;
-    border: 1px solid #444;
+    border: 1px solid @bg-main;
 }
 
 #scanStatusLabel {
@@ -273,51 +315,51 @@ QProgressBar::chunk {
    ============================================================ */
 
 QLabel {
-    color: #eaeaea;
+    color: @text-main;
 }
 
 QLabel#titleLabel {
     font-size: 18px;
     font-weight: bold;
-    color: #ffffff;
+    color: @text-light;
 }
 
 QLabel#subtitleLabel {
     font-size: 14px;
-    color: #a0a0a0;
+    color: @text-meta;
 }
 
 QLabel#timeLabel {
     font-family: 'Consolas', 'Courier New', monospace;
     font-size: 13px;
-    color: #a0a0a0;
+    color: @text-meta;
 }
 
 QLabel#bigTimeLabel {
     font-family: 'Consolas', 'Courier New', monospace;
     font-size: 15px;
     font-weight: bold;
-    color: #018574;
+    color: @accent;
 }
 
 QLabel#statusOk {
-    color: #4ecca3;
+    color: @status-ok;
     font-weight: bold;
 }
 
 QLabel#statusError {
-    color: #ff6b6b;
+    color: @status-error;
     font-weight: bold;
 }
 
 QLabel#statusWarning {
-    color: #f9ca24;
+    color: @status-warning;
     font-weight: bold;
 }
 
 QLabel#sectionLabel {
     font-weight: bold;
-    color: #ffffff;
+    color: @text-light;
     text-transform: uppercase;
     letter-spacing: 1px;
 }
@@ -328,23 +370,23 @@ QLabel#sectionLabel {
 
 /* Вертикальный скроллбар */
 QScrollBar:vertical {
-    background-color: #444444;
+    background-color: @bg-main;
     width: 12px;
     margin: 0;
 }
 
 QScrollBar::handle:vertical {
-    background-color: #808080;
+    background-color: @border;
     min-height: 30px;
     margin: 2px;
 }
 
 QScrollBar::handle:vertical:hover {
-    background-color: #018574;
+    background-color: @accent;
 }
 
 QScrollBar::handle:vertical:pressed {
-    background-color: #02a58a;
+    background-color: @accent-hover;
 }
 
 QScrollBar::add-line:vertical,
@@ -361,23 +403,23 @@ QScrollBar::sub-page:vertical {
 
 /* Горизонтальный скроллбар */
 QScrollBar:horizontal {
-    background-color: #444444;
+    background-color: @bg-main;
     height: 12px;
     margin: 0;
 }
 
 QScrollBar::handle:horizontal {
-    background-color: #808080;
+    background-color: @border;
     min-width: 30px;
     margin: 2px;
 }
 
 QScrollBar::handle:horizontal:hover {
-    background-color: #018574;
+    background-color: @accent;
 }
 
 QScrollBar::handle:horizontal:pressed {
-    background-color: #02a58a;
+    background-color: @accent-hover;
 }
 
 QScrollBar::add-line:horizontal,
@@ -401,7 +443,7 @@ QFrame {
 }
 
 QFrame#separator {
-    background-color: #808080;
+    background-color: @border;
     max-height: 2px;
     min-height: 2px;
 }
@@ -411,38 +453,38 @@ QFrame#separator {
    ============================================================ */
 /* Цвет верхней панели (меню-бар) */
 QMenuBar {
-    background-color: #373737;  /* основной фон панели */
-    color: #eaeaea;             /* цвет текста пунктов меню */
+    background-color: @bg-dark;  /* основной фон панели */
+    color: @text-main;             /* цвет текста пунктов меню */
     font-size: 13px;
 }
 
 QMenu {
-    background-color: #373737;
-    border: 1px solid #444444;
+    background-color: @bg-dark;
+    border: 1px solid @bg-main;
     padding: 2px;
     margin: 3px;
 }
 
 QMenu::item {
     padding: 2px 2px;
-    color: #eaeaea;
+    color: @text-main;
 
 }
 
 QMenu::item:selected {
-    background-color: #018574;
-    color: #ffffff;
+    background-color: @accent;
+    color: @text-light;
 
 }
 
 QMenu::item:pressed {
-    background-color: #00634d;
+    background-color: @accent-pressed;
 
 }
 
 QMenu::separator {
     height: 1px;
-    background-color: #808080;
+    background-color: @border;
     margin: 5px 10px;
 }
 
@@ -456,25 +498,25 @@ QMenu::indicator {
    ============================================================ */
 /* Фон диалогового окна */
 QDialog {
-    background-color: #444444;  /* тёмно-серый фон */
-    color: #eaeaea;             /* цвет текста внутри диалога */
+    background-color: @bg-main;  /* тёмно-серый фон */
+    color: @text-main;             /* цвет текста внутри диалога */
 }
 
 /* Фон всего виджета вкладок */
 QTabWidget {
-    background-color: #373737; /* фон контента вкладки */
+    background-color: @bg-dark; /* фон контента вкладки */
 }
 
 /* Вкладки сверху */
 QTabBar {
-    background-color: #2c2c2c; /* фон полоски с вкладками */
+    background-color: @bg-darker; /* фон полоски с вкладками */
 }
 
 QTabBar::tab {
-    background-color: #444444;  /* фон вкладки */
-    color: #eaeaea;             /* цвет текста */
+    background-color: @bg-main;  /* фон вкладки */
+    color: @text-main;             /* цвет текста */
     padding: 8px 20px;
-    border: 1px solid #808080;  /* рамка вокруг вкладки */
+    border: 1px solid @border;  /* рамка вокруг вкладки */
     border-bottom: none;         /* чтобы была "связанная" с контентом */
     border-top-left-radius: 3px;
     border-top-right-radius: 3px;
@@ -483,15 +525,15 @@ QTabBar::tab {
 
 /* Вкладка при наведении мыши */
 QTabBar::tab:hover {
-    background-color: #018574;
-    color: #ffffff;
+    background-color: @accent;
+    color: @text-light;
 }
 
 /* Активная вкладка */
 QTabBar::tab:selected {
-    background-color: #018574;
-    color: #ffffff;
-    border-bottom: 1px solid #018574; /* чтобы визуально сливалась с контентом */
+    background-color: @accent;
+    color: @text-light;
+    border-bottom: 1px solid @accent; /* чтобы визуально сливалась с контентом */
 }
 
 /* Вкладки слева/справа/снизу — если используешь */
@@ -506,55 +548,55 @@ QTabBar::tab:!selected {
 /* Автор книги */
 QLabel#delegate_author {
     font-size: 14px;
-    color: #CCCCCC;
+    color: @text-delegate;
 }
 
 /* Название книги */
 QLabel#delegate_title {
     font-size: 14px;
     font-weight: bold;
-    color: #CCCCCC;
+    color: @text-delegate;
 }
 
 /* Рассказчик */
 QLabel#delegate_narrator {
     font-size: 14px;
-    color: #CCCCCC;
+    color: @text-delegate;
 }
 
 /* Общая информация */
 QLabel#delegate_info {
     font-size: 14px;
     font-weight: bold;
-    color: #CCCCCC;
+    color: @text-delegate;
 }
 
 /* Папка */
 QLabel#delegate_folder {
     font-size: 14px;
     font-weight: bold;
-    color: #CCCCCC;
+    color: @text-delegate;
 }
 
 /* Прогресс прослушивания */
 QLabel#delegate_progress {
     font-size: 12px;
     font-weight: bold;
-    color: #CCCCCC;
+    color: @text-delegate;
 }
 
 /* Длительность */
 QLabel#delegate_duration {
     font-size: 12px;
     font-weight: bold;
-    color: #CCCCCC;
+    color: @text-delegate;
 }
 
 /* Количество файлов */
 QLabel#delegate_file_count {
     font-size: 12px;
     font-weight: bold;
-    color: #CCCCCC;
+    color: @text-delegate;
 }
 
 /* ============================================================
@@ -562,8 +604,8 @@ QLabel#delegate_file_count {
    ============================================================ */
 
 QToolTip {
-    color: #eaeaea;              /* цвет текста */
-    border: 1px solid #018574;  /* рамка */
+    color: @text-main;              /* цвет текста */
+    border: 1px solid @accent;  /* рамка */
     padding: 3px;
 }
 
@@ -573,24 +615,24 @@ QToolTip {
 
 /* Рамка миниатюры */
 #thumbnail_border {
-    border: 1px solid rgb(60, 60, 60);
+    border: 1px solid @border-item;
 }
 
 /* Фон прогресс-бара */
 #progress_bar_bg {
-    background-color: rgba(50, 50, 50, 200);
+    background-color: @bg-progress;
     min-height: 5px;
     max-height: 5px;
 }
 
 /* Заполнение прогресс-бара */
 #progress_bar_fill {
-    background-color: rgb(76, 175, 80);
+    background-color: @progress-fill;
 }
 
 /* Активная точка индикатора */
 #dot_active {
-    background-color: rgb(255, 255, 255);
+    background-color: @text-light;
     min-width: 6px;
     max-width: 6px;
     min-height: 6px;
@@ -599,29 +641,29 @@ QToolTip {
 
 /* Неактивная точка индикатора */
 #dot_inactive {
-    background-color: rgba(150, 150, 150, 180);
+    background-color: @color-inactive;
 }
 
 /* Фон пустой миниатюры */
 #empty_thumbnail_bg {
-    background-color: rgb(60, 60, 60);
+    background-color: @border-item;
 }
 
 /* Рамка пустой миниатюры */
 #empty_thumbnail_border {
-    border: 1px solid rgb(100, 100, 100);
+    border: 1px solid @border-muted;
 }
 
 /* Иконка пустой миниатюры */
 #empty_thumbnail_icon {
-    color: rgb(150, 150, 150);
+    color: @color-inactive;
     font-family: Arial;
     font-size: 16pt;
 }
 
 /* Фон метки длительности */
 #duration_label_bg {
-    background-color: rgba(0, 0, 0, 180);
+    background-color: @bg-overlay;
 }
 
 /* Текст метки длительности */
@@ -639,13 +681,13 @@ QToolTip {
 
 /* Информация о видео */
 #video_info {
-    color: rgb(200, 200, 200);
+    color: @text-info;
     font-size: 12px;
 }
 
 /* Текст прогресса просмотра */
 #video_progress_text {
-    color: rgb(76, 175, 80);
+    color: @progress-fill;
     font-size: 12px;
     /*font-style: italic;*/
 }
@@ -655,21 +697,21 @@ QToolTip {
    ============================================================ */
 
 QComboBox {
-    background-color: #373737;
-    color: #eaeaea;
-    border: 1px solid #808080;
+    background-color: @bg-dark;
+    color: @text-main;
+    border: 1px solid @border;
     padding: 5px;
     min-height: 16px;
     font-weight: 500;
 }
 
 QComboBox:hover {
-    background-color: #018574;
-    border-color: #018574;
+    background-color: @accent;
+    border-color: @accent;
 }
 
 QComboBox:focus {
-    border-color: #018574;
+    border-color: @accent;
 }
 
 /* убираем зону стрелки */
@@ -680,7 +722,7 @@ QComboBox::drop-down {
 
 /* Выпадающий список */
 QComboBox QAbstractItemView {
-    background-color: #373737;
+    background-color: @bg-dark;
 }
 
 
@@ -691,7 +733,7 @@ QComboBox QAbstractItemView {
 
 QGroupBox {
     background-color: transparent;
-    border: 1px solid #808080;
+    border: 1px solid @border;
     border-radius: 5px;
     margin-top: 15px; /* Leave space for the title */
     font-weight: bold;
@@ -702,8 +744,8 @@ QGroupBox::title {
     subcontrol-position: top left;
     left: 10px;
     padding: 0 3px;
-    background-color: #444444; /* Should match the dialog background */
-    color: #eaeaea;
+    background-color: @bg-main; /* Should match the dialog background */
+    color: @text-main;
 }
 
 /* ============================================================
@@ -711,7 +753,7 @@ QGroupBox::title {
    ============================================================ */
 
 QDialog#FolderStatsDialog {
-    background-color: #444444;
+    background-color: @bg-main;
 }
 
 #FolderStatsDialog QLabel {
@@ -720,7 +762,7 @@ QDialog#FolderStatsDialog {
 
 /* Cards/Containers */
 #FolderStatsDialog QFrame {
-    background-color: #373737;
+    background-color: @bg-dark;
     border-radius: 5px;
 }
 
@@ -728,41 +770,41 @@ QDialog#FolderStatsDialog {
 #FolderStatsDialog QLabel#StatsTitle {
     font-size: 18px; 
     font-weight: bold; 
-    color: #ffffff;
+    color: @text-light;
 }
 
 #FolderStatsDialog QLabel#StatsSubtitle {
     font-size: 13px; 
-    color: #a0a0a0;
+    color: @text-meta;
 }
 
 #FolderStatsDialog QLabel#StatsLabel {
     font-size: 13px; 
-    color: #a0a0a0;
+    color: @text-meta;
 }
 
 #FolderStatsDialog QLabel#StatsValue {
     font-size: 13px; 
     font-weight: bold; 
-    color: #eaeaea;
+    color: @text-main;
 }
 
 /* Legend */
 #FolderStatsDialog QLabel#LegendLabel {
-    color: #a0a0a0; 
+    color: @text-meta; 
     font-size: 11px;
 }
 
 /* Progress Bar */
 #FolderStatsDialog QProgressBar#FolderStatsProgressBar {
     border: none;
-    background-color: #444444;
+    background-color: @bg-main;
     border-radius: 5px;
     text-align: center;
 }
 
 #FolderStatsDialog QProgressBar#FolderStatsProgressBar::chunk {
-    background-color: #018574;
+    background-color: @accent;
     border-radius: 5px;
 }
 
@@ -770,12 +812,12 @@ QDialog#FolderStatsDialog {
 #FolderStatsDialog QLabel#ProgressLabel {
     font-weight: bold;
     font-size: 14px;
-    color: #eaeaea;
+    color: @text-main;
 }
 
 /* Vertical Separator Line */
 #FolderStatsDialog QFrame#StatsSeparator {
-    background-color: #555555;
+    background-color: @separator-color;
 }
 
 /* Legend Dot */
@@ -784,17 +826,17 @@ QDialog#FolderStatsDialog {
 }
 
 /* Status Properties for Coloring */
-QLabel[status="watched"] { color: #2ecc71; }
-QLabel[status="in_progress"] { color: #f1c40f; }
-QLabel[status="unwatched"] { color: #ff6b6b; }
-QLabel[status="default"] { color: #eaeaea; }
+QLabel[status="watched"] { color: @chart-watched; }
+QLabel[status="in_progress"] { color: @chart-progress; }
+QLabel[status="unwatched"] { color: @chart-unwatched; }
+QLabel[status="default"] { color: @text-main; }
 
 /* Donut Chart Colors */
 DonutChart {
-    qproperty-watchedColor: #2ecc71;
-    qproperty-inProgressColor: #f1c40f;
-    qproperty-unwatchedColor: #ff6b6b;
-    qproperty-holeColor: #373737;     /* Matches card background */
-    qproperty-centerTextColor: #ffffff;
+    qproperty-watchedColor: @chart-watched;
+    qproperty-inProgressColor: @chart-progress;
+    qproperty-unwatchedColor: @chart-unwatched;
+    qproperty-holeColor: @bg-dark;     /* Matches card background */
+    qproperty-centerTextColor: @text-light;
 }
 
