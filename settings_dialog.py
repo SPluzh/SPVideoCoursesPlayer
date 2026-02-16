@@ -19,6 +19,8 @@ from styles import DARK_STYLE
 from constants import RESOURCES_DIR
 from progress_dialog import ScanProgressDialog, UpdateProgressDialog
 from icon_manager import load_icons_dict
+from config_manager import ConfigManager
+from constants import ROOT_DIR, DATA_DIR
 
 from utils import resolve_binary_path
 
@@ -28,6 +30,7 @@ class SettingsDialog(QDialog):
     def __init__(self, parent=None, config_file=None):
         super().__init__(parent)
         self.config_file = config_file
+        self.config = ConfigManager(self.config_file, ROOT_DIR, DATA_DIR)
         self.setWindowTitle(tr('settings.title'))
         self.setMinimumWidth(650)
         self.load_icons()
@@ -217,15 +220,10 @@ class SettingsDialog(QDialog):
         return paths
 
     def load_current_settings(self):
-        if not self.config_file or not self.config_file.exists():
-            return
-
-        config = configparser.ConfigParser()
-        config.read(self.config_file, encoding='utf-8')
-
-        paths_str = config.get('Paths', 'paths', fallback='')
-        excluded_str = config.get('Paths', 'excluded_paths', fallback='')
-        excluded_paths = {os.path.normpath(p.strip()) for p in excluded_str.split(';') if p.strip()}
+        self.pathslist.clear()
+        
+        paths_str = self.config.get_library_paths()
+        excluded_paths = self.config.get_excluded_library_paths()
 
         if paths_str:
             for path in paths_str.split(';'):
@@ -233,6 +231,7 @@ class SettingsDialog(QDialog):
                 if path:
                     item = QTreeWidgetItem([path])
                     item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
+                    
                     if os.path.normpath(path) in excluded_paths:
                         item.setCheckState(0, Qt.CheckState.Unchecked)
                         font = item.font(0)
@@ -240,6 +239,7 @@ class SettingsDialog(QDialog):
                         item.setFont(0, font)
                     else:
                         item.setCheckState(0, Qt.CheckState.Checked)
+                        
                     self.pathslist.addTopLevelItem(item)
                     self._validate_path(item)
 
@@ -255,13 +255,6 @@ class SettingsDialog(QDialog):
             item.setToolTip(0, tr('settings.path_invalid', path=path))
 
     def save_settings(self):
-        config = configparser.ConfigParser()
-        if self.config_file.exists():
-            config.read(self.config_file, encoding='utf-8')
-
-        if 'Paths' not in config:
-            config['Paths'] = {}
-
         paths = []
         excluded_paths = []
         for i in range(self.pathslist.topLevelItemCount()):
@@ -271,11 +264,8 @@ class SettingsDialog(QDialog):
             if item.checkState(0) == Qt.CheckState.Unchecked:
                 excluded_paths.append(path)
         
-        config['Paths']['paths'] = ';'.join(paths)
-        config['Paths']['excluded_paths'] = ';'.join(excluded_paths)
-
-        with open(self.config_file, 'w', encoding='utf-8') as f:
-            config.write(f)
+        self.config.set_library_paths(paths)
+        self.config.set_excluded_library_paths(excluded_paths)
 
         self.accept()
 
@@ -316,28 +306,35 @@ class SettingsDialog(QDialog):
 
     def _save_settings_only(self):
         """Save settings without closing the dialog"""
-        config = configparser.ConfigParser()
-        if self.config_file.exists():
-            config.read(self.config_file, encoding='utf-8')
-
-        if 'Paths' not in config:
-            config['Paths'] = {}
-
         paths = self.get_paths_list()
-        config['Paths']['paths'] = ';'.join(paths)
-
-        with open(self.config_file, 'w', encoding='utf-8') as f:
-            config.write(f)
+        # Find excluded based on check state matching save_settings logic
+        # But get_paths_list only returns text.
+        # Let's logic it out properly or reuse logic.
+        # Simpler: call set_library_paths with whatever we have?
+        # But wait, logic in save_settings calculates excluded_paths too.
+        # This _save_settings_only implementation in current file ONLY saves 'paths', not 'excluded_paths'!
+        # That seems like a bug or simplification in original code.
+        # We should probably fix it to be consistent.
+        
+        paths = []
+        excluded_paths = []
+        for i in range(self.pathslist.topLevelItemCount()):
+            item = self.pathslist.topLevelItem(i)
+            path = item.text(0)
+            paths.append(path)
+            if item.checkState(0) == Qt.CheckState.Unchecked:
+                excluded_paths.append(path)
+                
+        self.config.set_library_paths(paths)
+        self.config.set_excluded_library_paths(excluded_paths)
 
     def check_libmpv_version(self):
         """Check if libmpv-2.dll is up to date"""
         try:
             from update_libmpv import get_latest_release, get_dll_version
-            config = configparser.ConfigParser()
-            if self.config_file and os.path.exists(self.config_file):
-                config.read(self.config_file, encoding='utf-8')
+            # config usage removed
             
-            dll_path = resolve_binary_path(config, 'libmpv_path', 'bin/libmpv-2.dll')
+            dll_path = self.config.get_libmpv_path()
             bin_dir = dll_path.parent
             version_file = bin_dir / "libmpv.version"
             
@@ -380,12 +377,8 @@ class SettingsDialog(QDialog):
     def check_ffmpeg_version(self):
         """Check if FFmpeg/ffprobe are present in bin folder"""
         try:
-            config = configparser.ConfigParser()
-            if self.config_file and os.path.exists(self.config_file):
-                config.read(self.config_file, encoding='utf-8')
-                
-            ffmpeg_path = resolve_binary_path(config, 'ffmpeg_path', 'bin/ffmpeg.exe')
-            ffprobe_path = resolve_binary_path(config, 'ffprobe_path', 'bin/ffprobe.exe')
+            ffmpeg_path = self.config.get_ffmpeg_path()
+            ffprobe_path = self.config.get_ffprobe_path()
             
             if ffmpeg_path.exists() and ffprobe_path.exists():
                 self.ffmpeg_btn.setText(f" FFmpeg & ffprobe")

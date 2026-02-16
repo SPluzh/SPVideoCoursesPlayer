@@ -13,33 +13,31 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from translator import tr
 from database import DatabaseManager
 from utils import natural_sort_key
+from config_manager import ConfigManager
+from constants import ROOT_DIR, DATA_DIR
 
 from utils import setup_encoding
-setup_encoding()
 
 class VideoScanner:
-    def __init__(self, config_file='video_course_browser.ini'):
+    def __init__(self, config_file='settings.ini'):
         print("\n" + "=" * 70)
         print(tr('scanner.init_title'))
         print("=" * 70)
 
-        self.script_dir = Path(__file__).parent
-        self.data_dir = self.script_dir / 'data'
+        self.script_dir = ROOT_DIR
+        self.data_dir = DATA_DIR
         self.data_dir.mkdir(exist_ok=True)
         
         self.config_file = self.script_dir / config_file
         self.db_file = self.data_dir / 'video_courses.db'
-        self.thumbnails_dir = self.data_dir / 'video_thumbnails'
         
-        self._load_settings()
+        self.config = ConfigManager(self.config_file, self.script_dir, self.data_dir)
         
-        # Paths to ffprobe and ffmpeg are already set in _load_settings, but ensure defaults if not loaded
-        if not hasattr(self, 'ffprobe_path'):
-            self.ffprobe_path = self.script_dir / 'resources/bin/ffprobe.exe'
+        self.thumbnails_dir = self.config.get_thumbnails_dir()
+        self.ffmpeg_path = self.config.get_ffmpeg_path()
+        self.ffprobe_path = self.config.get_ffprobe_path()
+        
         self.has_ffprobe = self.ffprobe_path.exists()
-        
-        if not hasattr(self, 'ffmpeg_path'):
-            self.ffmpeg_path = self.script_dir / 'resources/bin/ffmpeg.exe'
         self.has_ffmpeg = self.ffmpeg_path.exists()
 
         print(f"\n{tr('scanner.paths_title')}")
@@ -64,6 +62,21 @@ class VideoScanner:
         
         self._print_lock = threading.Lock()
         
+        # Load settings via ConfigManager
+        self.video_extensions = self.config.get_video_extensions()
+        self.audio_extensions = self.config.get_audio_extensions()
+        self.subtitle_extensions = self.config.get_subtitle_extensions()
+        
+        self.render_width = self.config.get_render_width()
+        self.render_height = self.config.get_render_height()
+        self.thumbnail_count = self.config.get_thumbnail_count()
+        self.thumbnail_quality = self.config.get_thumbnail_quality()
+        self.regenerate_thumbnails = self.config.get_regenerate_thumbnails()
+        
+        self.max_workers = self.config.get_max_workers()
+        self.thumbnail_workers = self.config.get_thumbnail_workers()
+        self.ffmpeg_timeout = self.config.get_ffmpeg_timeout()
+        
         # Statistics
         self.stats = {
             'thumbnails_generated': 0,
@@ -73,65 +86,6 @@ class VideoScanner:
             'time_ffprobe': 0,
             'time_total': 0
         }
-
-    def _load_settings(self):
-        """Load settings from configuration file."""
-        config = configparser.ConfigParser()
-        config.read(self.config_file, encoding='utf-8')
-
-        # Path to thumbnails folder
-        if config.has_section('Paths'):
-            custom_thumbs = config.get('Paths', 'thumbnails_dir', fallback=None)
-            if custom_thumbs:
-                self.thumbnails_dir = Path(custom_thumbs)
-                if not self.thumbnails_dir.is_absolute():
-                    self.thumbnails_dir = self.script_dir / self.thumbnails_dir
-
-            # Paths to binary files
-            ffmpeg_custom = config.get('Paths', 'ffmpeg_path', fallback=None)
-            if ffmpeg_custom:
-                self.ffmpeg_path = Path(ffmpeg_custom)
-                if not self.ffmpeg_path.is_absolute():
-                    self.ffmpeg_path = self.script_dir / self.ffmpeg_path
-
-            ffprobe_custom = config.get('Paths', 'ffprobe_path', fallback=None)
-            if ffprobe_custom:
-                self.ffprobe_path = Path(ffprobe_custom)
-                if not self.ffprobe_path.is_absolute():
-                    self.ffprobe_path = self.script_dir / self.ffprobe_path
-
-        # Video file extensions
-        extensions = config.get(
-            'Video', 'extensions',
-            fallback='.mp4,.mkv,.avi,.mov,.wmv,.flv,.webm,.m4v,.mpg,.mpeg,.3gp,.ts'
-        )
-        self.video_extensions = {e.strip().lower() for e in extensions.split(',')}
-
-        # Audio file extensions
-        audio_extensions = config.get(
-            'Audio', 'extensions',
-            fallback='.mp3,.aac,.ac3,.dts,.flac,.wav,.ogg,.m4a,.wma,.eac3,.opus,.mka'
-        )
-        self.audio_extensions = {e.strip().lower() for e in audio_extensions.split(',')}
-
-        # Subtitle file extensions
-        subtitle_extensions = config.get(
-            'Subtitles', 'extensions',
-            fallback='.srt,.ass,.ssa,.sub,.idx,.vtt,.sup,.stl,.smi,.txt'
-        )
-        self.subtitle_extensions = {e.strip().lower() for e in subtitle_extensions.split(',')}
-
-        # Thumbnail settings
-        self.render_width = config.getint('Thumbnails', 'render_width', fallback=320)
-        self.render_height = config.getint('Thumbnails', 'render_height', fallback=180)
-        self.thumbnail_count = config.getint('Thumbnails', 'count', fallback=10)
-        self.thumbnail_quality = config.getint('Thumbnails', 'quality', fallback=5)  # 2-31, lower is better
-        self.regenerate_thumbnails = config.getboolean('Thumbnails', 'regenerate', fallback=False)
-        
-        # Performance settings
-        self.max_workers = config.getint('Performance', 'max_workers', fallback=8)
-        self.thumbnail_workers = config.getint('Performance', 'thumbnail_workers', fallback=4)
-        self.ffmpeg_timeout = config.getint('Performance', 'ffmpeg_timeout', fallback=5)
 
         print(f"\n{'─' * 40}")
         print(tr('scanner.settings_title'))
@@ -1378,11 +1332,10 @@ class VideoScanner:
 
 
 def main():
+    setup_encoding()
     scanner = VideoScanner()
 
-    config = configparser.ConfigParser()
-    config.read(scanner.config_file, encoding='utf-8')
-
+    config = scanner.config.get_raw_config()
     default_path = config.get('Paths', 'default_path', fallback=r'D:\Courses')
 
     import sys

@@ -1505,11 +1505,7 @@ class VideoCourseBrowser(QMainWindow):
                 )
                 return
 
-        if 'Thumbnails' not in config:
-            config['Thumbnails'] = {}
 
-        with open(self.config_file, 'w', encoding='utf-8') as f:
-            config.write(f)
 
         # Show progress dialog with console output
         dialog = ScanProgressDialog(self)

@@ -51,6 +51,15 @@ class ConfigManager:
             'text_color': '#FFFFFF',
             'outline_color': '#000000',
             'font_scale': '1.0',
+            'extensions': '.srt,.ass,.ssa,.sub,.idx,.vtt,.sup,.stl,.smi,.txt',
+        },
+        'Audio': {
+            'extensions': '.mp3,.aac,.ac3,.dts,.flac,.wav,.ogg,.m4a,.wma,.eac3,.opus,.mka',
+        },
+        'Performance': {
+            'max_workers': '8',
+            'thumbnail_workers': '4',
+            'ffmpeg_timeout': '5',
         },
     }
 
@@ -168,12 +177,61 @@ class ConfigManager:
         config = self._read_config()
         return config.getint('Thumbnails', 'animation_interval', fallback=400)
 
+    def get_render_width(self) -> int:
+        config = self._read_config()
+        return config.getint('Thumbnails', 'render_width', fallback=320)
+
+    def get_render_height(self) -> int:
+        config = self._read_config()
+        return config.getint('Thumbnails', 'render_height', fallback=180)
+
+    def get_thumbnail_count(self) -> int:
+        config = self._read_config()
+        return config.getint('Thumbnails', 'count', fallback=12)
+
+    def get_thumbnail_quality(self) -> int:
+        config = self._read_config()
+        return config.getint('Thumbnails', 'quality', fallback=2)
+
+    def get_regenerate_thumbnails(self) -> bool:
+        config = self._read_config()
+        return config.getboolean('Thumbnails', 'regenerate', fallback=False)
+
+    # --- Performance settings ---
+
+    def get_max_workers(self) -> int:
+        config = self._read_config()
+        return config.getint('Performance', 'max_workers', fallback=8)
+
+    def get_thumbnail_workers(self) -> int:
+        config = self._read_config()
+        return config.getint('Performance', 'thumbnail_workers', fallback=4)
+
+    def get_ffmpeg_timeout(self) -> int:
+        config = self._read_config()
+        return config.getint('Performance', 'ffmpeg_timeout', fallback=5)
+
     # --- Video settings ---
 
     def get_folder_image_extensions(self) -> set:
         config = self._read_config()
         folder_exts = config.get('Video', 'folder_image_extensions', fallback='.jpg,.jpeg,.png,.webp,.bmp')
         return {e.strip().lower() for e in folder_exts.split(',')}
+
+    def get_video_extensions(self) -> set:
+        config = self._read_config()
+        exts = config.get('Video', 'extensions', fallback=self.DEFAULTS['Video']['extensions'])
+        return {e.strip().lower() for e in exts.split(',')}
+
+    def get_audio_extensions(self) -> set:
+        config = self._read_config()
+        exts = config.get('Audio', 'extensions', fallback=self.DEFAULTS['Audio']['extensions'])
+        return {e.strip().lower() for e in exts.split(',')}
+
+    def get_subtitle_extensions(self) -> set:
+        config = self._read_config()
+        exts = config.get('Subtitles', 'extensions', fallback=self.DEFAULTS['Subtitles']['extensions'])
+        return {e.strip().lower() for e in exts.split(',')}
 
     # --- Subtitle settings ---
 
@@ -245,6 +303,45 @@ class ConfigManager:
         config['General']['tag_filter_active'] = str(tag_active)
         config['General']['selected_tag_ids'] = ",".join(map(str, selected_tag_ids))
         self._write_config(config)
+
+    def set_library_paths(self, paths: list[str]):
+        config = self._read_config()
+        if 'Paths' not in config:
+            config['Paths'] = {}
+        config['Paths']['paths'] = ';'.join(paths)
+        self._write_config(config)
+
+    def set_excluded_library_paths(self, paths: list[str]):
+        config = self._read_config()
+        if 'Paths' not in config:
+            config['Paths'] = {}
+        config['Paths']['excluded_paths'] = ';'.join(paths)
+        self._write_config(config)
+
+    def get_ffmpeg_path(self) -> Path:
+        config = self._read_config()
+        # Logic similar to resolve_binary_path but using self.root_dir
+        path_str = config.get('Paths', 'ffmpeg_path', fallback='resources/bin/ffmpeg.exe')
+        path = Path(path_str)
+        if not path.is_absolute():
+            path = self.root_dir / path
+        return path
+
+    def get_ffprobe_path(self) -> Path:
+        config = self._read_config()
+        path_str = config.get('Paths', 'ffprobe_path', fallback='resources/bin/ffprobe.exe')
+        path = Path(path_str)
+        if not path.is_absolute():
+            path = self.root_dir / path
+        return path
+
+    def get_libmpv_path(self) -> Path:
+        config = self._read_config()
+        path_str = config.get('Paths', 'libmpv_path', fallback='resources/bin/libmpv-2.dll')
+        path = Path(path_str)
+        if not path.is_absolute():
+            path = self.root_dir / path
+        return path
 
     def get_raw_config(self) -> configparser.ConfigParser:
         """Get the raw ConfigParser for binary path resolution or other direct access."""
