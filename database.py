@@ -408,7 +408,7 @@ class DatabaseManager:
         try:
             with self.get_connection() as conn:
                 c = conn.cursor()
-                c.execute('UPDATE video_files SET watched_percent = 100, last_position = 0 WHERE file_path = ?', 
+                c.execute('UPDATE video_files SET watched_percent = 100, last_position = duration WHERE file_path = ?', 
                           (str(file_path),))
                 conn.commit()
         except Exception as e:
@@ -419,7 +419,7 @@ class DatabaseManager:
         try:
             with self.get_connection() as conn:
                 c = conn.cursor()
-                c.execute('UPDATE video_files SET watched_percent = 100, last_position = 0 WHERE folder_path = ?', 
+                c.execute('UPDATE video_files SET watched_percent = 100, last_position = duration WHERE folder_path = ?', 
                           (str(folder_path),))
                 conn.commit()
         except Exception as e:

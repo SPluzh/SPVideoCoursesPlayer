@@ -1,8 +1,6 @@
 # Changelog
 
 All notable changes to this project will be documented in this file.
-
-
 ## [1.2.3]
 - **Folder UI**: Major visual overhaul for course folders:
     - **Statistics**: Displays video count, total duration, watched duration, and percentage (e.g., "5 videos • 00:10:00 / 01:00:00 (16%)").
