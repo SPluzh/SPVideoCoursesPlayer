@@ -677,8 +677,22 @@ class VideoCourseBrowser(QMainWindow):
         dialog = SettingsDialog(self, self.config_file)
         if dialog.exec() == QDialog.DialogCode.Accepted:
             self.load_settings()
+            self.update_delegate_config()
             self.path_edit.setText(self.library_paths)
             QMessageBox.information(self, tr('settings.done'), tr('settings.saved'))
+
+    def update_delegate_config(self):
+        """Update delegate configuration with new settings."""
+        if hasattr(self, 'course_tree'):
+            delegate = self.course_tree.itemDelegate()
+            if isinstance(delegate, VideoItemDelegate):
+                delegate.config.update({
+                    'folder_row_height': self.folder_row_height,
+                    'video_row_height': self.video_row_height,
+                    'display_width': self.display_width,
+                    'display_height': self.display_height,
+                })
+                self.course_tree.viewport().update()
 
     def show_about(self):
         dialog = AboutDialog(self)
@@ -825,6 +839,39 @@ class VideoCourseBrowser(QMainWindow):
         except Exception as e:
             print(f"Error clearing metadata: {e}")
             return False
+
+    def _find_folder_image(self, folder_path):
+        """Find a suitable cover image for the folder."""
+        if not folder_path or not Path(folder_path).exists():
+            return None
+            
+        try:
+            # Priority 1: Specific names
+            priority_names = ['cover', 'folder', 'poster', 'fanart']
+            for name in priority_names:
+                for ext in self.folder_image_extensions:
+                    p = folder_path / f"{name}{ext}"
+                    if p.exists():
+                        return str(p)
+            
+            # Priority 2: Any image file
+            # This can be slow for large folders, so limit to first few
+            count = 0
+            for item in folder_path.iterdir():
+                if item.is_file() and item.suffix.lower() in self.folder_image_extensions:
+                    if 'cover' in item.name.lower() or 'folder' in item.name.lower():
+                         return str(item)
+                    # Return first found if loose mode logic is desired? 
+                    # The user said "if there is some picture take it"
+                    return str(item)
+                
+                count += 1
+                if count > 50: # Don't scan forever
+                    break
+        except Exception as e:
+            print(f"Error scanning for folder image: {e}")
+            
+        return None
 
     def get_saved_position(self, file_path):
         """Return (last_position, volume) for file."""
@@ -1457,7 +1504,8 @@ class VideoCourseBrowser(QMainWindow):
             'animation_interval': '400'
         }
         config['Video'] = {
-            'extensions': '.mp4,.mkv,.avi,.mov,.wmv,.flv,.webm,.m4v,.mpg,.mpeg,.3gp,.ts'
+            'extensions': '.mp4,.mkv,.avi,.mov,.wmv,.flv,.webm,.m4v,.mpg,.mpeg,.3gp,.ts',
+            'folder_image_extensions': '.jpg,.jpeg,.png,.webp,.bmp'
         }
         config['Subtitles'] = {
             'text_color': '#FFFFFF',
@@ -1498,7 +1546,12 @@ class VideoCourseBrowser(QMainWindow):
         self.window_width = config.getint('Display', 'window_width', fallback=1400)
         self.window_height = config.getint('Display', 'window_height', fallback=800)
         self.video_row_height = config.getint('Display', 'video_row_height', fallback=110)
-        self.folder_row_height = config.getint('Display', 'folder_row_height', fallback=35)
+        self.video_row_height = config.getint('Display', 'video_row_height', fallback=110)
+        self.folder_row_height = config.getint('Display', 'folder_row_height', fallback=70) # Increased default height
+
+        # Load folder image extensions
+        folder_exts = config.get('Video', 'folder_image_extensions', fallback='.jpg,.jpeg,.png,.webp,.bmp')
+        self.folder_image_extensions = {e.strip().lower() for e in folder_exts.split(',')}
 
         self.display_width = config.getint('Thumbnails', 'display_width', fallback=160)
         self.display_height = config.getint('Thumbnails', 'display_height', fallback=90)
@@ -1581,6 +1634,9 @@ class VideoCourseBrowser(QMainWindow):
         for f in folders:
             folders_data[f['path']] = f
 
+        # Default folder cover image
+        default_cover = str(RESOURCES_DIR / "icons" / "folder_cover.png")
+
         # Create root folders first (no parent in DB or parent not in list)
         for f in folders:
             if not f['parent_path'] or f['parent_path'] not in folders_data:
@@ -1594,9 +1650,14 @@ class VideoCourseBrowser(QMainWindow):
                 item.setData(0, Qt.ItemDataRole.UserRole, f['path'])
                 item.setData(0, Qt.ItemDataRole.UserRole + 1, 'folder')
                 item.setData(0, Qt.ItemDataRole.UserRole + 3, f['root_path']) # Store root_path for opening folder
+
+                # Find folder image
+                full_path = Path(f['root_path']) / f['path'] if f['path'] != '.' else Path(f['root_path'])
+                cover_image = self._find_folder_image(full_path) or default_cover
+                item.setData(0, Qt.ItemDataRole.UserRole + 4, cover_image)
                 
-                # Icon
-                item.setIcon(0, self.folder_icon)
+                # Icon (we might not need the default icon if drawing custom)
+                # item.setIcon(0, self.folder_icon)
                 
                 folder_items[f['path']] = item
                 if f.get('is_expanded'):
@@ -1623,7 +1684,13 @@ class VideoCourseBrowser(QMainWindow):
                     item.setData(0, Qt.ItemDataRole.UserRole, f['path'])
                     item.setData(0, Qt.ItemDataRole.UserRole + 1, 'folder')
                     item.setData(0, Qt.ItemDataRole.UserRole + 3, f['root_path']) # Store root_path
-                    item.setIcon(0, self.folder_icon)
+
+                    # Find folder image
+                    full_path = Path(f['root_path']) / f['path']
+                    cover_image = self._find_folder_image(full_path) or default_cover
+                    item.setData(0, Qt.ItemDataRole.UserRole + 4, cover_image)
+
+                    # item.setIcon(0, self.folder_icon)
                     
                     folder_items[f['path']] = item
                     if f.get('is_expanded'):

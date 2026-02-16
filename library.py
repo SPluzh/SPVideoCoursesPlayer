@@ -1,9 +1,11 @@
-
 from pathlib import Path
 
 from PyQt6.QtWidgets import QTreeWidget, QStyledItemDelegate, QWidget, QLabel
-from PyQt6.QtCore import Qt, QTimer, QRect, QPoint, QRectF
-from PyQt6.QtGui import QPainter, QPixmap, QPalette, QColor, QPen, QPolygon, QCursor, QFont, QBrush, QPainterPath
+from PyQt6.QtCore import Qt, QTimer, QRect, QPoint, QRectF, QPointF
+from PyQt6.QtGui import (
+    QAction, QColor, QIcon, QPainter, QPixmap, QPalette, QBrush, 
+    QStandardItem, QFont, QPen, QFontMetrics, QPainterPath, QTextLayout, QTextOption
+)
 
 from translator import tr
 from placeholders import draw_library_placeholder
@@ -126,6 +128,12 @@ class VideoItemDelegate(QStyledItemDelegate):
         try:
             # print(f"DEBUG: paint index {index.row()}") 
             item_type = index.data(Qt.ItemDataRole.UserRole + 1)
+            
+            # Handle Folder Rendering
+            if item_type == 'folder':
+                self.paint_folder(painter, option, index)
+                return
+
             if item_type != 'video':
                 super().paint(painter, option, index)
                 return
@@ -442,6 +450,133 @@ class VideoItemDelegate(QStyledItemDelegate):
             import traceback
             traceback.print_exc()
             painter.restore()
+
+    def paint_folder(self, painter, option, index):
+        """Paint folder item with custom 16:9 icon."""
+        painter.save()
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
+
+        # Config dimensions
+        video_height = self.config.get('video_row_height', 110)
+        
+        # Target icon height is half of video row height
+        icon_height = int(video_height / 2)
+        icon_width = int(icon_height * 16 / 9)
+        
+        # Centered vertically in the folder row
+        row_height = option.rect.height()
+        y_offset = (row_height - icon_height) // 2
+        
+        # Icon rect (left padding 5px)
+        icon_rect = QRect(option.rect.left() + 5, option.rect.top() + y_offset, icon_width, icon_height)
+        
+        # Draw Icon (folder cover)
+        cover_path = index.data(Qt.ItemDataRole.UserRole + 4)
+        
+        pixmap = self._get_pixmap(cover_path)
+        
+        if pixmap:
+            # Check if it's the default folder icon
+            is_default = "folder_cover.png" in str(cover_path)
+            mode = Qt.AspectRatioMode.KeepAspectRatio if is_default else Qt.AspectRatioMode.KeepAspectRatioByExpanding
+            
+            scaled_pixmap = pixmap.scaled(
+                icon_width, icon_height,
+                mode,
+                Qt.TransformationMode.SmoothTransformation
+            )
+            
+            # Crop to 16:9 if needed (simulated by drawing in rect with clipping)
+            # Actually KeepAspectRatioByExpanding + drawing in rect with clip is good
+            
+            path = QPainterPath()
+            path.addRoundedRect(QRectF(icon_rect), 3.0, 3.0)
+            painter.setClipPath(path)
+            
+            # Center the pixmap in the rect
+            px_x = icon_rect.left() + (icon_rect.width() - scaled_pixmap.width()) // 2
+            px_y = icon_rect.top() + (icon_rect.height() - scaled_pixmap.height()) // 2
+            
+            painter.drawPixmap(px_x, px_y, scaled_pixmap)
+            
+            # Draw border
+            painter.setClipping(False) # Turn off clip for border
+            painter.setPen(self.thumbnail_border.palette().color(QPalette.ColorRole.Mid))
+            painter.setBrush(Qt.BrushStyle.NoBrush)
+            painter.drawRoundedRect(icon_rect, 3, 3)
+            
+        else:
+            # Fallback if no image found (shouldn't happen if default is set)
+            painter.fillRect(icon_rect, self.empty_thumbnail_bg.palette().color(QPalette.ColorRole.Window))
+            painter.setPen(self.empty_thumbnail_border.palette().color(QPalette.ColorRole.Mid))
+            painter.drawRoundedRect(icon_rect, 3, 3)
+
+        # Draw Text
+        text_x = icon_rect.right() + 10
+        text_width = option.rect.right() - text_x - 10
+        
+        if text_width > 0:
+            # Main label (Folder Name + Info)
+            # The text is already formatted in main.py as "Name (Count) - Duration"
+            full_text = index.data(0)
+            
+            painter.setFont(self.video_title.font())
+            painter.setPen(self.video_title.palette().color(QPalette.ColorRole.WindowText))
+            
+            # Center text vertically relative to icon or row? Row is better.
+            
+            # Robust Folder Name Rendering
+            fm = painter.fontMetrics()
+            line_height = fm.lineSpacing()
+            
+            # Create text layout
+            layout = QTextLayout(str(full_text), painter.font())
+            layout.setCacheEnabled(True)
+            layout.beginLayout()
+            
+            lines = []
+            max_lines = 2
+            
+            while len(lines) < max_lines:
+                line = layout.createLine()
+                if not line.isValid():
+                    break
+                line.setLineWidth(text_width)
+                lines.append(line)
+                
+            layout.endLayout()
+            
+            # If layout failed to produce lines (e.g. text_width too small), try fallback or simple draw
+            if not lines and full_text:
+                # Fallback: simple elided text
+                elided = fm.elidedText(full_text, Qt.TextElideMode.ElideRight, int(text_width))
+                painter.drawText(int(text_x), int(option.rect.center().y() + fm.ascent() - line_height/2), elided)
+                painter.restore()
+                return
+
+            # Calculate total height to center vertically
+            total_height = sum(line.height() for line in lines)
+            y = option.rect.center().y() - total_height / 2
+            
+            # Draw lines
+            for i, line in enumerate(lines):
+                current_y = int(y + line.ascent())
+                
+                # Check for last line elision
+                if i == max_lines - 1:
+                    if line.textStart() + line.textLength() < len(full_text):
+                        remaining = full_text[line.textStart():]
+                        elided = fm.elidedText(remaining, Qt.TextElideMode.ElideRight, int(text_width))
+                        painter.drawText(int(text_x), current_y, elided)
+                        y += line.height()
+                        continue
+
+                line.draw(painter, QPointF(float(text_x), float(y)))
+                y += line.height()
+
+        painter.restore()
+
 
 
 class HoverTreeWidget(QTreeWidget):
