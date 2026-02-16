@@ -629,6 +629,40 @@ class VideoPlayerWidget(QWidget):
             self.auto_play_pending = False
             return False
 
+    def unload_video(self):
+        """Stop playback and clear player state."""
+        if not self.player:
+            return
+        
+        try:
+            file_to_unload = self.current_file
+            print(f"🎬 Unloading video: {file_to_unload}")
+            
+            # Reset current file FIRST so other methods (like save_progress) know we're stopping
+            self.current_file = None
+            self.saved_position = 0
+            
+            # Use 'stop' command only if we actually had a file
+            if file_to_unload:
+                try:
+                    self.player.command('stop')
+                except:
+                    pass
+            
+            # Reset UI
+            self.play_btn.setIcon(self.icons.get('play', QIcon()))
+            self.play_btn.setEnabled(False)
+            self.progress_slider.setValue(0)
+            self.progress_slider.setEnabled(False)
+            self.progress_slider.set_markers([], 0)
+            self.time_label.setText("00:00 / 00:00")
+            
+            if hasattr(self, 'video_widget'):
+                self.video_widget.update()
+                
+        except Exception as e:
+            print(f"Error unloading video: {e}")
+
     def _load_paused(self):
         """Load video in paused mode."""
         if not self.player: return
@@ -1322,7 +1356,7 @@ class VideoPlayerWidget(QWidget):
     def restore_position(self):
         if self.saved_position > 0 and not self.position_restore_attempted:
             try:
-                self.player.seek(self.saved_position, 'absolute')
+                self.player.seek(self.saved_position, 'absolute', 'exact')
                 self.position_restore_attempted = True
             except Exception as e:
                 print(f"Error restoring position: {e}")

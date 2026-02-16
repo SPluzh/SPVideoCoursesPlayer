@@ -203,6 +203,7 @@ class VideoCourseBrowser(QMainWindow):
 
         self.taskbar_progress = TaskbarProgress()
         self.pip_geometry = None
+        self.last_played_path = None
 
         self.create_menu_bar()
 
@@ -865,10 +866,23 @@ class VideoCourseBrowser(QMainWindow):
             # but I added another one later. Let me check my own code.
             # I added: save_progress(self, file_path, position, duration, percent, current_volume)
             
-            position = int(self.video_player.player.time_pos or 0)
-            duration = int(self.video_player.player.duration or 0)
-            current_volume = int(self.video_player.player.volume or 100)
-            percent = min(100, int((position / duration) * 100)) if duration > 0 else 0
+            if not file_path or file_path != self.video_player.current_file:
+                return
+
+            try:
+                position = self.video_player.player.time_pos or 0.0
+                duration = int(self.video_player.player.duration or 0)
+                current_volume = int(self.video_player.player.volume or 100)
+            except:
+                return
+            
+            if duration > 0:
+                percent = int((position / duration) * 100)
+                if percent >= 99:
+                    percent = 100
+                    position = duration
+            else:
+                percent = 0
             
             self.db.save_progress(file_path, position, duration, percent, current_volume)
         except Exception as e:
@@ -881,7 +895,7 @@ class VideoCourseBrowser(QMainWindow):
         file_path = self.video_player.current_file
 
         try:
-            position = int(self.video_player.player.time_pos or 0)
+            position = self.video_player.player.time_pos or 0.0
             duration = int(self.video_player.player.duration or 0)
             current_volume = int(self.video_player.player.volume or 100)
         except Exception as e:
@@ -890,6 +904,9 @@ class VideoCourseBrowser(QMainWindow):
 
         if duration > 0:
             percent = int((position / duration) * 100)
+            if percent >= 99:
+                percent = 100
+                position = duration
             
             try:
                 self.db.save_progress(file_path, position, duration, percent, current_volume)
@@ -1069,9 +1086,19 @@ class VideoCourseBrowser(QMainWindow):
         self.course_tree.viewport().update()
 
     def on_video_finished(self):
+        """Handle video completion with a delay to ensure stability."""
         if self.video_player.current_file:
-            self.db.mark_video_as_watched(self.video_player.current_file)
+            current_file = self.video_player.current_file
+            # Defer execution to let MPV handle its internal EOF state first
+            QTimer.singleShot(200, lambda: self._handle_video_completion(current_file))
+
+    def _handle_video_completion(self, file_path):
+        """Actual completion logic after delay."""
+        try:
+            self.db.mark_video_as_watched(file_path)
             self.load_courses()
+        except Exception as e:
+            print(f"Error in delayed video completion: {e}")
 
     def clear_metadata(self):
         """Clear all metadata via main window button."""
@@ -1555,10 +1582,11 @@ class VideoCourseBrowser(QMainWindow):
             item.setExpanded(not item.isExpanded())
 
     def play_next_video(self):
-        if not self.video_player.current_file:
+        current_file = self.video_player.current_file or self.last_played_path
+        if not current_file:
             return
 
-        current_item = self.find_video_item(self.video_player.current_file)
+        current_item = self.find_video_item(current_file)
         if not current_item:
             return
 
@@ -1588,10 +1616,11 @@ class VideoCourseBrowser(QMainWindow):
             iterator += 1
 
     def play_prev_video(self):
-        if not self.video_player.current_file:
+        current_file = self.video_player.current_file or self.last_played_path
+        if not current_file:
             return
 
-        current_item = self.find_video_item(self.video_player.current_file)
+        current_item = self.find_video_item(current_file)
         if not current_item:
             return
 
@@ -1620,6 +1649,7 @@ class VideoCourseBrowser(QMainWindow):
 
     def play_video_in_player(self, item, resume=True, auto_play=True):
         file_path = item.data(0, Qt.ItemDataRole.UserRole)
+        self.last_played_path = file_path
 
         if file_path and Path(file_path).exists():
             saved_position = 0

@@ -496,7 +496,7 @@ class VideoItemDelegate(QStyledItemDelegate):
             mode = Qt.AspectRatioMode.KeepAspectRatio if is_default else Qt.AspectRatioMode.KeepAspectRatioByExpanding
             
             scaled_pixmap = pixmap.scaled(
-                icon_width, icon_height,
+                int(icon_width), int(icon_height),
                 mode,
                 Qt.TransformationMode.SmoothTransformation
             )
@@ -512,6 +512,45 @@ class VideoItemDelegate(QStyledItemDelegate):
             painter.setPen(self.thumbnail_border.palette().color(QPalette.ColorRole.Mid))
             painter.setBrush(Qt.BrushStyle.NoBrush)
             painter.drawRoundedRect(icon_rect, 3, 3)
+
+            # Draw green stripe if folder contains currently playing video
+            folder_path = index.data(Qt.ItemDataRole.UserRole)
+            root_path = index.data(Qt.ItemDataRole.UserRole + 3)
+            if self.playing_path and folder_path and root_path:
+                try:
+                    full_folder_path = Path(root_path) / folder_path
+                    is_parent = Path(self.playing_path).is_relative_to(full_folder_path)
+                    if is_parent:
+                        stripe_width = 8
+                        stripe_rect = QRectF(
+                            icon_rect.left() - stripe_width,
+                            icon_rect.top(),
+                            stripe_width,
+                            icon_rect.height()
+                        )
+                        # Use QPainterPath for partial rounding (only left side)
+                        path = QPainterPath()
+                        radius = 3
+                        # Start from top-right
+                        path.moveTo(stripe_rect.right(), stripe_rect.top())
+                        # Top edge to start of top-left arc
+                        path.lineTo(stripe_rect.left() + radius, stripe_rect.top())
+                        # Top-left arc (x, y, w, h, startAngle, spanAngle)
+                        path.arcTo(stripe_rect.left(), stripe_rect.top(), 2*radius, 2*radius, 90, 90)
+                        # Left edge to start of bottom-left arc
+                        path.lineTo(stripe_rect.left(), stripe_rect.bottom() - radius)
+                        # Bottom-left arc
+                        path.arcTo(stripe_rect.left(), stripe_rect.bottom() - 2*radius, 2*radius, 2*radius, 180, 90)
+                        # Bottom edge to bottom-right
+                        path.lineTo(stripe_rect.right(), stripe_rect.bottom())
+                        # Right edge back to start (closing path)
+                        path.closeSubpath()
+                        
+                        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+                        painter.fillPath(path, QColor(1, 133, 116))
+                        painter.setRenderHint(QPainter.RenderHint.Antialiasing, False)
+                except (ValueError, Exception):
+                    pass
             
         else:
             # Fallback if no image found (shouldn't happen if default is set)
