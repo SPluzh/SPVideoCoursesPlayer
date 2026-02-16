@@ -840,3 +840,24 @@ DonutChart {
     qproperty-centerTextColor: @text-light;
 }
 
+
+/* ============================================================
+   CHECKBOXES (QTreeWidget indicators)
+   ============================================================ */
+
+QTreeWidget::indicator {
+    width: 13px;
+    height: 13px;
+    border: 1px solid #cccccc;
+    border-radius: 2px;
+}
+
+QTreeWidget::indicator:checked {
+    image: none;
+    border: 1px solid #cccccc;
+    background-color: qradialgradient(cx:0.5, cy:0.5, radius:0.4, fx:0.5, fy:0.5, stop:0 #cccccc, stop:0.6 #cccccc, stop:0.7 transparent);
+}
+
+QTreeWidget::indicator:unchecked {
+    background-color: transparent;
+}

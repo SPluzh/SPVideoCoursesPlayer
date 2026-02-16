@@ -677,9 +677,10 @@ class VideoCourseBrowser(QMainWindow):
         dialog = SettingsDialog(self, self.config_file)
         if dialog.exec() == QDialog.DialogCode.Accepted:
             self.load_settings()
+            self.load_courses()
             self.update_delegate_config()
-            self.path_edit.setText(self.library_paths)
-            QMessageBox.information(self, tr('settings.done'), tr('settings.saved'))
+            # self.path_edit.setText(self.library_paths) # path_edit might not exist or be relevant anymore
+            # QMessageBox.information(self, tr('settings.done'), tr('settings.saved')) # Optional, maybe too annoying?
 
     def update_delegate_config(self):
         """Update delegate configuration with new settings."""
@@ -1563,8 +1564,12 @@ class VideoCourseBrowser(QMainWindow):
 
         # If no paths provided, load from config
         if paths is None or isinstance(paths, bool):
-            paths_str = config.get('Paths', 'paths', fallback='')
-            paths = [p.strip() for p in paths_str.split(';') if p.strip()]
+            all_paths = config.get('Paths', 'paths', fallback='').split(';')
+            excluded = config.get('Paths', 'excluded_paths', fallback='').split(';')
+            excluded_set = {os.path.normpath(e.strip()) for e in excluded if e.strip()}
+            
+            paths = [p.strip() for p in all_paths if p.strip() and os.path.normpath(p.strip()) not in excluded_set]
+            
             if not paths:
                 QMessageBox.warning(
                     self,
@@ -1647,7 +1652,11 @@ class VideoCourseBrowser(QMainWindow):
         tr.load_language(lang)
         self.show_preview_popup = config.getboolean('General', 'show_preview_popup', fallback=True)
 
+        
         self.library_paths = config.get('Paths', 'paths', fallback='')
+        excluded_str = config.get('Paths', 'excluded_paths', fallback='')
+        self.excluded_library_paths = {os.path.normpath(p.strip()) for p in excluded_str.split(';') if p.strip()}
+        
         self.thumbnails_dir = DATA_DIR / 'video_thumbnails'
         if config.has_section('Paths'):
             self.thumbnails_dir = Path(config.get('Paths', 'thumbnails_dir', fallback=str(DATA_DIR / 'video_thumbnails')))
@@ -1797,6 +1806,11 @@ class VideoCourseBrowser(QMainWindow):
 
         # Create root folders first (no parent in DB or parent not in list)
         for f in folders:
+            # Skip excluded paths (and their children potentially, but simplistic check on root_path here)
+            # Use strict string comparison for now, assuming paths are normalized in DB/config
+            if os.path.normpath(f['root_path']) in self.excluded_library_paths:
+                continue
+
             if not f['parent_path'] or f['parent_path'] not in folders_data:
                 item = QTreeWidgetItem(self.course_tree)
                 item.setText(0, f['name'])
@@ -1851,6 +1865,9 @@ class VideoCourseBrowser(QMainWindow):
         for _ in range(max_iterations):
             added_any = False
             for f in folders:
+                if os.path.normpath(f['root_path']) in self.excluded_library_paths:
+                    continue
+                    
                 if f['path'] in folder_items:
                     continue
                 

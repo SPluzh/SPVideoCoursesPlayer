@@ -300,6 +300,8 @@ class SettingsDialog(QDialog):
 
         self.pathslist = QTreeWidget()
         self.pathslist.setHeaderHidden(True)
+        # Styles moved to resources/styles/dark.qss
+        self.pathslist.itemChanged.connect(self.on_path_checked)
         library_layout.addWidget(self.pathslist)
 
         buttons = QHBoxLayout()
@@ -375,7 +377,14 @@ class SettingsDialog(QDialog):
             self, tr('dialog.select_directory')
         )
         if directory:
+            # Check if path already exists
+            for i in range(self.pathslist.topLevelItemCount()):
+                if self.pathslist.topLevelItem(i).text(0) == directory:
+                    return
+
             item = QTreeWidgetItem([directory])
+            item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
+            item.setCheckState(0, Qt.CheckState.Checked)
             self.pathslist.addTopLevelItem(item)
             self._validate_path(item)
 
@@ -440,6 +449,19 @@ class SettingsDialog(QDialog):
             index = self.pathslist.indexOfTopLevelItem(current)
             self.pathslist.takeTopLevelItem(index)
 
+    def on_path_checked(self, item, column):
+        """Update visual style when path active state changes."""
+        font = item.font(0)
+        if item.checkState(0) == Qt.CheckState.Unchecked:
+            font.setStrikeOut(True)
+            # Optional: set color to gray to indicate disabled state further
+            # item.setForeground(0, Qt.GlobalColor.gray)
+        else:
+            font.setStrikeOut(False)
+            # item.setForeground(0, Qt.GlobalColor.black) # Restore color if needed
+            
+        item.setFont(0, font)
+
     def get_paths_list(self):
         paths = []
         for i in range(self.pathslist.topLevelItemCount()):
@@ -454,11 +476,22 @@ class SettingsDialog(QDialog):
         config.read(self.config_file, encoding='utf-8')
 
         paths_str = config.get('Paths', 'paths', fallback='')
+        excluded_str = config.get('Paths', 'excluded_paths', fallback='')
+        excluded_paths = {os.path.normpath(p.strip()) for p in excluded_str.split(';') if p.strip()}
+
         if paths_str:
             for path in paths_str.split(';'):
                 path = path.strip()
                 if path:
                     item = QTreeWidgetItem([path])
+                    item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
+                    if os.path.normpath(path) in excluded_paths:
+                        item.setCheckState(0, Qt.CheckState.Unchecked)
+                        font = item.font(0)
+                        font.setStrikeOut(True)
+                        item.setFont(0, font)
+                    else:
+                        item.setCheckState(0, Qt.CheckState.Checked)
                     self.pathslist.addTopLevelItem(item)
                     self._validate_path(item)
 
@@ -481,16 +514,31 @@ class SettingsDialog(QDialog):
         if 'Paths' not in config:
             config['Paths'] = {}
 
-        paths = self.get_paths_list()
+        paths = []
+        excluded_paths = []
+        for i in range(self.pathslist.topLevelItemCount()):
+            item = self.pathslist.topLevelItem(i)
+            path = item.text(0)
+            paths.append(path)
+            if item.checkState(0) == Qt.CheckState.Unchecked:
+                excluded_paths.append(path)
+        
         config['Paths']['paths'] = ';'.join(paths)
+        config['Paths']['excluded_paths'] = ';'.join(excluded_paths)
 
         with open(self.config_file, 'w', encoding='utf-8') as f:
             config.write(f)
 
-        self.close()
+        self.accept()
 
     def start_scan(self):
-        paths = self.get_paths_list()
+        # Only scan checked (active) paths
+        paths = []
+        for i in range(self.pathslist.topLevelItemCount()):
+            item = self.pathslist.topLevelItem(i)
+            if item.checkState(0) == Qt.CheckState.Checked:
+                paths.append(item.text(0))
+                
         if not paths:
             QMessageBox.warning(
                 self,
