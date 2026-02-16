@@ -4,7 +4,8 @@ from PyQt6.QtWidgets import QTreeWidget, QStyledItemDelegate, QWidget, QLabel
 from PyQt6.QtCore import Qt, QTimer, QRect, QPoint, QRectF, QPointF
 from PyQt6.QtGui import (
     QAction, QColor, QIcon, QPainter, QPixmap, QPalette, QBrush, 
-    QStandardItem, QFont, QPen, QFontMetrics, QPainterPath, QTextLayout, QTextOption
+    QStandardItem, QFont, QPen, QFontMetrics, QPainterPath, QTextLayout, QTextOption,
+    QPolygon
 )
 
 from translator import tr
@@ -460,20 +461,33 @@ class VideoItemDelegate(QStyledItemDelegate):
         # Config dimensions
         video_height = self.config.get('video_row_height', 110)
         
-        # Target icon height is half of video row height
-        icon_height = int(video_height / 2)
+        
+        # Icon Area
+        config = self.config
+        # Reserve space for progress bar (8px + 2px padding + bottom padding)
+        # So we subtract more from row height
+        icon_height = config.get('folder_row_height', 70) - 14  
         icon_width = int(icon_height * 16 / 9)
         
-        # Centered vertically in the folder row
-        row_height = option.rect.height()
-        y_offset = (row_height - icon_height) // 2
+        # Center vertically but shift up slightly to make room below?
+        # Or just use row height logic.
+        # If we reduce height by 14, we have 7px top/bottom padding if centered.
+        # We need 2 (gap) + 8 (bar) = 10px below.
+        # So shift up by 3px.
         
-        # Icon rect (left padding 5px)
-        icon_rect = QRect(option.rect.left() + 5, option.rect.top() + y_offset, icon_width, icon_height)
+        center_y = option.rect.center().y()
+        icon_rect = QRectF(
+            option.rect.left() + 5,
+            center_y - icon_height / 2 - 2, # Shift up 2px
+            icon_width,
+            icon_height
+        )
+
+        # Draw Icon Background (for missing images or transparent ones)
+        painter.save()
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         
-        # Draw Icon (folder cover)
-        cover_path = index.data(Qt.ItemDataRole.UserRole + 4)
-        
+        cover_path = index.data(Qt.ItemDataRole.UserRole + 4) # Folder image path
         pixmap = self._get_pixmap(cover_path)
         
         if pixmap:
@@ -487,18 +501,11 @@ class VideoItemDelegate(QStyledItemDelegate):
                 Qt.TransformationMode.SmoothTransformation
             )
             
-            # Crop to 16:9 if needed (simulated by drawing in rect with clipping)
-            # Actually KeepAspectRatioByExpanding + drawing in rect with clip is good
+            # Center the pixmap in the rect (for AspectRatio handling)
+            px_x = icon_rect.x() + (icon_rect.width() - scaled_pixmap.width()) / 2
+            px_y = icon_rect.y() + (icon_rect.height() - scaled_pixmap.height()) / 2
             
-            path = QPainterPath()
-            path.addRoundedRect(QRectF(icon_rect), 3.0, 3.0)
-            painter.setClipPath(path)
-            
-            # Center the pixmap in the rect
-            px_x = icon_rect.left() + (icon_rect.width() - scaled_pixmap.width()) // 2
-            px_y = icon_rect.top() + (icon_rect.height() - scaled_pixmap.height()) // 2
-            
-            painter.drawPixmap(px_x, px_y, scaled_pixmap)
+            painter.drawPixmap(int(px_x), int(px_y), scaled_pixmap)
             
             # Draw border
             painter.setClipping(False) # Turn off clip for border
@@ -511,6 +518,30 @@ class VideoItemDelegate(QStyledItemDelegate):
             painter.fillRect(icon_rect, self.empty_thumbnail_bg.palette().color(QPalette.ColorRole.Window))
             painter.setPen(self.empty_thumbnail_border.palette().color(QPalette.ColorRole.Mid))
             painter.drawRoundedRect(icon_rect, 3, 3)
+
+        # Draw Folder Progress Bar
+        progress = index.data(Qt.ItemDataRole.UserRole + 6)
+        if progress is not None:
+            # Always draw background/track if we moved layout, or only if > 0?
+            # User said: "draw not on picture but under it"
+            # And "make line height 2 times higher" -> 8px
+            
+            bar_height = 8
+            gap = 2
+            bar_y = icon_rect.bottom() + gap
+            
+            # Background
+            bg_rect = QRectF(icon_rect.left(), bar_y, icon_rect.width(), bar_height)
+            painter.fillRect(bg_rect, QColor(40, 40, 40)) # Dark track
+            
+            val = int(progress)
+            if val > 0:
+                # Progress
+                fill_width = icon_rect.width() * (val / 100.0)
+                fill_rect = QRectF(icon_rect.left(), bar_y, fill_width, bar_height)
+                
+                # Green color
+                painter.fillRect(fill_rect, QColor("#2ecc71"))
 
         # Draw Text
         text_x = icon_rect.right() + 10

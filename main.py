@@ -1679,11 +1679,13 @@ class VideoCourseBrowser(QMainWindow):
                 elif f['video_count'] > 0:
                      # Fallback if video list didn't have them for some reason (e.g. filter mismatch?)
                      stats_text = f"{f['video_count']} videos • {self.format_duration(f['total_duration'])}"
+                     percent = 0
 
                 item.setFont(0, folder_font)
                 item.setData(0, Qt.ItemDataRole.UserRole, f['path'])
                 item.setData(0, Qt.ItemDataRole.UserRole + 1, 'folder')
                 item.setData(0, Qt.ItemDataRole.UserRole + 5, stats_text) # Store stats separately
+                item.setData(0, Qt.ItemDataRole.UserRole + 6, percent if 'percent' in locals() else 0) # Store progress percent
                 item.setData(0, Qt.ItemDataRole.UserRole + 3, f['root_path']) # Store root_path for opening folder
 
                 # Find folder image
@@ -1727,11 +1729,13 @@ class VideoCourseBrowser(QMainWindow):
                         stats_text = f"{count} videos • {watched_str} / {duration_str} ({percent}%)"
                     elif f['video_count'] > 0:
                          stats_text = f"{f['video_count']} videos • {self.format_duration(f['total_duration'])}"
+                         percent = 0
 
                     item.setFont(0, folder_font)
                     item.setData(0, Qt.ItemDataRole.UserRole, f['path'])
                     item.setData(0, Qt.ItemDataRole.UserRole + 1, 'folder')
                     item.setData(0, Qt.ItemDataRole.UserRole + 5, stats_text) # Store stats separately
+                    item.setData(0, Qt.ItemDataRole.UserRole + 6, percent if 'percent' in locals() else 0) # Store progress percent
                     item.setData(0, Qt.ItemDataRole.UserRole + 3, f['root_path']) # Store root_path
 
                     # Find folder image
