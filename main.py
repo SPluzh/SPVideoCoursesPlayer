@@ -210,6 +210,8 @@ class VideoCourseBrowser(QMainWindow):
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
         main_layout = QVBoxLayout(central_widget)
+        main_layout.setContentsMargins(2, 2, 2, 2)
+        main_layout.setSpacing(0)
 
         self.status = self.statusBar()
         self.status.setContentsMargins(5, 0, 5, 0)
@@ -232,7 +234,7 @@ class VideoCourseBrowser(QMainWindow):
         # Search area layout
         search_container = QWidget()
         search_container_layout = QHBoxLayout(search_container)
-        search_container_layout.setContentsMargins(5, 5, 5, 5)
+        search_container_layout.setContentsMargins(5, 0, 5, 5)
         search_container_layout.setSpacing(5)
 
         self.search_edit = QLineEdit()
@@ -329,8 +331,8 @@ class VideoCourseBrowser(QMainWindow):
         # Set default sizes before restoring state
         self.splitter.setSizes([int(self.window_width * 0.3), int(self.window_width * 0.7)])
 
-        self.splitter.setStretchFactor(0, 2)
-        self.splitter.setStretchFactor(1, 3)
+        self.splitter.setStretchFactor(0, 0)
+        self.splitter.setStretchFactor(1, 1)
 
         self.restore_window_state()
         

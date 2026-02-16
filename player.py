@@ -311,6 +311,7 @@ class VideoPlayerWidget(QWidget):
         panel_layout.addWidget(self.speed_slider)
 
         self.speed_label = QLabel(tr('player.speed', speed='1.0'))
+        self.speed_label.setContentsMargins(0, 0, 2, 0)
         panel_layout.addWidget(self.speed_label)
 
         # Ensure buttons don't take focus to avoid breaking global hotkeys
