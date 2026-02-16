@@ -3,8 +3,7 @@ from PyQt6.QtWidgets import QDialog, QVBoxLayout, QFrame, QLabel, QPushButton
 from PyQt6.QtCore import Qt
 from translator import tr
 
-ROOT_DIR = Path(__file__).parent
-RESOURCES_DIR = ROOT_DIR / "resources"
+from constants import RESOURCES_DIR
 
 class AboutDialog(QDialog):
     """Custom About Dialog with dark theme"""

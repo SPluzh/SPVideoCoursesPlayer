@@ -10,22 +10,9 @@ from PyQt6.QtGui import QPainter, QPixmap, QKeyEvent, QMouseEvent, QCursor
 
 from placeholders import draw_video_placeholder
 
-# Define global paths locally to avoid circular imports from main
-ROOT_DIR = Path(__file__).parent
-RESOURCES_DIR = ROOT_DIR / "resources"
+from constants import ROOT_DIR, RESOURCES_DIR
 
-def resolve_binary_path(config, key, default_relative):
-    default_path = RESOURCES_DIR / default_relative
-    try:
-        custom_path = config.get('Paths', key, fallback=None)
-        if custom_path:
-            res_path = Path(custom_path)
-            if not res_path.is_absolute():
-                res_path = ROOT_DIR / res_path
-            return res_path
-    except Exception:
-        pass
-    return default_path
+from utils import resolve_binary_path
 
 def setup_mpv_dll():
     """Set up the MPV DLL path for the application."""

@@ -14,8 +14,8 @@ from marker_dialog import MarkerDialog
 from marker_gallery import MarkerGalleryWidget
 from thumbnail_provider import ThumbnailProvider
 
-ROOT_DIR = Path(__file__).parent
-RESOURCES_DIR = ROOT_DIR / "resources"
+from constants import RESOURCES_DIR
+from icon_manager import load_icons_dict
 
 class ClickableSlider(QSlider):
     """Slider that jumps to click position."""
@@ -240,13 +240,7 @@ class VideoPlayerWidget(QWidget):
         panel_layout = QHBoxLayout(control_panel)
         panel_layout.setContentsMargins(0, 5, 0, 0)
 
-        self.icons = {}
-        for name in ["play", "pause", "next", "prev", "pip"]:
-            path = RESOURCES_DIR / "icons" / f"{name}.png"
-            if path.exists():
-                self.icons[name] = QIcon(str(path))
-            else:
-                 self.icons[name] = QIcon()
+        self.icons = load_icons_dict(["play", "pause", "next", "prev", "pip"])
 
         # Previous Video Button
         self.prev_video_btn = QPushButton()

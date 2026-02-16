@@ -3,23 +3,10 @@ import os
 import time
 from pathlib import Path
 
-# Fix for 'charmap' codec errors on Windows when printing Cyrillic
-if sys.platform == 'win32':
-    import io
-    if hasattr(sys.stdout, 'reconfigure'):
-        sys.stdout.reconfigure(encoding='utf-8')
-    if hasattr(sys.stderr, 'reconfigure'):
-        sys.stderr.reconfigure(encoding='utf-8')
-    # Try to reconfigure the underlying streams used by OutputCapture
-    if hasattr(sys.__stdout__, 'reconfigure'):
-        sys.__stdout__.reconfigure(encoding='utf-8')
-    if hasattr(sys.__stderr__, 'reconfigure'):
-        sys.__stderr__.reconfigure(encoding='utf-8')
+from utils import setup_encoding
+setup_encoding()
 
-ROOT_DIR = Path(__file__).parent
-RESOURCES_DIR = ROOT_DIR / "resources"
-DATA_DIR = ROOT_DIR / "data"
-DATA_DIR.mkdir(exist_ok=True)
+from constants import ROOT_DIR, RESOURCES_DIR, DATA_DIR
 
 from mpv_handler import setup_mpv_dll, resolve_binary_path
 
@@ -29,6 +16,7 @@ locale.setlocale(locale.LC_NUMERIC, 'C')
 from database import DatabaseManager
 import json
 import io
+from icon_manager import load_icons_dict
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout,
     QTreeWidget, QTreeWidgetItem, QLabel, QPushButton,
@@ -1050,20 +1038,15 @@ class VideoCourseBrowser(QMainWindow):
 
 
     def load_icons(self):
-        self.icons = {}
         # List of icons to load for the browser
         icon_names = [
             "menu_scan", "menu_settings", "menu_reload", "menu_about",
             "context_open_folder", "context_mark_read", "context_mark_unread",
             "context_play", "app_icon", "screenshot", "next_frame", "prev_frame",
-            "volume_hight", "add", "context_favorite_on", "context_favorite_off", "context_tags"
+            "volume_hight", "add", "context_favorite_on", "context_favorite_off", "context_tags",
+            "show_markers", "pip"
         ]
-        for name in icon_names:
-            icon_path = RESOURCES_DIR / "icons" / f"{name}.png"
-            if icon_path.exists():
-                self.icons[name] = QIcon(str(icon_path))
-            else:
-                self.icons[name] = QIcon()
+        self.icons = load_icons_dict(icon_names)
 
         # Set window icon
         if 'app_icon' in self.icons:

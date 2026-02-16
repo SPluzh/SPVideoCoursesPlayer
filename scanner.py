@@ -12,25 +12,10 @@ from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from translator import tr
 from database import DatabaseManager
+from utils import natural_sort_key
 
-# Fix for 'charmap' codec errors on Windows when printing Cyrillic
-if sys.platform == 'win32':
-    if hasattr(sys.stdout, 'reconfigure'):
-        sys.stdout.reconfigure(encoding='utf-8')
-    if hasattr(sys.stderr, 'reconfigure'):
-        sys.stderr.reconfigure(encoding='utf-8')
-
-def natural_sort_key(path):
-    """
-    Natural sort key.
-    "1. Intro" < "2. Basic" < "10. Advanced"
-    """
-    def convert(text):
-        return int(text) if text.isdigit() else text.lower()
-    
-    name = path.name if isinstance(path, Path) else str(path)
-    return [convert(c) for c in re.split(r'(\d+)', name)]
-
+from utils import setup_encoding
+setup_encoding()
 
 class VideoScanner:
     def __init__(self, config_file='video_course_browser.ini'):

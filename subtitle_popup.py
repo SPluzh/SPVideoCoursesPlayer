@@ -9,8 +9,8 @@ from PyQt6.QtGui import QIcon
 
 from translator import tr
 
-ROOT_DIR = Path(__file__).parent
-RESOURCES_DIR = ROOT_DIR / "resources"
+from constants import RESOURCES_DIR
+from icon_manager import load_icons_dict
 
 class SubtitlePopup(QWidget):
     """Popup window with subtitle list and settings."""
@@ -74,13 +74,7 @@ class SubtitlePopup(QWidget):
         main_layout.addLayout(left_panel)
         
         # Load icons
-        self.icons = {}
-        for name in ["subtitle_on", "subtitle_off"]:
-            path = RESOURCES_DIR / "icons" / f"{name}.png"
-            if path.exists():
-                self.icons[name] = QIcon(str(path))
-            else:
-                self.icons[name] = QIcon()
+        self.icons = load_icons_dict(["subtitle_on", "subtitle_off"])
         
         self.subtitles_enabled = False
         self._update_toggle_icon()
@@ -374,13 +368,7 @@ class SubtitleButton(QPushButton):
         super().__init__(parent)
         self.setFixedSize(30, 30)
         
-        self.icons = {}
-        for name in ["subtitle_on", "subtitle_off"]:
-            path = RESOURCES_DIR / "icons" / f"{name}.png"
-            if path.exists():
-                self.icons[name] = QIcon(str(path))
-            else:
-                self.icons[name] = QIcon()
+        self.icons = load_icons_dict(["subtitle_on", "subtitle_off"])
 
         self.setToolTip(tr('player.tooltip_subtitle_track'))
         self.popup = SubtitlePopup(self)
