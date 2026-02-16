@@ -517,21 +517,18 @@ class VideoItemDelegate(QStyledItemDelegate):
         text_width = option.rect.right() - text_x - 10
         
         if text_width > 0:
-            # Main label (Folder Name + Info)
-            # The text is already formatted in main.py as "Name (Count) - Duration"
-            full_text = index.data(0)
+            # Main label (Folder Name)
+            folder_name = index.data(0)
+            stats_text = index.data(Qt.ItemDataRole.UserRole + 5)
             
             painter.setFont(self.video_title.font())
             painter.setPen(self.video_title.palette().color(QPalette.ColorRole.WindowText))
             
-            # Center text vertically relative to icon or row? Row is better.
-            
-            # Robust Folder Name Rendering
             fm = painter.fontMetrics()
             line_height = fm.lineSpacing()
             
-            # Create text layout
-            layout = QTextLayout(str(full_text), painter.font())
+            # 1. Calculate Name Height (Max 2 lines)
+            layout = QTextLayout(str(folder_name), painter.font())
             layout.setCacheEnabled(True)
             layout.beginLayout()
             
@@ -544,36 +541,55 @@ class VideoItemDelegate(QStyledItemDelegate):
                     break
                 line.setLineWidth(text_width)
                 lines.append(line)
-                
             layout.endLayout()
-            
-            # If layout failed to produce lines (e.g. text_width too small), try fallback or simple draw
-            if not lines and full_text:
-                # Fallback: simple elided text
-                elided = fm.elidedText(full_text, Qt.TextElideMode.ElideRight, int(text_width))
-                painter.drawText(int(text_x), int(option.rect.center().y() + fm.ascent() - line_height/2), elided)
-                painter.restore()
-                return
 
-            # Calculate total height to center vertically
-            total_height = sum(line.height() for line in lines)
-            y = option.rect.center().y() - total_height / 2
+            name_height = sum(line.height() for line in lines) if lines else line_height
             
-            # Draw lines
-            for i, line in enumerate(lines):
-                current_y = int(y + line.ascent())
+            # 2. Calculate Stats Height
+            stats_height = 0
+            if stats_text:
+                stats_height = line_height
+            
+            # 3. Total text block height
+            spacing = 2
+            total_text_height = name_height + (spacing + stats_height if stats_text else 0)
+            
+            # 4. Starting Y to center the block vertically
+            start_y = option.rect.center().y() - total_text_height / 2
+            current_y = start_y
+            
+            # 5. Draw Name
+            if not lines and folder_name:
+                 # Fallback
+                 elided = fm.elidedText(folder_name, Qt.TextElideMode.ElideRight, int(text_width))
+                 painter.drawText(int(text_x), int(current_y + fm.ascent()), elided)
+                 current_y += line_height
+            else:
+                for i, line in enumerate(lines):
+                    line_y = int(current_y + line.ascent())
+                    
+                    if i == max_lines - 1:
+                        if line.textStart() + line.textLength() < len(folder_name):
+                            remaining = folder_name[line.textStart():]
+                            elided = fm.elidedText(remaining, Qt.TextElideMode.ElideRight, int(text_width))
+                            painter.drawText(int(text_x), line_y, elided)
+                            current_y += line.height()
+                            continue
+
+                    line.draw(painter, QPointF(float(text_x), float(current_y)))
+                    current_y += line.height()
+            
+            # 6. Draw Stats
+            if stats_text:
+                current_y += spacing
+                # Use a slightly smaller font? keeping same for now or self.video_info.font()
+                painter.setFont(self.video_info.font())
+                painter.setPen(QColor('#CCCCCC'))
+                fm_stats = painter.fontMetrics()
                 
-                # Check for last line elision
-                if i == max_lines - 1:
-                    if line.textStart() + line.textLength() < len(full_text):
-                        remaining = full_text[line.textStart():]
-                        elided = fm.elidedText(remaining, Qt.TextElideMode.ElideRight, int(text_width))
-                        painter.drawText(int(text_x), current_y, elided)
-                        y += line.height()
-                        continue
+                elided_stats = fm_stats.elidedText(stats_text, Qt.TextElideMode.ElideRight, int(text_width))
+                painter.drawText(int(text_x), int(current_y + fm_stats.ascent()), elided_stats)
 
-                line.draw(painter, QPointF(float(text_x), float(y)))
-                y += line.height()
 
         painter.restore()
 

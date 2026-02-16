@@ -1634,6 +1634,24 @@ class VideoCourseBrowser(QMainWindow):
         for f in folders:
             folders_data[f['path']] = f
 
+        # Calculate folder stats from videos (Direct content only, consistent with DB)
+        folder_stats = {}
+        for v in videos:
+            f_path = v['folder_path']
+            if f_path not in folder_stats:
+                folder_stats[f_path] = {'watched': 0.0, 'total': 0.0, 'count': 0}
+            
+            p = v['watched_percent']
+            d = v['duration']
+            pos = v['last_position']
+            
+            # Logic: if watched >= 90%, count full duration. Else use last position.
+            w = d if p >= 90 else pos
+            
+            folder_stats[f_path]['watched'] += w
+            folder_stats[f_path]['total'] += d
+            folder_stats[f_path]['count'] += 1
+
         # Default folder cover image
         default_cover = str(RESOURCES_DIR / "icons" / "folder_cover.png")
 
@@ -1641,14 +1659,31 @@ class VideoCourseBrowser(QMainWindow):
         for f in folders:
             if not f['parent_path'] or f['parent_path'] not in folders_data:
                 item = QTreeWidgetItem(self.course_tree)
-                name_with_info = f"{f['name']}"
-                if f['video_count'] > 0:
-                    name_with_info += f" ({f['video_count']}) - {self.format_duration(f['total_duration'])}"
+                item.setText(0, f['name'])
                 
-                item.setText(0, name_with_info)
+                stats_text = ""
+                # Use calculated stats if available, else fallback to DB (though DB count should match)
+                f_stats = folder_stats.get(f['path'])
+                
+                if f_stats and f_stats['count'] > 0:
+                    count = f_stats['count']
+                    total = f_stats['total']
+                    watched = f_stats['watched']
+                    percent = int((watched / total * 100)) if total > 0 else 0
+                    
+                    # Format: "X videos • Watched / Total (Y%)"
+                    duration_str = self.format_duration(total)
+                    watched_str = self.format_duration(watched)
+                    
+                    stats_text = f"{count} videos • {watched_str} / {duration_str} ({percent}%)"
+                elif f['video_count'] > 0:
+                     # Fallback if video list didn't have them for some reason (e.g. filter mismatch?)
+                     stats_text = f"{f['video_count']} videos • {self.format_duration(f['total_duration'])}"
+
                 item.setFont(0, folder_font)
                 item.setData(0, Qt.ItemDataRole.UserRole, f['path'])
                 item.setData(0, Qt.ItemDataRole.UserRole + 1, 'folder')
+                item.setData(0, Qt.ItemDataRole.UserRole + 5, stats_text) # Store stats separately
                 item.setData(0, Qt.ItemDataRole.UserRole + 3, f['root_path']) # Store root_path for opening folder
 
                 # Find folder image
@@ -1675,14 +1710,28 @@ class VideoCourseBrowser(QMainWindow):
                     parent_item = folder_items[f['parent_path']]
                     item = QTreeWidgetItem(parent_item)
                     
-                    name_with_info = f"{f['name']}"
-                    if f['video_count'] > 0:
-                        name_with_info += f" ({f['video_count']}) - {self.format_duration(f['total_duration'])}"
+                    item.setText(0, f['name'])
                     
-                    item.setText(0, name_with_info)
+                    stats_text = ""
+                    f_stats = folder_stats.get(f['path'])
+                    
+                    if f_stats and f_stats['count'] > 0:
+                        count = f_stats['count']
+                        total = f_stats['total']
+                        watched = f_stats['watched']
+                        percent = int((watched / total * 100)) if total > 0 else 0
+                        
+                        duration_str = self.format_duration(total)
+                        watched_str = self.format_duration(watched)
+                        
+                        stats_text = f"{count} videos • {watched_str} / {duration_str} ({percent}%)"
+                    elif f['video_count'] > 0:
+                         stats_text = f"{f['video_count']} videos • {self.format_duration(f['total_duration'])}"
+
                     item.setFont(0, folder_font)
                     item.setData(0, Qt.ItemDataRole.UserRole, f['path'])
                     item.setData(0, Qt.ItemDataRole.UserRole + 1, 'folder')
+                    item.setData(0, Qt.ItemDataRole.UserRole + 5, stats_text) # Store stats separately
                     item.setData(0, Qt.ItemDataRole.UserRole + 3, f['root_path']) # Store root_path
 
                     # Find folder image
