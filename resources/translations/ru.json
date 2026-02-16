@@ -18,7 +18,8 @@
         "tools": "Инструменты",
         "screenshot": "Сделать скриншот",
         "frame_step": "Следующий кадр",
-        "frame_back": "Предыдущий кадр"
+        "frame_back": "Предыдущий кадр",
+        "show_markers": "Показать закладки"
     },
     "library": {
         "search_placeholder": "Поиск..."
@@ -107,6 +108,7 @@
         "tooltip_pip": "Открепить видео"
     },
     "status": {
+        "error": "Ошибка",
         "ready": "Готов",
         "not_loaded": "Библиотека не загружена",
         "playing": "Воспроизведение: {file}",
@@ -325,6 +327,7 @@
         "remaining": "Осталось",
         "total_time": "Общее время",
         "watched_time": "Просмотрено",
-        "progress": "Прогресс"
+        "progress": "Прогресс",
+        "subtitle": "Всего видео: {total}"
     }
 }

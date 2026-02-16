@@ -18,7 +18,8 @@
         "tools": "Tools",
         "screenshot": "Take Screenshot",
         "frame_step": "Next Frame",
-        "frame_back": "Previous Frame"
+        "frame_back": "Previous Frame",
+        "show_markers": "Show Bookmarks"
     },
     "library": {
         "search_placeholder": "Search..."
@@ -108,6 +109,7 @@
     },
     "status": {
         "ready": "Ready",
+        "error": "Error",
         "not_loaded": "Library not loaded",
         "playing": "Playing: {file}",
         "paused": "Paused: {file}",
@@ -325,6 +327,7 @@
         "remaining": "Remaining",
         "total_time": "Total Time",
         "watched_time": "Watched",
-        "progress": "Progress"
+        "progress": "Progress",
+        "subtitle": "Total videos: {total}"
     }
 }

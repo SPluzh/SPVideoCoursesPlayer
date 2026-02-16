@@ -575,6 +575,11 @@ class VideoCourseBrowser(QMainWindow):
         add_marker_action.setShortcut('B')
         add_marker_action.triggered.connect(lambda: self.handle_player_action("add_marker"))
         tools_menu.addAction(add_marker_action)
+
+        show_markers_action = QAction(self.icons.get('show_markers', QIcon()), tr('menu.show_markers'), self)
+        show_markers_action.setShortcut('G')
+        show_markers_action.triggered.connect(lambda: self.handle_player_action("toggle_marker_gallery"))
+        tools_menu.addAction(show_markers_action)
         
         tools_menu.addSeparator()
         
@@ -1424,7 +1429,7 @@ class VideoCourseBrowser(QMainWindow):
         config = configparser.ConfigParser()
 
         config['General'] = {
-        'language': 'ru',
+        'language': 'en',
         'show_preview_popup': 'True'
     }
         config['Paths'] = {
