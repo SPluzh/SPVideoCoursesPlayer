@@ -96,6 +96,46 @@ QPushButton#playBtn {
     min-width: 50px;
 }
 
+QPushButton#favFilterBtn {
+    background-color: @bg-dark;
+    border: 1px solid @border;
+    border-radius: 3px;
+    padding: 2px;
+}
+
+QPushButton#favFilterBtn:checked {
+    background-color: @accent;
+    border-color: @accent-hover;
+}
+
+QPushButton#favFilterBtn:hover {
+    background-color: @bg-hover;
+}
+
+QPushButton#favFilterBtn:checked:hover {
+    background-color: @accent-hover;
+}
+
+QPushButton#tagFilterBtn {
+    background-color: @bg-dark;
+    border: 1px solid @border;
+    border-radius: 3px;
+    padding: 2px;
+}
+
+QPushButton#tagFilterBtn:checked {
+    background-color: @accent;
+    border-color: @accent-hover;
+}
+
+QPushButton#tagFilterBtn:hover {
+    background-color: @bg-hover;
+}
+
+QPushButton#tagFilterBtn:checked:hover {
+    background-color: @accent-hover;
+}
+
 /* ============================================================
    ПОЛЯ ВВОДА
    ============================================================ */
@@ -868,21 +908,20 @@ QTreeWidget::indicator:unchecked {
    CHECKBOXES (QCheckBox indicators)
    ============================================================ */
 
-QCheckBox::indicator {
+QCheckBox::indicator, QListWidget::indicator, QTreeWidget::indicator {
     width: 13px;
     height: 13px;
     border: 1px solid #cccccc;
     border-radius: 2px;
 }
 
-QCheckBox::indicator:checked {
+QCheckBox::indicator:checked, QListWidget::indicator:checked, QTreeWidget::indicator:checked {
     image: none;
     border: 1px solid #cccccc;
     background-color: qradialgradient(cx:0.5, cy:0.5, radius:0.4, fx:0.5, fy:0.5, stop:0 #cccccc, stop:0.6 #cccccc, stop:0.7 transparent);
 }
 
-
-QCheckBox::indicator:unchecked {
+QCheckBox::indicator:unchecked, QListWidget::indicator:unchecked, QTreeWidget::indicator:unchecked {
     background-color: transparent;
 }
 
@@ -901,4 +940,35 @@ QLabel#TagBadge {
     border-radius: 10px;
     color: #ffffff;
     font-weight: bold;
+}
+
+/* ============================================================
+   TAG FILTER POPUP
+   ============================================================ */
+#TagPopupFrame {
+    background-color: @bg-dark;
+    border: 1px solid @accent;
+    border-radius: 5px;
+}
+
+#popupTagList {
+    background-color: transparent;
+    border: none;
+}
+
+#popupSeparator {
+    background-color: @border;
+    max-height: 1px;
+    min-height: 1px;
+}
+
+#TagPopupFrame QPushButton {
+    background-color: @bg-darker;
+    border: 1px solid @border;
+    font-size: 11px;
+    padding: 4px;
+}
+
+#TagPopupFrame QPushButton:hover {
+    background-color: @accent;
 }

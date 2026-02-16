@@ -22,7 +22,12 @@
         "show_markers": "Показать закладки"
     },
     "library": {
-        "search_placeholder": "Поиск..."
+        "search_placeholder": "Поиск...",
+        "filter_favorites": "Показать только избранное",
+        "filter_tags": "Фильтр по тегам",
+        "select_all": "Выбрать все",
+        "deselect_all": "Снять все",
+        "no_tags_available": "Теги отсутствуют"
     },
     "settings": {
         "title": "Настройки",

@@ -22,7 +22,12 @@
         "show_markers": "Show Bookmarks"
     },
     "library": {
-        "search_placeholder": "Search..."
+        "search_placeholder": "Search...",
+        "filter_favorites": "Show only favorites",
+        "filter_tags": "Filter by tags",
+        "select_all": "Select All",
+        "deselect_all": "Deselect All",
+        "no_tags_available": "No tags available"
     },
     "settings": {
         "title": "Settings",

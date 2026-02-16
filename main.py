@@ -37,7 +37,7 @@ from PyQt6.QtWidgets import (
     QLineEdit, QHBoxLayout, QFileDialog,
     QStyle, QMenu, QMessageBox, QCheckBox, QSplitter,
     QTreeWidgetItemIterator, QDialog, QGroupBox, QSpinBox, QSizePolicy, QFrame, QComboBox,
-    QTextEdit, QProgressBar, QListWidget, QGridLayout
+    QTextEdit, QProgressBar, QListWidget, QListWidgetItem, QGridLayout
 )
 from PyQt6.QtCore import Qt, QSize, QRect, QTimer, QUrl, pyqtSignal, QByteArray, QPoint, QThread, QRectF
 from PyQt6.QtGui import QIcon, QPixmap, QFont, QBrush, QColor, QPainter, QAction, QKeyEvent, QMouseEvent, QActionGroup, QPalette, QPolygon, QCursor, QPen, QTextCursor
@@ -58,6 +58,119 @@ from hotkeys import HotkeyManager
 from tags_dialog import TagsDialog
 from floating_player import FloatingVideoWindow
 
+class TagFilterPopup(QWidget):
+    """A popup widget containing a checkable list of tags for filtering"""
+    filter_changed = pyqtSignal(set) # Emits set of checked tag IDs
+
+    def __init__(self, all_tags, selected_ids, parent=None):
+        super().__init__(parent)
+        self.setWindowFlags(Qt.WindowType.Popup | Qt.WindowType.FramelessWindowHint)
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+        
+        # Main container frame to handle border and background
+        self.container_frame = QFrame()
+        self.container_frame.setObjectName("TagPopupFrame")
+        
+        # Set layout for popup itself (transparent wrapper)
+        popup_layout = QVBoxLayout()
+        popup_layout.setContentsMargins(0, 0, 0, 0)
+        popup_layout.setSpacing(0)
+        self.setLayout(popup_layout)
+        popup_layout.addWidget(self.container_frame)
+        
+        # Set layout for inner frame
+        container_layout = QVBoxLayout(self.container_frame)
+        container_layout.setContentsMargins(0, 0, 0, 0)
+        container_layout.setSpacing(0)
+        
+        # Helper layout for buttons
+        btn_layout = QHBoxLayout()
+        btn_layout.setContentsMargins(5, 5, 5, 5)
+        btn_layout.setSpacing(5)
+        
+        self.btn_select_all = QPushButton(tr("library.select_all"))
+        self.btn_select_all.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_select_all.clicked.connect(self.select_all)
+        
+        self.btn_deselect_all = QPushButton(tr("library.deselect_all"))
+        self.btn_deselect_all.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_deselect_all.clicked.connect(self.deselect_all)
+
+        btn_layout.addWidget(self.btn_select_all)
+        btn_layout.addWidget(self.btn_deselect_all)
+        
+        # Container for buttons
+        btn_container = QWidget()
+        btn_container.setLayout(btn_layout)
+        container_layout.addWidget(btn_container)
+        
+        # Separator line
+        line = QFrame()
+        line.setObjectName("popupSeparator")
+        line.setFrameShape(QFrame.Shape.HLine)
+        line.setFrameShadow(QFrame.Shadow.Plain)
+        container_layout.addWidget(line)
+        
+        self.list_widget = QListWidget()
+        self.list_widget.setObjectName("popupTagList")
+        self.list_widget.setSelectionMode(QListWidget.SelectionMode.NoSelection)
+        self.list_widget.itemChanged.connect(self._on_item_changed)
+        
+        # Populate list
+        if not all_tags:
+             item = QListWidgetItem(tr("library.no_tags_available"))
+             item.setFlags(Qt.ItemFlag.NoItemFlags)
+             self.list_widget.addItem(item)
+             self.btn_select_all.setEnabled(False)
+             self.btn_deselect_all.setEnabled(False)
+        else:
+            for tag in all_tags:
+                item = QListWidgetItem(tag['name'])
+                item.setFlags(Qt.ItemFlag.ItemIsUserCheckable | Qt.ItemFlag.ItemIsEnabled)
+                item.setCheckState(Qt.CheckState.Checked if tag['id'] in selected_ids else Qt.CheckState.Unchecked)
+                item.setData(Qt.ItemDataRole.UserRole, tag['id'])
+                
+                if tag.get('color'):
+                    pixmap = QPixmap(14, 14)
+                    pixmap.fill(QColor(tag['color']))
+                    item.setIcon(QIcon(pixmap))
+                
+                self.list_widget.addItem(item)
+                
+        # Calculate size
+        rows = self.list_widget.count()
+        row_height = self.list_widget.sizeHintForRow(0) if rows > 0 else 24
+        height = min(400, rows * row_height + 25 + 45)
+        width = 220
+        
+        self.list_widget.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.resize(width, height)
+        container_layout.addWidget(self.list_widget)
+
+    def select_all(self):
+        self._set_all_checked(Qt.CheckState.Checked)
+
+    def deselect_all(self):
+        self._set_all_checked(Qt.CheckState.Unchecked)
+
+    def _set_all_checked(self, state):
+        self.list_widget.blockSignals(True)
+        for i in range(self.list_widget.count()):
+            item = self.list_widget.item(i)
+            if item.flags() & Qt.ItemFlag.ItemIsUserCheckable:
+                item.setCheckState(state)
+        self.list_widget.blockSignals(False)
+        self._on_item_changed(None)
+
+    def _on_item_changed(self, item):
+        checked_ids = set()
+        for i in range(self.list_widget.count()):
+            it = self.list_widget.item(i)
+            if it.checkState() == Qt.CheckState.Checked:
+                tid = it.data(Qt.ItemDataRole.UserRole)
+                if tid is not None:
+                    checked_ids.add(tid)
+        self.filter_changed.emit(checked_ids)
 
 
 class VideoCourseBrowser(QMainWindow):
@@ -83,6 +196,7 @@ class VideoCourseBrowser(QMainWindow):
         self.hotkey_manager.global_action_state_changed.connect(
             lambda action, pressed: self.handle_player_action(action, pressed)
         )
+        self.selected_tag_ids = set()
         self.load_settings()
 
         self.load_icons()
@@ -114,12 +228,44 @@ class VideoCourseBrowser(QMainWindow):
         browser_layout.setContentsMargins(0, 0, 0, 0)
         browser_layout.setSpacing(0)
 
+        # Search area layout
+        search_container = QWidget()
+        search_container_layout = QHBoxLayout(search_container)
+        search_container_layout.setContentsMargins(5, 5, 5, 5)
+        search_container_layout.setSpacing(5)
+
         self.search_edit = QLineEdit()
         self.search_edit.setPlaceholderText(tr('library.search_placeholder'))
         self.search_edit.setClearButtonEnabled(True)
         self.search_edit.textChanged.connect(self.filter_library)
         self.search_edit.setObjectName("librarySearch")
-        browser_layout.addWidget(self.search_edit)
+        search_container_layout.addWidget(self.search_edit)
+
+        self.fav_filter_btn = QPushButton()
+        self.fav_filter_btn.setCheckable(True)
+        self.fav_filter_btn.setIcon(self.icons.get('context_favorite_on', QIcon()))
+        self.fav_filter_btn.setToolTip(tr('library.filter_favorites'))
+        self.fav_filter_btn.setFixedSize(30, 30)
+        self.fav_filter_btn.setObjectName("favFilterBtn")
+        
+        # Connect toggled BEFORE setting checked state to ensure initial filtering
+        self.fav_filter_btn.toggled.connect(lambda _: self.filter_library(self.search_edit.text()))
+        
+        search_container_layout.addWidget(self.fav_filter_btn)
+
+        self.tag_filter_btn = QPushButton()
+        self.tag_filter_btn.setCheckable(True)
+        self.tag_filter_btn.setIcon(self.icons.get('context_tags', QIcon())) # Assuming context_tags exists
+        self.tag_filter_btn.setToolTip(tr('library.filter_tags'))
+        self.tag_filter_btn.setFixedSize(30, 30)
+        self.tag_filter_btn.setObjectName("tagFilterBtn")
+        self.tag_filter_btn.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.tag_filter_btn.customContextMenuRequested.connect(self.show_tag_filter_popup)
+        self.tag_filter_btn.toggled.connect(lambda _: self.filter_library(self.search_edit.text()))
+        
+        search_container_layout.addWidget(self.tag_filter_btn)
+
+        browser_layout.addWidget(search_container)
 
         self.course_tree = HoverTreeWidget()
         self.course_tree.setColumnCount(1)
@@ -202,6 +348,12 @@ class VideoCourseBrowser(QMainWindow):
         self.progress_save_timer = QTimer(self)
         self.progress_save_timer.timeout.connect(self.periodic_progress_save)
         self.progress_save_timer.start(1000)
+
+        # Restore filter states AFTER all components (like course_tree) are initialized
+        if hasattr(self, 'fav_filter_active'):
+            self.fav_filter_btn.setChecked(self.fav_filter_active)
+        if hasattr(self, 'tag_filter_active'):
+            self.tag_filter_btn.setChecked(self.tag_filter_active)
 
     def keyPressEvent(self, event: QKeyEvent):
         action = self.hotkey_manager.get_action(event)
@@ -502,6 +654,12 @@ class VideoCourseBrowser(QMainWindow):
             config['Window']['last_video'] = self.video_player.current_file
 
         config['Window']['playback_speed'] = str(self.video_player.speed_slider.value())
+
+        if 'General' not in config:
+            config['General'] = {}
+        config['General']['fav_filter_active'] = str(self.fav_filter_btn.isChecked())
+        config['General']['tag_filter_active'] = str(self.tag_filter_btn.isChecked())
+        config['General']['selected_tag_ids'] = ",".join(map(str, self.selected_tag_ids))
 
         with open(self.config_file, 'w', encoding='utf-8') as f:
             config.write(f)
@@ -1651,6 +1809,16 @@ class VideoCourseBrowser(QMainWindow):
         lang = config.get('General', 'language', fallback='ru')
         tr.load_language(lang)
         self.show_preview_popup = config.getboolean('General', 'show_preview_popup', fallback=True)
+        self.fav_filter_active = config.getboolean('General', 'fav_filter_active', fallback=False)
+        self.tag_filter_active = config.getboolean('General', 'tag_filter_active', fallback=False)
+        tag_ids_str = config.get('General', 'selected_tag_ids', fallback='')
+        if tag_ids_str:
+            try:
+                self.selected_tag_ids = set(map(int, tag_ids_str.split(',')))
+            except:
+                self.selected_tag_ids = set()
+        else:
+            self.selected_tag_ids = set()
 
         
         self.library_paths = config.get('Paths', 'paths', fallback='')
@@ -1977,52 +2145,118 @@ class VideoCourseBrowser(QMainWindow):
                                    resumed=resumed_count))
         
         # Apply current filter if any
-        if hasattr(self, 'search_edit') and self.search_edit.text():
+        search_text = self.search_edit.text() if hasattr(self, 'search_edit') else ""
+        fav_active = hasattr(self, 'fav_filter_btn') and self.fav_filter_btn.isChecked()
+        tag_active = hasattr(self, 'tag_filter_btn') and self.tag_filter_btn.isChecked()
+        
+        if search_text or fav_active or tag_active:
+            self.filter_library(search_text)
+
+    def show_tag_filter_popup(self, pos):
+        """Show the tag filter selection popup."""
+        all_tags = self.db.get_tags()
+        self.tag_popup = TagFilterPopup(all_tags, self.selected_tag_ids, self)
+        
+        # Position popup above or below the button
+        button_pos = self.tag_filter_btn.mapToGlobal(QPoint(0, 0))
+        self.tag_popup.move(button_pos.x(), button_pos.y() + self.tag_filter_btn.height())
+        
+        self.tag_popup.filter_changed.connect(self._on_tag_filter_changed)
+        self.tag_popup.show()
+
+    def _on_tag_filter_changed(self, selected_ids):
+        """Handle change in tag selection from the popup."""
+        self.selected_tag_ids = selected_ids
+        # If filter is active, refresh library
+        if self.tag_filter_btn.isChecked():
             self.filter_library(self.search_edit.text())
 
     def filter_library(self, text):
-        """Filter library items by text."""
+        """Filter library items by text, favorites and tags."""
         query = text.lower()
-        self.course_tree.blockSignals(True)
+        fav_only = hasattr(self, 'fav_filter_btn') and self.fav_filter_btn.isChecked()
+        tag_ids = self.selected_tag_ids if hasattr(self, 'tag_filter_btn') and self.tag_filter_btn.isChecked() else None
+        
+        # Hide progress save timer during bulk operations
+        if hasattr(self, 'progress_save_timer'):
+            self.progress_save_timer.stop()
+            
         self.course_tree.setUpdatesEnabled(False)
+        self.course_tree.blockSignals(True)
+        
         try:
             for i in range(self.course_tree.topLevelItemCount()):
                 item = self.course_tree.topLevelItem(i)
-                self._apply_filter(item, query)
+                self._apply_filter(item, query, fav_only=fav_only, tag_ids=tag_ids)
         finally:
-            self.course_tree.setUpdatesEnabled(True)
             self.course_tree.blockSignals(False)
+            self.course_tree.setUpdatesEnabled(True)
+            self.course_tree.viewport().update()
+            
+            # Re-enable timer if needed (it will be started in load_courses or similar if active)
+            if hasattr(self, 'progress_save_timer'):
+                self.progress_save_timer.start(1000)
+    
 
-    def _apply_filter(self, item, query, parent_matches=False):
+    def _apply_filter(self, item, query, fav_only=False, tag_ids=None, parent_matches=False):
         """Recursively apply filter to item and children."""
         item_text = item.text(0).lower()
-        
-        # Extended search: check tags
-        tag_match = False
         item_type = item.data(0, Qt.ItemDataRole.UserRole + 1)
+        
+        # Favorite check
+        is_favorite = False
         if item_type == 'video':
             data = item.data(0, Qt.ItemDataRole.UserRole + 2)
-            if data and len(data) >= 11:
-                tags = data[10]
-                for tag in tags:
-                    if query in tag['name'].lower():
-                        tag_match = True
-                        break
+            if data and len(data) >= 10:
+                is_favorite = bool(data[9])
 
-        item_matches = (query in item_text) or tag_match
+        # Tag check
+        tag_match = True
+        if tag_ids is not None and item_type == 'video':
+            # Tags are stored in UserRole + 2, at index 10
+            data = item.data(0, Qt.ItemDataRole.UserRole + 2)
+            if data and len(data) >= 11:
+                item_tags = data[10]
+                tag_match = any(t['id'] in tag_ids for t in item_tags)
+            else:
+                tag_match = False
+
+        # Text search (also check tags names in text search)
+        text_matches_item = query in item_text
+        if query and not text_matches_item and item_type == 'video':
+            data = item.data(0, Qt.ItemDataRole.UserRole + 2)
+            if data and len(data) >= 11:
+                item_tags = data[10]
+                text_matches_item = any(query in t['name'].lower() for t in item_tags)
+
+        # Logic for this item
+        text_match = text_matches_item or parent_matches
         
-        # If parent matches, all children are shown
-        actual_matches = item_matches or parent_matches
-        
+        item_matches = text_match
+        if fav_only and item_type == 'video':
+            item_matches = item_matches and is_favorite
+        if tag_ids is not None and item_type == 'video':
+            item_matches = item_matches and tag_match
+            
         child_visible = False
         for i in range(item.childCount()):
-            if self._apply_filter(item.child(i), query, actual_matches):
+            if self._apply_filter(item.child(i), query, fav_only, tag_ids, item_matches):
                 child_visible = True
         
-        is_visible = actual_matches or child_visible
+        # Visibility decision
+        is_visible = False
+        if item_type == 'video':
+            is_visible = item_matches
+        else:
+            # Folder visibility
+            if fav_only or tag_ids:
+                is_visible = child_visible
+            else:
+                is_visible = text_match or child_visible
+                
         item.setHidden(not is_visible)
         
-        if query and child_visible:
+        if (query or fav_only or tag_ids) and child_visible:
             item.setExpanded(True)
             
         return is_visible

@@ -1,6 +1,9 @@
 # Changelog
 
 All notable changes to this project will be documented in this file.
+## [1.2.5]
+- **Library Filter**: Added buttons to filter by **Favorites** and **Tags** in the search area.
+
 ## [1.2.4]
 - **Settings**: Implemented **Inactive Source** support:
     - **Control**: Added checkboxes to library paths to easily toggle them as active or inactive.
