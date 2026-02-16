@@ -311,3 +311,119 @@ class FloatingVideoWindow(QWidget):
             self.request_close()
         else:
             super().keyPressEvent(event)
+
+
+class PiPManager:
+    """
+    Manages Picture-in-Picture mode lifecycle.
+
+    Coordinates the FloatingVideoWindow, main window visibility,
+    video widget detachment/reattachment, and taskbar progress swapping.
+    """
+
+    def __init__(self, main_window, video_player, taskbar_progress):
+        self.main_window = main_window
+        self.video_player = video_player
+        self.taskbar_progress = taskbar_progress
+        self.floating_window = None
+        self.floating_window_active = False
+        self.pip_geometry = None
+
+    @property
+    def is_active(self):
+        return self.floating_window and self.floating_window.isVisible()
+
+    def toggle(self):
+        """Toggle Picture-in-Picture mode."""
+        print("DEBUG: toggle_pip_mode called")
+        if self.is_active:
+            print("DEBUG: Floating window visible, exiting PiP")
+            self.exit_pip()
+        else:
+            print("DEBUG: Floating window not visible/exists, entering PiP")
+            self.enter_pip()
+
+    def enter_pip(self):
+        """Enter Picture-in-Picture mode."""
+        print("DEBUG: enter_pip_mode start")
+        if self.is_active:
+            print("DEBUG: Already in PiP mode, ignoring")
+            return
+
+        if not self.video_player.current_file:
+            print("DEBUG: No current file, cannot enter PiP")
+            return
+
+        try:
+            # Detach video widget
+            print("DEBUG: Detaching video widget...")
+            video_widget = self.video_player.detach_video_widget()
+            print(f"DEBUG: Detached widget: {video_widget}")
+
+            # Create floating window
+            print("DEBUG: Creating FloatingVideoWindow...")
+            self.floating_window = FloatingVideoWindow(video_widget)
+            print("DEBUG: Connecting pip_exit_requested...")
+            self.floating_window.pip_exit_requested.connect(self.exit_pip)
+            print("DEBUG: Showing floating window...")
+            if self.pip_geometry:
+                self.floating_window.restoreGeometry(self.pip_geometry)
+            self.floating_window.show()
+
+            self.floating_window_active = True
+
+            # Hide main window
+            print("DEBUG: Hiding main window...")
+            self.main_window.hide()
+
+            # Swap taskbar progress to PiP window (after show, so HWND is set)
+            if self.floating_window.taskbar_progress._initialized:
+                self.video_player.taskbar_progress = self.floating_window.taskbar_progress
+            print("DEBUG: enter_pip_mode finished")
+
+        except Exception as e:
+            print(f"ERROR in enter_pip_mode: {e}")
+            import traceback
+            traceback.print_exc()
+
+    def exit_pip(self):
+        """Exit Picture-in-Picture mode."""
+        print("DEBUG: exit_pip_mode start")
+        if not self.floating_window:
+            print("DEBUG: No floating window to exit")
+            return
+
+        try:
+            # Get widget back
+            print("DEBUG: Getting video widget back...")
+            video_widget = self.floating_window.video_widget
+            if not video_widget:
+                 print("ERROR: Floating window has no video widget!")
+
+            print("DEBUG: Reattaching video widget...")
+            self.video_player.reattach_video_widget(video_widget)
+
+            # Destroy floating window
+            if self.floating_window:
+                self.pip_geometry = self.floating_window.saveGeometry()
+                print("DEBUG: Closing floating window...")
+                self.floating_window.close()
+                self.floating_window = None
+            self.floating_window_active = False
+
+            # Show main window
+            print("DEBUG: Showing main window...")
+
+            # Restore taskbar progress to main window
+            self.video_player.taskbar_progress = self.taskbar_progress
+
+            self.main_window.show()
+            self.main_window.raise_()
+            self.main_window.activateWindow()
+            print("DEBUG: exit_pip_mode finished")
+
+        except Exception as e:
+            print(f"ERROR in exit_pip_mode: {e}")
+            import traceback
+            traceback.print_exc()
+

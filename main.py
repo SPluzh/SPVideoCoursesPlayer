@@ -1,6 +1,5 @@
 import sys
 import os
-import configparser
 import time
 from pathlib import Path
 
@@ -28,7 +27,6 @@ setup_mpv_dll()
 import locale
 locale.setlocale(locale.LC_NUMERIC, 'C')
 from database import DatabaseManager
-import configparser
 import json
 import io
 from PyQt6.QtWidgets import (
@@ -56,129 +54,15 @@ from player import VideoPlayerWidget
 from library import HoverTreeWidget, VideoItemDelegate
 from hotkeys import HotkeyManager
 from tags_dialog import TagsDialog
-from floating_player import FloatingVideoWindow
+from floating_player import FloatingVideoWindow, PiPManager
+from tag_filter_popup import TagFilterPopup
+from utils import natural_sort_key, format_time, format_duration, format_size
+from config_manager import ConfigManager
 
-class TagFilterPopup(QWidget):
-    """A popup widget containing a checkable list of tags for filtering"""
-    filter_changed = pyqtSignal(set) # Emits set of checked tag IDs
-
-    def __init__(self, all_tags, selected_ids, parent=None):
-        super().__init__(parent)
-        self.setWindowFlags(Qt.WindowType.Popup | Qt.WindowType.FramelessWindowHint)
-        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
-        
-        # Main container frame to handle border and background
-        self.container_frame = QFrame()
-        self.container_frame.setObjectName("TagPopupFrame")
-        
-        # Set layout for popup itself (transparent wrapper)
-        popup_layout = QVBoxLayout()
-        popup_layout.setContentsMargins(0, 0, 0, 0)
-        popup_layout.setSpacing(0)
-        self.setLayout(popup_layout)
-        popup_layout.addWidget(self.container_frame)
-        
-        # Set layout for inner frame
-        container_layout = QVBoxLayout(self.container_frame)
-        container_layout.setContentsMargins(0, 0, 0, 0)
-        container_layout.setSpacing(0)
-        
-        # Helper layout for buttons
-        btn_layout = QHBoxLayout()
-        btn_layout.setContentsMargins(5, 5, 5, 5)
-        btn_layout.setSpacing(5)
-        
-        self.btn_select_all = QPushButton(tr("library.select_all"))
-        self.btn_select_all.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.btn_select_all.clicked.connect(self.select_all)
-        
-        self.btn_deselect_all = QPushButton(tr("library.deselect_all"))
-        self.btn_deselect_all.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.btn_deselect_all.clicked.connect(self.deselect_all)
-
-        btn_layout.addWidget(self.btn_select_all)
-        btn_layout.addWidget(self.btn_deselect_all)
-        
-        # Container for buttons
-        btn_container = QWidget()
-        btn_container.setLayout(btn_layout)
-        container_layout.addWidget(btn_container)
-        
-        # Separator line
-        line = QFrame()
-        line.setObjectName("popupSeparator")
-        line.setFrameShape(QFrame.Shape.HLine)
-        line.setFrameShadow(QFrame.Shadow.Plain)
-        container_layout.addWidget(line)
-        
-        self.list_widget = QListWidget()
-        self.list_widget.setObjectName("popupTagList")
-        self.list_widget.setSelectionMode(QListWidget.SelectionMode.NoSelection)
-        self.list_widget.itemChanged.connect(self._on_item_changed)
-        
-        # Populate list
-        if not all_tags:
-             item = QListWidgetItem(tr("library.no_tags_available"))
-             item.setFlags(Qt.ItemFlag.NoItemFlags)
-             self.list_widget.addItem(item)
-             self.btn_select_all.setEnabled(False)
-             self.btn_deselect_all.setEnabled(False)
-        else:
-            for tag in all_tags:
-                item = QListWidgetItem(tag['name'])
-                item.setFlags(Qt.ItemFlag.ItemIsUserCheckable | Qt.ItemFlag.ItemIsEnabled)
-                item.setCheckState(Qt.CheckState.Checked if tag['id'] in selected_ids else Qt.CheckState.Unchecked)
-                item.setData(Qt.ItemDataRole.UserRole, tag['id'])
-                
-                if tag.get('color'):
-                    pixmap = QPixmap(14, 14)
-                    pixmap.fill(QColor(tag['color']))
-                    item.setIcon(QIcon(pixmap))
-                
-                self.list_widget.addItem(item)
-                
-        # Calculate size
-        rows = self.list_widget.count()
-        row_height = self.list_widget.sizeHintForRow(0) if rows > 0 else 24
-        height = min(400, rows * row_height + 25 + 45)
-        width = 220
-        
-        self.list_widget.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self.resize(width, height)
-        container_layout.addWidget(self.list_widget)
-
-    def select_all(self):
-        self._set_all_checked(Qt.CheckState.Checked)
-
-    def deselect_all(self):
-        self._set_all_checked(Qt.CheckState.Unchecked)
-
-    def _set_all_checked(self, state):
-        self.list_widget.blockSignals(True)
-        for i in range(self.list_widget.count()):
-            item = self.list_widget.item(i)
-            if item.flags() & Qt.ItemFlag.ItemIsUserCheckable:
-                item.setCheckState(state)
-        self.list_widget.blockSignals(False)
-        self._on_item_changed(None)
-
-    def _on_item_changed(self, item):
-        checked_ids = set()
-        for i in range(self.list_widget.count()):
-            it = self.list_widget.item(i)
-            if it.checkState() == Qt.CheckState.Checked:
-                tid = it.data(Qt.ItemDataRole.UserRole)
-                if tid is not None:
-                    checked_ids.add(tid)
-        self.filter_changed.emit(checked_ids)
 
 
 class VideoCourseBrowser(QMainWindow):
-    @staticmethod
-    def natural_sort_key(name):
-        def convert(text):
-            return int(text) if text.isdigit() else text.lower()
-        return [convert(c) for c in re.split(r'(\d+)', str(name))]
+    # natural_sort_key is now in utils.py
 
     def __init__(self):
         super().__init__()
@@ -190,6 +74,7 @@ class VideoCourseBrowser(QMainWindow):
         self.config_file = RESOURCES_DIR / 'settings.ini'
         self.db_file = DATA_DIR / 'video_courses.db'
         self.db = DatabaseManager(self.db_file)
+        self.config = ConfigManager(self.config_file, ROOT_DIR, DATA_DIR)
 
         self.hotkey_manager = HotkeyManager(self)
         self.hotkey_manager.global_action_triggered.connect(self.handle_player_action)
@@ -202,7 +87,6 @@ class VideoCourseBrowser(QMainWindow):
         self.load_icons()
 
         self.taskbar_progress = TaskbarProgress()
-        self.pip_geometry = None
         self.last_played_path = None
 
         self.create_menu_bar()
@@ -286,8 +170,8 @@ class VideoCourseBrowser(QMainWindow):
             'video_row_height': self.video_row_height,
             'display_width': self.display_width,
             'display_height': self.display_height,
-            'format_duration': self.format_duration,
-            'format_size': self.format_size
+            'format_duration': format_duration,
+            'format_size': format_size
         }
         self.course_tree.setItemDelegate(
             VideoItemDelegate(delegate_config, self.course_tree)
@@ -319,9 +203,8 @@ class VideoCourseBrowser(QMainWindow):
         self.video_player.toggle_fullscreen_requested.connect(self.toggle_fullscreen)
         self.video_player.pip_mode_requested.connect(self.enter_pip_mode)
         self.video_player.pip_exit_requested.connect(self.exit_pip_mode)
-        
-        self.floating_window_active = False
-        self.floating_window = None
+
+        self.pip_manager = PiPManager(self, self.video_player, self.taskbar_progress)
 
         # Apply initial subtitle settings
         self.video_player.set_subtitle_styles(self.sub_color, self.sub_border_color, self.sub_scale)
@@ -476,26 +359,10 @@ class VideoCourseBrowser(QMainWindow):
         QTimer.singleShot(100, self.update_all_texts)
 
     def save_language_setting(self, lang_code):
-        config = configparser.ConfigParser()
-        if self.config_file.exists():
-            config.read(self.config_file, encoding='utf-8')
-
-        if 'General' not in config:
-            config['General'] = {}
-
-        config['General']['language'] = lang_code
-
-        with open(self.config_file, 'w', encoding='utf-8') as f:
-            config.write(f)
+        self.config.set_language(lang_code)
 
     def load_language_setting(self):
-        if not self.config_file.exists():
-            return 'ru'
-
-        config = configparser.ConfigParser()
-        config.read(self.config_file, encoding='utf-8')
-
-        return config.get('General', 'language', fallback='ru')
+        return self.config.get_language()
 
     def update_all_texts(self):
         try:
@@ -560,14 +427,12 @@ class VideoCourseBrowser(QMainWindow):
 
     def restore_window_state(self):
         is_maximized = False
-        config = configparser.ConfigParser()
-        if self.config_file.exists():
-            config.read(self.config_file, encoding='utf-8')
+        state = self.config.get_window_state()
 
-            if config.has_option('Window', 'geometry'):
+        if state:
+            if 'geometry' in state:
                 try:
-                    geometry_hex = config.get('Window', 'geometry')
-                    geometry = QByteArray.fromHex(bytes(geometry_hex, 'utf-8'))
+                    geometry = QByteArray.fromHex(bytes(state['geometry'], 'utf-8'))
                     self.restoreGeometry(geometry)
                 except Exception as e:
                     print(f"Error restoring geometry: {e}")
@@ -575,16 +440,11 @@ class VideoCourseBrowser(QMainWindow):
             else:
                 self.resize(self.window_width, self.window_height)
 
-            if config.has_option('Window', 'is_maximized'):
-                try:
-                    is_maximized = config.getboolean('Window', 'is_maximized')
-                except Exception as e:
-                    print(f"Error reading maximized state: {e}")
+            is_maximized = state.get('is_maximized', False)
 
-            if config.has_option('Window', 'splitter_state'):
+            if 'splitter_state' in state:
                 try:
-                    splitter_hex = config.get('Window', 'splitter_state')
-                    splitter_state = QByteArray.fromHex(bytes(splitter_hex, 'utf-8'))
+                    splitter_state = QByteArray.fromHex(bytes(state['splitter_state'], 'utf-8'))
                     self.splitter.restoreState(splitter_state)
                     
                     # Ensure player pane (index 1) is not collapsed
@@ -598,17 +458,16 @@ class VideoCourseBrowser(QMainWindow):
                 except Exception as e:
                     print(f"Error restoring splitter: {e}")
 
-            if config.has_option('Window', 'playback_speed'):
+            if 'playback_speed' in state:
                 try:
-                    speed_value = int(config.get('Window', 'playback_speed'))
+                    speed_value = int(state['playback_speed'])
                     self.video_player.speed_slider.setValue(speed_value)
                 except Exception as e:
                     print(f"Error restoring playback speed: {e}")
                     
-            if config.has_option('Window', 'pip_geometry'):
+            if 'pip_geometry' in state:
                 try:
-                    pip_geo_hex = config.get('Window', 'pip_geometry')
-                    self.pip_geometry = QByteArray.fromHex(bytes(pip_geo_hex, 'utf-8'))
+                    self.pip_manager.pip_geometry = QByteArray.fromHex(bytes(state['pip_geometry'], 'utf-8'))
                 except Exception as e:
                     print(f"Error restoring PiP geometry: {e}")
         else:
@@ -629,55 +488,36 @@ class VideoCourseBrowser(QMainWindow):
                     self.splitter.setSizes([400, 1000])
 
     def save_window_state(self):
-        config = configparser.ConfigParser()
-        if self.config_file.exists():
-            config.read(self.config_file, encoding='utf-8')
-
-        if 'Window' not in config:
-            config['Window'] = {}
-
-        geometry = self.saveGeometry().toHex().data().decode('utf-8')
-        config['Window']['geometry'] = geometry
-
-        splitter_state = self.splitter.saveState().toHex().data().decode('utf-8')
-        config['Window']['splitter_state'] = splitter_state
+        state = {}
+        state['geometry'] = self.saveGeometry().toHex().data().decode('utf-8')
+        state['splitter_state'] = self.splitter.saveState().toHex().data().decode('utf-8')
         
         # Save PiP geometry
-        # If PiP is active, get current geometry
-        if self.floating_window and self.floating_window.isVisible():
-            self.pip_geometry = self.floating_window.saveGeometry()
+        if self.pip_manager.floating_window and self.pip_manager.floating_window.isVisible():
+            self.pip_manager.pip_geometry = self.pip_manager.floating_window.saveGeometry()
             
-        if self.pip_geometry:
-            pip_geo_str = self.pip_geometry.toHex().data().decode('utf-8')
-            config['Window']['pip_geometry'] = pip_geo_str
+        if self.pip_manager.pip_geometry:
+            state['pip_geometry'] = self.pip_manager.pip_geometry.toHex().data().decode('utf-8')
 
-        config['Window']['is_maximized'] = str(self.isMaximized())
+        state['is_maximized'] = str(self.isMaximized())
 
         if self.video_player.current_file:
-            config['Window']['last_video'] = self.video_player.current_file
+            state['last_video'] = self.video_player.current_file
 
-        config['Window']['playback_speed'] = str(self.video_player.speed_slider.value())
+        state['playback_speed'] = str(self.video_player.speed_slider.value())
 
-        if 'General' not in config:
-            config['General'] = {}
-        config['General']['fav_filter_active'] = str(self.fav_filter_btn.isChecked())
-        config['General']['tag_filter_active'] = str(self.tag_filter_btn.isChecked())
-        config['General']['selected_tag_ids'] = ",".join(map(str, self.selected_tag_ids))
-
-        with open(self.config_file, 'w', encoding='utf-8') as f:
-            config.write(f)
+        self.config.save_window_state(state)
+        self.config.save_filter_state(
+            self.fav_filter_btn.isChecked(),
+            self.tag_filter_btn.isChecked(),
+            self.selected_tag_ids
+        )
 
     def restore_last_video(self):
-        config = configparser.ConfigParser()
-        if not self.config_file.exists():
+        state = self.config.get_window_state()
+        last_video_path = state.get('last_video')
+        if not last_video_path:
             return
-
-        config.read(self.config_file, encoding='utf-8')
-
-        if not config.has_option('Window', 'last_video'):
-            return
-
-        last_video_path = config.get('Window', 'last_video')
 
         if not last_video_path or not Path(last_video_path).exists():
             return
@@ -1016,8 +856,8 @@ class VideoCourseBrowser(QMainWindow):
                     
                     percent_folder = int((watched / total * 100)) if total > 0 else 0
                     
-                    duration_str = self.format_duration(total)
-                    watched_str = self.format_duration(watched)
+                    duration_str = format_duration(total)
+                    watched_str = format_duration(watched)
                     
                     new_stats_text = f"{count} videos • {watched_str} / {duration_str} ({percent_folder}%)"
                     
@@ -1198,97 +1038,15 @@ class VideoCourseBrowser(QMainWindow):
 
     def toggle_pip_mode(self):
         """Toggle Picture-in-Picture mode."""
-        print("DEBUG: toggle_pip_mode called")
-        if self.floating_window and self.floating_window.isVisible():
-            print("DEBUG: Floating window visible, exiting PiP")
-            self.exit_pip_mode()
-        else:
-            print("DEBUG: Floating window not visible/exists, entering PiP")
-            self.enter_pip_mode()
+        self.pip_manager.toggle()
 
     def enter_pip_mode(self):
         """Enter Picture-in-Picture mode."""
-        print("DEBUG: enter_pip_mode start")
-        if self.floating_window and self.floating_window.isVisible():
-            print("DEBUG: Already in PiP mode, ignoring")
-            return
-            
-        if not self.video_player.current_file:
-            print("DEBUG: No current file, cannot enter PiP")
-            return
-            
-        try:
-            # 2. Detach video widget
-            print("DEBUG: Detaching video widget...")
-            video_widget = self.video_player.detach_video_widget()
-            print(f"DEBUG: Detached widget: {video_widget}")
-            
-            # 3. Create floating window
-            print("DEBUG: Creating FloatingVideoWindow...")
-            self.floating_window = FloatingVideoWindow(video_widget)
-            print("DEBUG: Connecting pip_exit_requested...")
-            self.floating_window.pip_exit_requested.connect(self.exit_pip_mode)
-            print("DEBUG: Showing floating window...")
-            if self.pip_geometry:
-                self.floating_window.restoreGeometry(self.pip_geometry)
-            self.floating_window.show()
-            
-            self.floating_window_active = True
-            
-            # 4. Hide main window
-            print("DEBUG: Hiding main window...")
-            self.hide()
-            
-            # Swap taskbar progress to PiP window (after show, so HWND is set)
-            if self.floating_window.taskbar_progress._initialized:
-                self.video_player.taskbar_progress = self.floating_window.taskbar_progress
-            print("DEBUG: enter_pip_mode finished")
-            
-        except Exception as e:
-            print(f"ERROR in enter_pip_mode: {e}")
-            import traceback
-            traceback.print_exc()
+        self.pip_manager.enter_pip()
 
     def exit_pip_mode(self):
         """Exit Picture-in-Picture mode."""
-        print("DEBUG: exit_pip_mode start")
-        if not self.floating_window:
-            print("DEBUG: No floating window to exit")
-            return
-
-        try:
-            # 1. Get widget back
-            print("DEBUG: Getting video widget back...")
-            video_widget = self.floating_window.video_widget
-            if not video_widget:
-                 print("ERROR: Floating window has no video widget!")
-            
-            print("DEBUG: Reattaching video widget...")
-            self.video_player.reattach_video_widget(video_widget)
-            
-            # 2. Destroy floating window
-            if self.floating_window:
-                self.pip_geometry = self.floating_window.saveGeometry()
-                print("DEBUG: Closing floating window...")
-                self.floating_window.close()
-                self.floating_window = None
-            self.floating_window_active = False
-            
-            # 3. Show main window
-            print("DEBUG: Showing main window...")
-            
-            # Restore taskbar progress to main window
-            self.video_player.taskbar_progress = self.taskbar_progress
-            
-            self.show()
-            self.raise_()
-            self.activateWindow()
-            print("DEBUG: exit_pip_mode finished")
-            
-        except Exception as e:
-            print(f"ERROR in exit_pip_mode: {e}")
-            import traceback
-            traceback.print_exc()
+        self.pip_manager.exit_pip()
 
 
     def load_icons(self):
@@ -1330,7 +1088,7 @@ class VideoCourseBrowser(QMainWindow):
             saved_pos, _ = self.get_saved_position(file_path)
 
             if saved_pos > 0:
-                resume_action = menu.addAction(self.icons.get('context_play', QIcon()), tr('context_menu.resume', time=self.format_time(saved_pos)))
+                resume_action = menu.addAction(self.icons.get('context_play', QIcon()), tr('context_menu.resume', time=format_time(saved_pos)))
                 resume_action.triggered.connect(lambda: self.play_video_in_player(item, resume=True))
 
                 restart_action = menu.addAction(self.icons.get('context_play', QIcon()), tr('context_menu.restart'))
@@ -1749,14 +1507,10 @@ class VideoCourseBrowser(QMainWindow):
         return scanner.scan_directory(path)
 
     def rescan_directories(self, paths=None):
-        config = configparser.ConfigParser()
-        config.read(self.config_file, encoding='utf-8')
-
         # If no paths provided, load from config
         if paths is None or isinstance(paths, bool):
-            all_paths = config.get('Paths', 'paths', fallback='').split(';')
-            excluded = config.get('Paths', 'excluded_paths', fallback='').split(';')
-            excluded_set = {os.path.normpath(e.strip()) for e in excluded if e.strip()}
+            all_paths = self.config.get_library_paths().split(';')
+            excluded_set = self.config.get_excluded_library_paths()
             
             paths = [p.strip() for p in all_paths if p.strip() and os.path.normpath(p.strip()) not in excluded_set]
             
@@ -1787,151 +1541,43 @@ class VideoCourseBrowser(QMainWindow):
         # Refresh courses immediately while dialog might still be open
         self.load_courses()
 
-    def create_default_settings(self):
-        config = configparser.ConfigParser()
-
-        config['General'] = {
-        'language': 'en',
-        'show_preview_popup': 'True'
-    }
-        config['Paths'] = {
-            'paths': '',
-            'thumbnails_dir': 'data/video_thumbnails',
-            'ffmpeg_path': 'resources/bin/ffmpeg.exe',
-            'ffprobe_path': 'resources/bin/ffprobe.exe',
-            'libmpv_path': 'resources/bin/libmpv-2.dll'
-        }
-        config['Display'] = {
-            'window_width': '1400',
-            'window_height': '800',
-            'video_row_height': '110',
-            'folder_row_height': '35'
-        }
-        config['Thumbnails'] = {
-            'render_width': '320',
-            'render_height': '180',
-            'display_width': '160',
-            'display_height': '90',
-            'count': '12',
-            'quality': '2',
-            'regenerate': 'False',
-            'max_workers': '8',
-            'animation_interval': '400'
-        }
-        config['Video'] = {
-            'extensions': '.mp4,.mkv,.avi,.mov,.wmv,.flv,.webm,.m4v,.mpg,.mpeg,.3gp,.ts',
-            'folder_image_extensions': '.jpg,.jpeg,.png,.webp,.bmp'
-        }
-        config['Subtitles'] = {
-            'text_color': '#FFFFFF',
-            'outline_color': '#000000',
-            'font_scale': '1.0'
-        }
-
-        with open(self.config_file, 'w', encoding='utf-8') as f:
-            config.write(f)
-
     def load_settings(self):
-        if not self.config_file.exists():
-            self.create_default_settings()
-
-        config = configparser.ConfigParser()
-        config.read(self.config_file, encoding='utf-8')
-
-        lang = config.get('General', 'language', fallback='ru')
+        lang = self.config.get_language()
         tr.load_language(lang)
-        self.show_preview_popup = config.getboolean('General', 'show_preview_popup', fallback=True)
-        self.fav_filter_active = config.getboolean('General', 'fav_filter_active', fallback=False)
-        self.tag_filter_active = config.getboolean('General', 'tag_filter_active', fallback=False)
-        tag_ids_str = config.get('General', 'selected_tag_ids', fallback='')
-        if tag_ids_str:
-            try:
-                self.selected_tag_ids = set(map(int, tag_ids_str.split(',')))
-            except:
-                self.selected_tag_ids = set()
-        else:
-            self.selected_tag_ids = set()
+        self.show_preview_popup = self.config.get_show_preview_popup()
+        self.fav_filter_active = self.config.get_fav_filter_active()
+        self.tag_filter_active = self.config.get_tag_filter_active()
+        self.selected_tag_ids = self.config.get_selected_tag_ids()
 
-        
-        self.library_paths = config.get('Paths', 'paths', fallback='')
-        excluded_str = config.get('Paths', 'excluded_paths', fallback='')
-        self.excluded_library_paths = {os.path.normpath(p.strip()) for p in excluded_str.split(';') if p.strip()}
-        
-        self.thumbnails_dir = DATA_DIR / 'video_thumbnails'
-        if config.has_section('Paths'):
-            self.thumbnails_dir = Path(config.get('Paths', 'thumbnails_dir', fallback=str(DATA_DIR / 'video_thumbnails')))
-            # If path is relative, make it absolute relative to ROOT_DIR
-            if not self.thumbnails_dir.is_absolute():
-                self.thumbnails_dir = ROOT_DIR / self.thumbnails_dir
+        self.library_paths = self.config.get_library_paths()
+        self.excluded_library_paths = self.config.get_excluded_library_paths()
+        self.thumbnails_dir = self.config.get_thumbnails_dir()
 
-            if not self.thumbnails_dir.is_absolute():
-                self.thumbnails_dir = ROOT_DIR / self.thumbnails_dir
+        # Binary files - use raw config for resolve_binary_path
+        raw_config = self.config.get_raw_config()
+        self.ffmpeg_path = resolve_binary_path(raw_config, 'ffmpeg_path', 'bin/ffmpeg.exe')
+        self.ffprobe_path = resolve_binary_path(raw_config, 'ffprobe_path', 'bin/ffprobe.exe')
+        self.libmpv_path = resolve_binary_path(raw_config, 'libmpv_path', 'bin/libmpv-2.dll')
 
-        # Binary files - get from already loaded config
-        self.ffmpeg_path = resolve_binary_path(config, 'ffmpeg_path', 'bin/ffmpeg.exe')
-        self.ffprobe_path = resolve_binary_path(config, 'ffprobe_path', 'bin/ffprobe.exe')
-        self.libmpv_path = resolve_binary_path(config, 'libmpv_path', 'bin/libmpv-2.dll')
+        self.window_width = self.config.get_window_width()
+        self.window_height = self.config.get_window_height()
+        self.video_row_height = self.config.get_video_row_height()
+        self.folder_row_height = self.config.get_folder_row_height()
 
-        self.window_width = config.getint('Display', 'window_width', fallback=1400)
-        self.window_height = config.getint('Display', 'window_height', fallback=800)
-        self.video_row_height = config.getint('Display', 'video_row_height', fallback=110)
-        self.video_row_height = config.getint('Display', 'video_row_height', fallback=110)
-        self.folder_row_height = config.getint('Display', 'folder_row_height', fallback=70) # Increased default height
+        self.folder_image_extensions = self.config.get_folder_image_extensions()
 
-        # Load folder image extensions
-        folder_exts = config.get('Video', 'folder_image_extensions', fallback='.jpg,.jpeg,.png,.webp,.bmp')
-        self.folder_image_extensions = {e.strip().lower() for e in folder_exts.split(',')}
-
-        self.display_width = config.getint('Thumbnails', 'display_width', fallback=160)
-        self.display_height = config.getint('Thumbnails', 'display_height', fallback=90)
-        self.animation_interval = config.getint('Thumbnails', 'animation_interval', fallback=400)
+        self.display_width = self.config.get_display_width()
+        self.display_height = self.config.get_display_height()
+        self.animation_interval = self.config.get_animation_interval()
 
         # Subtitle settings
-        self.sub_color = config.get('Subtitles', 'text_color', fallback='#FFFFFF')
-        self.sub_border_color = config.get('Subtitles', 'outline_color', fallback='#000000')
-        self.sub_scale = config.getfloat('Subtitles', 'font_scale', fallback=1.0)
+        self.sub_color, self.sub_border_color, self.sub_scale = self.config.get_subtitle_settings()
 
     def save_subtitle_settings(self, property_name, value):
         """Save subtitle style settings to ini file."""
-        config = configparser.ConfigParser()
-        if self.config_file.exists():
-            config.read(self.config_file, encoding='utf-8')
+        self.config.save_subtitle_setting(property_name, value)
 
-        if 'Subtitles' not in config:
-            config['Subtitles'] = {}
-
-        if property_name == "sub-color":
-            config['Subtitles']['text_color'] = value
-        elif property_name == "sub-border-color":
-            config['Subtitles']['outline_color'] = value
-        elif property_name == "sub-scale":
-            config['Subtitles']['font_scale'] = f"{value:.2f}"
-
-        with open(self.config_file, 'w', encoding='utf-8') as f:
-            config.write(f)
-
-    def format_time(self, seconds):
-        if not seconds:
-            return "00:00"
-
-        hours, remainder = divmod(int(seconds), 3600)
-        minutes, secs = divmod(remainder, 60)
-
-        if hours:
-            return f"{hours}:{minutes:02d}:{secs:02d}"
-        else:
-            return f"{minutes:02d}:{secs:02d}"
-
-    def format_duration(self, seconds):
-        return self.format_time(seconds)
-
-    def format_size(self, bytes_size):
-        if bytes_size < 1024 * 1024:
-            return tr('video_info.size_kb', size=f'{bytes_size/1024:.1f}')
-        elif bytes_size < 1024 * 1024 * 1024:
-            return tr('video_info.size_mb', size=f'{bytes_size/(1024*1024):.1f}')
-        else:
-            return tr('video_info.size_gb', size=f'{bytes_size/(1024*1024*1024):.2f}')
+    # format_time, format_duration, format_size moved to utils.py
 
     def load_courses(self):
         """Load courses from DB and build tree."""
@@ -2026,13 +1672,13 @@ class VideoCourseBrowser(QMainWindow):
                     percent = int((watched / total * 100)) if total > 0 else 0
                     
                     # Format: "X videos • Watched / Total (Y%)"
-                    duration_str = self.format_duration(total)
-                    watched_str = self.format_duration(watched)
+                    duration_str = format_duration(total)
+                    watched_str = format_duration(watched)
                     
                     stats_text = f"{count} videos • {watched_str} / {duration_str} ({percent}%)"
                 elif f['video_count'] > 0:
                      # Fallback if video list didn't have them for some reason (e.g. filter mismatch?)
-                     stats_text = f"{f['video_count']} videos • {self.format_duration(f['total_duration'])}"
+                     stats_text = f"{f['video_count']} videos • {format_duration(f['total_duration'])}"
                      percent = 0
 
                 item.setFont(0, folder_font)
@@ -2086,12 +1732,12 @@ class VideoCourseBrowser(QMainWindow):
                         watched = f_stats['watched']
                         percent = int((watched / total * 100)) if total > 0 else 0
                         
-                        duration_str = self.format_duration(total)
-                        watched_str = self.format_duration(watched)
+                        duration_str = format_duration(total)
+                        watched_str = format_duration(watched)
                         
                         stats_text = f"{count} videos • {watched_str} / {duration_str} ({percent}%)"
                     elif f['video_count'] > 0:
-                         stats_text = f"{f['video_count']} videos • {self.format_duration(f['total_duration'])}"
+                         stats_text = f"{f['video_count']} videos • {format_duration(f['total_duration'])}"
                          percent = 0
 
                     item.setFont(0, folder_font)
