@@ -726,7 +726,7 @@ class VideoCourseBrowser(QMainWindow):
             duration = int(self.video_player.player.duration or 0)
             current_volume = int(self.video_player.player.volume or 100)
         except Exception as e:
-            print(f"Error getting player state for save: {e}")
+            # print(f"Error getting player state for save: {e}")
             return
 
         if duration > 0:
@@ -739,6 +739,126 @@ class VideoCourseBrowser(QMainWindow):
                 return
 
             self.update_video_item_display(file_path, percent, position)
+            
+            # Update folder stats every 60 seconds (approx)
+            # Use specific attribute to track last update for playing file
+            current_time = time.time()
+            if not hasattr(self, '_last_stats_update'):
+                self._last_stats_update = 0
+            
+            if current_time - self._last_stats_update >= 60:
+                self.update_folder_stats_display(file_path, position, duration, percent)
+                self._last_stats_update = current_time
+
+    def update_folder_stats_display(self, file_path, position, duration, percent):
+        """Update stats of parent folders for the currently playing video."""
+        item = self.find_video_item(file_path)
+        if not item:
+            return
+
+        # Calculate current consumed "watched" time for this video
+        # Logic matches load_courses: if >= 90%, count full duration. Else position.
+        current_w = duration if percent >= 90 else position
+        
+        # Get previous stored data to calculate delta
+        data = item.data(0, Qt.ItemDataRole.UserRole + 2)
+        if not data:
+            return
+            
+        # Unpack stored data
+        # Tuple structure:
+        # 0:filename, 1:duration, 2:resolution, 3:file_size,
+        # 4:watched_percent, 5:thumbnail_path, 6:thumbnails_list, 
+        # 7:last_position, ...
+        stored_percent = data[4]
+        stored_pos = data[7]
+        
+        old_w = duration if stored_percent >= 90 else stored_pos
+        
+        delta_w = current_w - old_w
+        
+        # If no meaningful change, skip bubble up (e.g. playing within same second)
+        if abs(delta_w) < 1:
+            return
+            
+        # Walk up the tree
+        parent = item.parent()
+        while parent:
+            item_type = parent.data(0, Qt.ItemDataRole.UserRole + 1)
+            if item_type == 'folder':
+                stats_text = parent.data(0, Qt.ItemDataRole.UserRole + 5)
+                # Parse existing stats or just use stored aggregated map if we had one?
+                # Storing 'raw' aggregated stats in UserRole would be better than parsing text.
+                # However, for now we can't easily add a new role without modifying load_courses heavily everywhere.
+                # Alternative: Use a separate dictionary on the Window class?
+                # Or just rely on the text? No, text is formatted.
+                
+                # Let's check if we can query the stats from DB? No, DB update happens in parallel/slowly.
+                # Better: Maintain a runtime cache of folder stats in self that we updated in load_courses?
+                # Let's try to parse the text carefully or introduce a new Role for raw stats.
+                # Adding a new UserRole is safe.
+                # Let's say UserRole + 10 holds raw dictionary {'watched': X, 'total': Y, 'count': Z}
+                pass
+            
+            # Actually, simpler approach for now to avoid parsing fragile text:
+            # We don't have the raw stats stored on the item easily accessible without parsing.
+            # parsing: "5 videos • 00:05:00 / 00:10:00 (50%)"
+            
+            # Let's stick to modifying the item data in memory if possible?
+            # Re-implementing a quick parse seems feasible if format is strict.
+            # Format: "{count} videos • {watched_str} / {duration_str} ({percent}%)"
+            
+            # But wait, we ONLY need to increment the internal 'watched' counter.
+            # If we don't have it, we can't increment it accuratey.
+            
+            # Let's modify load_courses to store raw stats first? 
+            # That would be a bigger change.
+            
+            # Quick fix: Just rely on load_courses triggering on 'stop' or 'finish'.
+            # User wants intermediate updates.
+            
+            # Let's store raw stats in UserRole + 7 in `load_courses` (UserRole+6 is percent).
+            # I will modify load_courses next. For now, let's put a placeholder or basic implementation.
+            
+            # Actually, let's assume we will have raw stats in UserRole + 7.
+            raw_stats = parent.data(0, Qt.ItemDataRole.UserRole + 7)
+            if raw_stats:
+                # raw_stats should be mutable or replaced? Tuple is immutable.
+                # It's likely a python dict if we stored it as such? data() returns python object.
+                 if isinstance(raw_stats, dict):
+                    raw_stats['watched'] += delta_w
+                    
+                    # Recalculate text
+                    count = raw_stats['count']
+                    total = raw_stats['total']
+                    watched = raw_stats['watched']
+                    
+                    # Clamp watched to total to avoid >100% due to floating point drifts
+                    if watched > total: watched = total
+                    
+                    percent_folder = int((watched / total * 100)) if total > 0 else 0
+                    
+                    duration_str = self.format_duration(total)
+                    watched_str = self.format_duration(watched)
+                    
+                    new_stats_text = f"{count} videos • {watched_str} / {duration_str} ({percent_folder}%)"
+                    
+                    parent.setData(0, Qt.ItemDataRole.UserRole + 5, new_stats_text)
+                    parent.setData(0, Qt.ItemDataRole.UserRole + 6, percent_folder)
+                    # We don't need to setData for raw_stats if we modified the dict in place, 
+                    # but PyQt might copy it. Better set it back.
+                    parent.setData(0, Qt.ItemDataRole.UserRole + 7, raw_stats)
+            
+            parent = parent.parent()
+
+        # Finally, update the own item's stored data so the next delta is correct relative to THIS moment
+        # We need to update existing tuple
+        lst = list(data)
+        lst[4] = percent # watched_percent
+        lst[7] = position # last_position
+        item.setData(0, Qt.ItemDataRole.UserRole + 2, tuple(lst))
+        
+        self.course_tree.viewport().update()
 
     def update_video_item_display(self, file_path, percent, position):
         iterator = QTreeWidgetItemIterator(self.course_tree)
@@ -1634,10 +1754,16 @@ class VideoCourseBrowser(QMainWindow):
         for f in folders:
             folders_data[f['path']] = f
 
-        # Calculate folder stats from videos (Direct content only, consistent with DB)
+        # Calculate folder stats
+        # 1. Initialize for all folders
         folder_stats = {}
+        for f in folders:
+            folder_stats[f['path']] = {'watched': 0.0, 'total': 0.0, 'count': 0}
+
+        # 2. Add direct video stats
         for v in videos:
             f_path = v['folder_path']
+            # If for some reason video folder is not in folders list (shouldn't happen with FK)
             if f_path not in folder_stats:
                 folder_stats[f_path] = {'watched': 0.0, 'total': 0.0, 'count': 0}
             
@@ -1651,6 +1777,20 @@ class VideoCourseBrowser(QMainWindow):
             folder_stats[f_path]['watched'] += w
             folder_stats[f_path]['total'] += d
             folder_stats[f_path]['count'] += 1
+
+        # 3. Aggregate recursively (Deepest first)
+        # Sort by path length (depth) descending to ensure children are processed before parents
+        # We use strict string length as a proxy for depth, or count separators
+        sorted_folders = sorted(folders, key=lambda x: len(Path(x['path']).parts), reverse=True)
+
+        for f in sorted_folders:
+            parent_path = f['parent_path']
+            if parent_path and parent_path in folder_stats:
+                child_stats = folder_stats[f['path']]
+                if child_stats['count'] > 0:
+                    folder_stats[parent_path]['watched'] += child_stats['watched']
+                    folder_stats[parent_path]['total'] += child_stats['total']
+                    folder_stats[parent_path]['count'] += child_stats['count']
 
         # Default folder cover image
         default_cover = str(RESOURCES_DIR / "icons" / "folder_cover.png")
@@ -1686,7 +1826,13 @@ class VideoCourseBrowser(QMainWindow):
                 item.setData(0, Qt.ItemDataRole.UserRole + 1, 'folder')
                 item.setData(0, Qt.ItemDataRole.UserRole + 5, stats_text) # Store stats separately
                 item.setData(0, Qt.ItemDataRole.UserRole + 6, percent if 'percent' in locals() else 0) # Store progress percent
-                item.setData(0, Qt.ItemDataRole.UserRole + 3, f['root_path']) # Store root_path for opening folder
+                # Store raw stats for live updates
+                if f_stats:
+                    item.setData(0, Qt.ItemDataRole.UserRole + 7, f_stats.copy())
+                else:
+                    item.setData(0, Qt.ItemDataRole.UserRole + 7, {'watched': 0.0, 'total': 0.0, 'count': 0})
+                    
+                item.setData(0, Qt.ItemDataRole.UserRole + 3, f['root_path']) # Store root_path
 
                 # Find folder image
                 full_path = Path(f['root_path']) / f['path'] if f['path'] != '.' else Path(f['root_path'])
@@ -1736,6 +1882,12 @@ class VideoCourseBrowser(QMainWindow):
                     item.setData(0, Qt.ItemDataRole.UserRole + 1, 'folder')
                     item.setData(0, Qt.ItemDataRole.UserRole + 5, stats_text) # Store stats separately
                     item.setData(0, Qt.ItemDataRole.UserRole + 6, percent if 'percent' in locals() else 0) # Store progress percent
+                    # Store raw stats for live updates
+                    if f_stats:
+                        item.setData(0, Qt.ItemDataRole.UserRole + 7, f_stats.copy())
+                    else:
+                        item.setData(0, Qt.ItemDataRole.UserRole + 7, {'watched': 0.0, 'total': 0.0, 'count': 0})
+
                     item.setData(0, Qt.ItemDataRole.UserRole + 3, f['root_path']) # Store root_path
 
                     # Find folder image
