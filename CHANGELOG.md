@@ -2,7 +2,8 @@
 
 All notable changes to this project will be documented in this file.
 ## [1.2.5]
-- **Library Filter**: Added buttons to filter by **Favorites** and **Tags** in the search area.
+- **Library Filter**: Introduced dedicated filter buttons for **Favorites** and **Tags** in the search area.
+- **Tags Filter**: Added a versatile multi-tag filtering system (OR logic) with persistent state and selection popup.
 
 ## [1.2.4]
 - **Settings**: Implemented **Inactive Source** support:

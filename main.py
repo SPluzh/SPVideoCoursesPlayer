@@ -2175,7 +2175,9 @@ class VideoCourseBrowser(QMainWindow):
         """Filter library items by text, favorites and tags."""
         query = text.lower()
         fav_only = hasattr(self, 'fav_filter_btn') and self.fav_filter_btn.isChecked()
-        tag_ids = self.selected_tag_ids if hasattr(self, 'tag_filter_btn') and self.tag_filter_btn.isChecked() else None
+        tag_ids = self.selected_tag_ids if (hasattr(self, 'tag_filter_btn') and 
+                                           self.tag_filter_btn.isChecked() and 
+                                           self.selected_tag_ids) else None
         
         # Hide progress save timer during bulk operations
         if hasattr(self, 'progress_save_timer'):
