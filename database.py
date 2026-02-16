@@ -14,13 +14,15 @@ class DatabaseManager:
         self.db_path.parent.mkdir(exist_ok=True)
         self.init_database()
 
-    def get_connection(self, timeout=10):
+    def get_connection(self, timeout=30):
         """Returns a connection to the SQLite database."""
         return sqlite3.connect(self.db_path, timeout=timeout)
 
     def init_database(self):
         """Initializes the database structure, tables, and indices."""
         with self.get_connection() as conn:
+            # Enable WAL mode for better concurrency
+            conn.execute("PRAGMA journal_mode=WAL;")
             c = conn.cursor()
             
             # Folders table

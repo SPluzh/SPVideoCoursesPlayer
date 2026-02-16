@@ -1060,6 +1060,7 @@ class VideoScanner:
             print(f"\n{tr('scanner.scan_error_not_exists')}")
             return 0, 0
 
+        # Initial stats check - short transaction
         with self.db.get_connection() as conn:
             c = conn.cursor()
             
@@ -1073,61 +1074,96 @@ class VideoScanner:
             """, (root_str,))
             existing_videos = c.fetchone()[0]
             
-            if existing_folders > 0:
-                print(f"\n{tr('scanner.scan_existing_data')}")
-                print(tr('scanner.scan_existing_folders', count=existing_folders))
-                print(tr('scanner.scan_existing_videos', count=existing_videos))
+        if existing_folders > 0:
+            print(f"\n{tr('scanner.scan_existing_data')}")
+            print(tr('scanner.scan_existing_folders', count=existing_folders))
+            print(tr('scanner.scan_existing_videos', count=existing_videos))
 
-            total_video_count = 0
-            total_folder_count = 0
-            new_videos = 0
-            cached_videos = 0
-            total_embedded_audio = 0
-            total_external_audio = 0
-            restored_audio_selections = 0
-            total_embedded_subs = 0
-            total_external_subs = 0
+        total_video_count = 0
+        total_folder_count = 0
+        new_videos = 0
+        cached_videos = 0
+        total_embedded_audio = 0
+        total_external_audio = 0
+        restored_audio_selections = 0
+        total_embedded_subs = 0
+        total_external_subs = 0
 
-            # Search for folders with video
-            print(f"\n{tr('scanner.scan_searching')}")
-            scan_start = time.time()
-            
-            video_folders = []
-            for item in root.rglob('*'):
-                if item.is_dir():
-                    # Check if there are videos in the folder itself
-                    try:
-                        if any(f.suffix.lower() in self.video_extensions for f in item.iterdir() if f.is_file()):
-                            video_folders.append(item)
-                    except:
-                        continue
-            
-            # Also check root
-            try:
-                if any(f.suffix.lower() in self.video_extensions for f in root.iterdir() if f.is_file()):
-                    if root not in video_folders:
-                        video_folders.append(root)
-            except:
-                pass
-            
-            video_folders.sort(key=natural_sort_key)
-            
-            for folder in video_folders:
+        # Search for folders with video
+        print(f"\n{tr('scanner.scan_searching')}")
+        
+        video_folders = []
+        for item in root.rglob('*'):
+            if item.is_dir():
+                # Check if there are videos in the folder itself
                 try:
-                    rel_path = folder.relative_to(root)
-                    parent = rel_path.parent if str(rel_path.parent) != '.' else ''
+                    if any(f.suffix.lower() in self.video_extensions for f in item.iterdir() if f.is_file()):
+                        video_folders.append(item)
+                except:
+                    continue
+        
+        # Also check root
+        try:
+            if any(f.suffix.lower() in self.video_extensions for f in root.iterdir() if f.is_file()):
+                if root not in video_folders:
+                    video_folders.append(root)
+        except:
+            pass
+        
+        video_folders.sort(key=natural_sort_key)
+        
+        for folder in video_folders:
+            # Process one folder at a time, holding DB lock only when writing results
+            try:
+                rel_path = folder.relative_to(root)
+                parent = rel_path.parent if str(rel_path.parent) != '.' else ''
+                
+                print(f"\n📁 {rel_path if str(rel_path) != '.' else folder.name}")
+                
+                # List of video files
+                video_files = sorted(
+                    [f for f in folder.iterdir() if f.is_file() and f.suffix.lower() in self.video_extensions],
+                    key=natural_sort_key
+                )
+                
+                video_count = len(video_files)
+                
+                # HEAVY LIFTING - Reading metadata (Parallel) - NO WRITE LOCK YET
+                folder_start = time.time()
+                folder_duration = 0
+                folder_size = 0
+                folder_thumbs = 0
+                folder_embedded_audio = 0
+                folder_external_audio = 0
+                folder_embedded_subs = 0
+                folder_external_subs = 0
+                folder_cached = 0
+                folder_new = 0
+                
+                tasks = [(video_files[i], folder, rel_path, i + 1) 
+                         for i in range(len(video_files))]
+                
+                results = []
+                
+                # Parallel processing for large folders
+                if len(video_files) > 2:
+                    with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
+                        futures = [executor.submit(self._process_video_file, *task) for task in tasks]
+                        for future in as_completed(futures):
+                            result = future.result()
+                            if result:
+                                results.append(result)
+                else:
+                    for task in tasks:
+                        result = self._process_video_file(*task)
+                        if result:
+                            results.append(result)
+                
+                # WRITE RESULTS - Open Transaction
+                with self.db.get_connection() as conn:
+                    c = conn.cursor()
                     
-                    print(f"\n📁 {rel_path if str(rel_path) != '.' else folder.name}")
-                    
-                    # List of video files
-                    video_files = sorted(
-                        [f for f in folder.iterdir() if f.is_file() and f.suffix.lower() in self.video_extensions],
-                        key=natural_sort_key
-                    )
-                    
-                    video_count = len(video_files)
-                    
-                    # Insert/update folder
+                    # Insert/update folder record
                     c.execute("""
                         INSERT INTO folders (path, parent_path, name, video_count, root_path, total_duration, total_size)
                         VALUES (?, ?, ?, ?, ?, 0, 0)
@@ -1139,38 +1175,7 @@ class VideoScanner:
                             last_updated = CURRENT_TIMESTAMP
                     """, (str(rel_path), str(parent), folder.name, video_count, root_str))
 
-                    # Process video files
-                    folder_start = time.time()
-                    folder_duration = 0
-                    folder_size = 0
-                    folder_thumbs = 0
-                    folder_embedded_audio = 0
-                    folder_external_audio = 0
-                    folder_embedded_subs = 0
-                    folder_external_subs = 0
-                    folder_cached = 0
-                    folder_new = 0
-                    
-                    tasks = [(video_files[i], folder, rel_path, i + 1) 
-                             for i in range(len(video_files))]
-                    
-                    results = []
-                    
-                    # Parallel processing for large folders
-                    if len(video_files) > 2:
-                        with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
-                            futures = [executor.submit(self._process_video_file, *task) for task in tasks]
-                            for future in as_completed(futures):
-                                result = future.result()
-                                if result:
-                                    results.append(result)
-                    else:
-                        for task in tasks:
-                            result = self._process_video_file(*task)
-                            if result:
-                                results.append(result)
-                    
-                    # Save results to DB
+                    # Save video results to DB
                     for result in results:
                         folder_duration += result['duration'] or 0
                         folder_size += result['file_size'] or 0
@@ -1286,45 +1291,50 @@ class VideoScanner:
                     c.execute("""
                         UPDATE folders SET total_duration = ?, total_size = ? WHERE path = ?
                     """, (folder_duration, folder_size, str(rel_path)))
+                    
+                    conn.commit()
 
-                    # Output folder info
-                    folder_time = time.time() - folder_start
-                    hours = int(folder_duration // 3600)
-                    minutes = int((folder_duration % 3600) // 60)
-                    size_gb = folder_size / (1024**3)
-                    
-                    info_parts = [
-                        tr('scanner.scanner_units.videos', count=video_count),
-                        f"⏱ {tr('scanner.scanner_units.hours_short', hours=hours)}{tr('scanner.scanner_units.minutes_short', minutes=minutes)}",
-                        f"💾 {size_gb:.1f}GB"
-                    ]
-                    
-                    if folder_cached:
-                        info_parts.append(tr('scanner.process_cached', count=folder_cached))
-                    
-                    if folder_embedded_audio + folder_external_audio > 0:
-                        info_parts.append(tr('scanner.process_audio', embedded=folder_embedded_audio, external=folder_external_audio))
-                    
-                    if folder_embedded_subs + folder_external_subs > 0:
-                        info_parts.append(tr('scanner.process_subs', embedded=folder_embedded_subs, external=folder_external_subs))
-                    
-                    # Add thumbnail info only if generated
-                    thumbs_generated = self.stats['thumbnails_generated'] - (getattr(self, '_last_thumbs_count', 0))
-                    self._last_thumbs_count = self.stats['thumbnails_generated']
-                    if thumbs_generated > 0:
-                        info_parts.append(f"🖼 {thumbs_generated}")
-                    
-                    info_parts.append(tr('scanner.process_time', time=f"{folder_time:.1f}"))
-                    
-                    print(tr('scanner.process_info', info=' | '.join(info_parts)))
+                # Output folder info (Outside DB lock)
+                folder_time = time.time() - folder_start
+                hours = int(folder_duration // 3600)
+                minutes = int((folder_duration % 3600) // 60)
+                size_gb = folder_size / (1024**3)
+                
+                info_parts = [
+                    tr('scanner.scanner_units.videos', count=video_count),
+                    f"⏱ {tr('scanner.scanner_units.hours_short', hours=hours)}{tr('scanner.scanner_units.minutes_short', minutes=minutes)}",
+                    f"💾 {size_gb:.1f}GB"
+                ]
+                
+                if folder_cached:
+                    info_parts.append(tr('scanner.process_cached', count=folder_cached))
+                
+                if folder_embedded_audio + folder_external_audio > 0:
+                    info_parts.append(tr('scanner.process_audio', embedded=folder_embedded_audio, external=folder_external_audio))
+                
+                if folder_embedded_subs + folder_external_subs > 0:
+                    info_parts.append(tr('scanner.process_subs', embedded=folder_embedded_subs, external=folder_external_subs))
+                
+                # Add thumbnail info only if generated
+                thumbs_generated = self.stats['thumbnails_generated'] - (getattr(self, '_last_thumbs_count', 0))
+                self._last_thumbs_count = self.stats['thumbnails_generated']
+                if thumbs_generated > 0:
+                    info_parts.append(f"🖼 {thumbs_generated}")
+                
+                info_parts.append(tr('scanner.process_time', time=f"{folder_time:.1f}"))
+                
+                print(tr('scanner.process_info', info=' | '.join(info_parts)))
 
-                except Exception as e:
-                    print(tr('scanner.process_error', error=f"{type(e).__name__}: {e}"))
-                    continue
-
-            # Create folder hierarchy
-            print(f"\n{tr('scanner.hierarchy_building')}")
-            
+            except Exception as e:
+                print(tr('scanner.process_error', error=f"{type(e).__name__}: {e}"))
+                import traceback
+                traceback.print_exc()
+                continue
+        
+        # Create folder hierarchy - Short transaction
+        print(f"\n{tr('scanner.hierarchy_building')}")
+        with self.db.get_connection() as conn:
+            c = conn.cursor()
             c.execute("SELECT DISTINCT parent_path FROM folders WHERE parent_path != '' AND root_path = ?", (root_str,))
             parent_paths = [row[0] for row in c.fetchall()]
             
@@ -1341,7 +1351,6 @@ class VideoScanner:
                             ON CONFLICT(path) DO NOTHING
                         """, (current, parent, Path(current).name, root_str))
                         added.add(current)
-
             conn.commit()
 
         # Final statistics
