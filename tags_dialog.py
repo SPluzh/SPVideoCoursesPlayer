@@ -13,6 +13,7 @@ class TagsDialog(QDialog):
         super().__init__(parent)
         self.setWindowTitle(tr('tags.title') or "Manage Tags")
         self.setMinimumSize(400, 500)
+
         self.db = db
         self.file_path = file_path
         
@@ -35,9 +36,11 @@ class TagsDialog(QDialog):
         self.name_input.setPlaceholderText(tr('tags.new_tag_name') or "New Tag Name")
         create_layout.addWidget(self.name_input)
         
+
         self.color_btn = QPushButton()
+        self.color_btn.setObjectName("TagColorBtn")
         self.color_btn.setFixedSize(24, 24)
-        self.color_btn.setStyleSheet(f"background-color: {self.selected_color}; border: 1px solid #555; border-radius: 4px;")
+        self.color_btn.setStyleSheet(f"background-color: {self.selected_color};")
         self.color_btn.clicked.connect(self.pick_color)
         create_layout.addWidget(self.color_btn)
         
@@ -87,7 +90,8 @@ class TagsDialog(QDialog):
             
             # Color Badge
             lbl = QLabel(tag['name'])
-            lbl.setStyleSheet(f"background-color: {tag['color']}; padding: 3px 8px; border-radius: 10px; color: #fff; font-weight: bold;")
+            lbl.setObjectName("TagBadge")
+            lbl.setStyleSheet(f"background-color: {tag['color']};")
             layout.addWidget(lbl)
             
             layout.addStretch()
@@ -119,7 +123,7 @@ class TagsDialog(QDialog):
         color = QColorDialog.getColor(QColor(self.selected_color), self, tr('tags.select_color') or "Select Color")
         if color.isValid():
             self.selected_color = color.name()
-            self.color_btn.setStyleSheet(f"background-color: {self.selected_color}; border: 1px solid #555; border-radius: 4px;")
+            self.color_btn.setStyleSheet(f"background-color: {self.selected_color};")
 
     def create_tag(self):
         name = self.name_input.text().strip()
