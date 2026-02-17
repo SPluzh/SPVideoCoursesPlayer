@@ -32,6 +32,17 @@ PROTECTED_ITEMS = {
 }
 
 
+def _get_app_dir() -> Path:
+    """
+    Get the top-level application directory.
+    In frozen PyInstaller onedir builds, ROOT_DIR points to _internal/,
+    but the .exe lives one level up. This returns the correct dir.
+    """
+    if getattr(sys, 'frozen', False):
+        return Path(sys.executable).parent
+    return ROOT_DIR
+
+
 def get_current_version() -> str:
     """Read current app version from resources/version.txt."""
     try:
@@ -112,19 +123,47 @@ def check_for_update() -> dict | None:
 
 def download_update(download_url: str) -> Path:
     """
-    Download update zip to ROOT_DIR/_update_download.zip.
+    Download update zip to app_dir/_update_download.zip.
     Uses Downloader from update_libmpv for multi-threaded download.
     Returns path to downloaded file.
     """
-    target = ROOT_DIR / '_update_download.zip'
+    import time as _time
+
+    app_dir = _get_app_dir()
+    target = app_dir / '_update_download.zip'
+
+    print("=" * 50)
+    print("  Downloading application update...")
+    print("=" * 50)
+    print(f"URL: {download_url}")
+    print(f"Target: {target}")
+    print("")
 
     try:
-        from update_libmpv import Downloader
+        from update_libmpv import Downloader, format_size
         downloader = Downloader(download_url, str(target))
-        downloader.download()
+
+        # Get file size before download
+        req = urllib.request.Request(download_url, headers={'User-Agent': USER_AGENT}, method='HEAD')
+        try:
+            with urllib.request.urlopen(req, timeout=15) as resp:
+                total = int(resp.info().get('Content-Length', 0))
+                if total > 0:
+                    print(f"File size: {format_size(total)}")
+        except Exception:
+            pass
+
+        print(f"Threads: {downloader.num_threads}")
+        print("Downloading...")
+        print("")
+
+        duration = downloader.download()
+
+        print("")
+        print(f"Download completed in {duration:.1f}s")
     except ImportError:
         # Fallback: simple download
-        print(f"Downloading update from {download_url}...")
+        print("Using single-thread fallback...")
         req = urllib.request.Request(download_url, headers={'User-Agent': USER_AGENT})
         with urllib.request.urlopen(req, timeout=300) as response:
             with open(target, 'wb') as f:
@@ -137,6 +176,11 @@ def download_update(download_url: str) -> Path:
 
     if not target.exists():
         raise RuntimeError("Download failed: file not found")
+
+    size_mb = target.stat().st_size / (1024 * 1024)
+    print(f"Saved: {target.name} ({size_mb:.1f} MB)")
+    print("")
+    print("Creating updater script...")
     return target
 
 
@@ -145,44 +189,48 @@ def create_updater_script(zip_path: Path, new_version: str) -> Path:
     Generate _updater.bat that waits for app exit, extracts zip,
     copies files (skipping protected ones), restarts app, self-deletes.
     """
-    bat_path = ROOT_DIR / '_updater.bat'
+    app_dir = _get_app_dir()
+    bat_path = app_dir / '_updater.bat'
     exe_name = _get_exe_name()
+    exe_path = _get_exe_path()
     current_pid = os.getpid()
-
-    # Build exclusion filter for findstr
-    # Each protected item on its own line for findstr matching
-    protected_patterns = '\\n'.join([
-        f"\\\\{item}" if not item.endswith(('.exe', '.dll', '.ini', '.version'))
-        else f"\\\\{item}"
-        for item in PROTECTED_ITEMS
-    ])
 
     script = f"""@echo off
 chcp 65001 >nul
 setlocal EnableDelayedExpansion
 
 set "APP_DIR=%~dp0"
-set "EXE_NAME={exe_name}"
+set "EXE_PATH={exe_path}"
 set "PID={current_pid}"
 set "ZIP_PATH={zip_path}"
 set "TEMP_DIR=%APP_DIR%_update_temp"
 set "VERSION={new_version}"
+set "LOG=%APP_DIR%_update_log.txt"
+
+echo [%date% %time%] Update started > "%LOG%"
+echo APP_DIR=%APP_DIR% >> "%LOG%"
+echo EXE_PATH=%EXE_PATH% >> "%LOG%"
+echo ZIP_PATH=%ZIP_PATH% >> "%LOG%"
 
 REM --- Wait for application to exit ---
+echo Waiting for PID %PID% to exit... >> "%LOG%"
 :wait_loop
 tasklist /FI "PID eq %PID%" 2>nul | find "%PID%" >nul
 if not errorlevel 1 (
     timeout /t 1 /nobreak >nul
     goto wait_loop
 )
+echo Process exited. >> "%LOG%"
 
 REM --- Small delay for file handles to release ---
-timeout /t 2 /nobreak >nul
+timeout /t 3 /nobreak >nul
 
 REM --- Extract zip to temp directory ---
 if exist "%TEMP_DIR%" rmdir /s /q "%TEMP_DIR%"
 mkdir "%TEMP_DIR%" 2>nul
+echo Extracting zip... >> "%LOG%"
 powershell -Command "Expand-Archive -Path '%ZIP_PATH%' -DestinationPath '%TEMP_DIR%' -Force"
+echo Extraction done. >> "%LOG%"
 
 REM --- Find the actual content root (may be nested in a subfolder) ---
 set "SOURCE_DIR=%TEMP_DIR%"
@@ -193,54 +241,59 @@ set "LAST_SUBFOLDER="
 for /d %%D in ("%TEMP_DIR%\\*") do (
     set /a SUBFOLDER_COUNT+=1
     set "LAST_SUBFOLDER=%%D"
+    echo Found subfolder: %%D >> "%LOG%"
 )
 
-REM If exactly one subfolder and no files at root, use it as source
+REM Count files at root level
 set "FILE_COUNT=0"
-for %%F in ("%TEMP_DIR%\\*.*") do set /a FILE_COUNT+=1
-
-if %SUBFOLDER_COUNT% equ 1 if %FILE_COUNT% equ 0 (
-    set "SOURCE_DIR=!LAST_SUBFOLDER!"
+for %%F in ("%TEMP_DIR%\\*.*") do (
+    set /a FILE_COUNT+=1
+    echo Found root file: %%F >> "%LOG%"
 )
 
-REM --- Copy files, skipping protected items ---
-xcopy "!SOURCE_DIR!\\*" "%APP_DIR%" /e /y /i /exclude:%~f0.exc >nul 2>&1
+if !SUBFOLDER_COUNT! equ 1 if !FILE_COUNT! equ 0 (
+    set "SOURCE_DIR=!LAST_SUBFOLDER!"
+    echo Using subfolder as source: !SOURCE_DIR! >> "%LOG%"
+)
 
-REM If xcopy exclude doesn't work well, use robocopy as fallback
-robocopy "!SOURCE_DIR!" "%APP_DIR%" /e /xf settings.ini ffmpeg.exe ffprobe.exe libmpv-2.dll libmpv.version _updater.bat /xd data _update_temp >nul 2>&1
+echo SOURCE_DIR=!SOURCE_DIR! >> "%LOG%"
+
+REM --- List source contents for debugging ---
+echo Source directory contents: >> "%LOG%"
+dir /b "!SOURCE_DIR!" >> "%LOG%" 2>&1
+
+REM --- Copy all files using robocopy, excluding protected items ---
+echo Starting robocopy... >> "%LOG%"
+robocopy "!SOURCE_DIR!" "%APP_DIR%." /e /np /njh /njs /r:3 /w:2 /xf settings.ini ffmpeg.exe ffprobe.exe libmpv-2.dll libmpv.version _updater.bat _updater.bat.exc _update_log.txt /xd data _update_temp >> "%LOG%" 2>&1
+echo Robocopy exit code: !errorlevel! >> "%LOG%"
 
 REM --- Update version file ---
-echo %VERSION%> "%APP_DIR%resources\\version.txt"
+if exist "%APP_DIR%_internal\\resources\\version.txt" (
+    echo %VERSION%> "%APP_DIR%_internal\\resources\\version.txt"
+    echo Updated version in _internal\\resources\\version.txt >> "%LOG%"
+) else if exist "%APP_DIR%resources\\version.txt" (
+    echo %VERSION%> "%APP_DIR%resources\\version.txt"
+    echo Updated version in resources\\version.txt >> "%LOG%"
+)
 
 REM --- Cleanup ---
+echo Cleaning up... >> "%LOG%"
 rmdir /s /q "%TEMP_DIR%" 2>nul
 del /f /q "%ZIP_PATH%" 2>nul
 
 REM --- Restart application ---
-start "" "%APP_DIR%%EXE_NAME%"
+echo Starting: %EXE_PATH% >> "%LOG%"
+start "" "%EXE_PATH%"
 
 REM --- Bring window to foreground ---
 timeout /t 2 /nobreak >nul
-powershell -Command "(New-Object -ComObject WScript.Shell).AppActivate('%EXE_NAME%')" >nul 2>&1
+powershell -Command "(New-Object -ComObject WScript.Shell).AppActivate('{exe_name}')" >nul 2>&1
 
 REM --- Self-delete ---
+echo Update complete. >> "%LOG%"
 del "%~f0.exc" 2>nul
 (goto) 2>nul & del "%~f0"
 """
-
-    # Write exclusion file for xcopy (one pattern per line)
-    exc_path = Path(str(bat_path) + '.exc')
-    exc_lines = [
-        'settings.ini',
-        'ffmpeg.exe',
-        'ffprobe.exe',
-        'libmpv-2.dll',
-        'libmpv.version',
-        '_updater.bat',
-        '\\data\\',
-        '\\_update_temp\\',
-    ]
-    exc_path.write_text('\n'.join(exc_lines), encoding='utf-8')
 
     bat_path.write_text(script, encoding='utf-8')
     return bat_path
@@ -248,21 +301,23 @@ del "%~f0.exc" 2>nul
 
 def launch_updater_and_exit(bat_path: Path):
     """Launch the updater bat script hidden and quit the application."""
+    app_dir = _get_app_dir()
     subprocess.Popen(
         ['cmd', '/c', str(bat_path)],
         creationflags=subprocess.CREATE_NO_WINDOW,
         close_fds=True,
-        cwd=str(ROOT_DIR),
+        cwd=str(app_dir),
     )
 
 
 def cleanup_update_artifacts():
     """Remove leftover update files from previous runs."""
+    app_dir = _get_app_dir()
     artifacts = [
-        ROOT_DIR / '_update_temp',
-        ROOT_DIR / '_update_download.zip',
-        ROOT_DIR / '_updater.bat',
-        ROOT_DIR / '_updater.bat.exc',
+        app_dir / '_update_temp',
+        app_dir / '_update_download.zip',
+        app_dir / '_updater.bat',
+        app_dir / '_updater.bat.exc',
     ]
     for path in artifacts:
         try:
@@ -276,8 +331,14 @@ def cleanup_update_artifacts():
 
 
 def _get_exe_name() -> str:
-    """Get the name of the running executable."""
+    """Get the name of the running executable (just filename)."""
     if getattr(sys, 'frozen', False):
         return Path(sys.executable).name
-    # Dev mode: return python script name
     return 'SP Video Courses Player.exe'
+
+
+def _get_exe_path() -> str:
+    """Get the full path to the running executable."""
+    if getattr(sys, 'frozen', False):
+        return str(Path(sys.executable))
+    return str(ROOT_DIR / 'SP Video Courses Player.exe')

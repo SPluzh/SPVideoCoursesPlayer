@@ -740,38 +740,21 @@ class VideoCourseBrowser(QMainWindow):
                 )
 
     def _do_app_update(self, update_info: dict):
-        """Download update and launch updater script."""
-        try:
-            from update_app import download_update, create_updater_script, launch_updater_and_exit
+        """Download update with progress dialog and restart on user action."""
+        from progress_dialog import AppUpdateProgressDialog
+        from update_app import launch_updater_and_exit
+        from pathlib import Path
 
-            self.info_label.setText(tr('updater.downloading'))
-            QApplication.processEvents()
+        dialog = AppUpdateProgressDialog(self)
 
-            # Download
-            zip_path = download_update(update_info['url'])
-
-            self.info_label.setText(tr('updater.extracting'))
-            QApplication.processEvents()
-
-            # Create bat script
-            bat_path = create_updater_script(zip_path, update_info['latest'])
-
-            self.info_label.setText(tr('updater.success'))
-            QApplication.processEvents()
-
-            # Save state before exit
+        def on_restart(bat_path_str):
             self.save_window_state()
-
-            # Launch updater and quit
-            launch_updater_and_exit(bat_path)
+            launch_updater_and_exit(Path(bat_path_str))
             QApplication.quit()
 
-        except Exception as e:
-            QMessageBox.critical(
-                self,
-                tr('updater.title'),
-                tr('updater.error', error=str(e))
-            )
+        dialog.restart_requested.connect(on_restart)
+        dialog.start_download(update_info)
+        dialog.exec()
 
     def save_progress(self, position_sec, file_path):
         """Save playback progress."""

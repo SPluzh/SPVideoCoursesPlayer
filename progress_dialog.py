@@ -195,3 +195,68 @@ class UpdateProgressDialog(BaseProgressDialog):
             self.status_label.setText(tr('libmpv_updater.success', version=''))
         else:
             self.status_label.setText(tr('libmpv_updater.error', error=''))
+
+
+class AppUpdateThread(QThread):
+    """Background thread for downloading app update and creating updater script."""
+    progress = pyqtSignal(str)
+    finished_update = pyqtSignal(bool, str, str)  # success, zip_path, bat_path
+
+    def __init__(self, update_info: dict):
+        super().__init__()
+        self.update_info = update_info
+
+    def run(self):
+        old_stdout = sys.stdout
+        try:
+            sys.stdout = OutputCapture(self.progress)
+
+            from update_app import download_update, create_updater_script
+
+            zip_path = download_update(self.update_info['url'])
+            bat_path = create_updater_script(zip_path, self.update_info['latest'])
+
+            sys.stdout = old_stdout
+            self.finished_update.emit(True, str(zip_path), str(bat_path))
+        except Exception as e:
+            sys.stdout = old_stdout
+            self.progress.emit(f"Error: {e}")
+            self.finished_update.emit(False, '', '')
+
+
+class AppUpdateProgressDialog(BaseProgressDialog):
+    """Download progress dialog with a restart button on success."""
+
+    restart_requested = pyqtSignal(str)  # bat_path
+
+    def __init__(self, parent=None):
+        super().__init__(parent, tr('updater.title'))
+        self.status_label.setText(tr('updater.downloading'))
+
+        self.restart_btn = QPushButton(tr('updater.update_now'))
+        self.restart_btn.setObjectName("updateNowBtn")
+        self.restart_btn.setVisible(False)
+        self.restart_btn.clicked.connect(self._on_restart)
+        self.layout().insertWidget(self.layout().indexOf(self.close_btn), self.restart_btn)
+
+        self._bat_path = ''
+
+    def start_download(self, update_info: dict):
+        self.update_thread = AppUpdateThread(update_info)
+        self.thread = self.update_thread
+        self.update_thread.progress.connect(self.append_log)
+        self.update_thread.finished_update.connect(self._on_download_finished)
+        self.update_thread.start()
+
+    def _on_download_finished(self, success: bool, zip_path: str, bat_path: str):
+        super().on_finished()
+        if success:
+            self._bat_path = bat_path
+            self.status_label.setText(tr('updater.success'))
+            self.restart_btn.setVisible(True)
+        else:
+            self.status_label.setText(tr('updater.error', error=''))
+
+    def _on_restart(self):
+        self.restart_requested.emit(self._bat_path)
+        self.accept()

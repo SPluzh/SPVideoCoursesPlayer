@@ -109,8 +109,9 @@ class Downloader:
                            speed=speed_str)
                 
                 # Clear line and print new progress
-                sys.stdout.write('\r' + s.ljust(80)[:80])
-                sys.stdout.flush()
+                if sys.stdout:
+                    sys.stdout.write('\r' + s.ljust(80)[:80])
+                    sys.stdout.flush()
 
     def download(self):
         # Initial request to get file size and check range support
