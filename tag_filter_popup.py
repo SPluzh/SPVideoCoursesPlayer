@@ -1,6 +1,6 @@
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QPushButton,
-    QFrame, QListWidget, QListWidgetItem
+    QFrame, QListWidget, QListWidgetItem, QLabel
 )
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QIcon, QPixmap, QColor
@@ -13,57 +13,44 @@ class TagFilterPopup(QWidget):
     filter_changed = pyqtSignal(set) # Emits set of checked tag IDs
 
     def __init__(self, all_tags, selected_ids, parent=None):
-        super().__init__(parent)
-        self.setWindowFlags(Qt.WindowType.Popup | Qt.WindowType.FramelessWindowHint)
-        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+        super().__init__(parent, Qt.WindowType.Popup | Qt.WindowType.FramelessWindowHint)
+        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground)
+        self.setObjectName("tagFilterPopup")
         
-        # Main container frame to handle border and background
-        self.container_frame = QFrame()
-        self.container_frame.setObjectName("TagPopupFrame")
+        main_layout = QVBoxLayout(self)
+        main_layout.setContentsMargins(8, 8, 8, 8)
+        main_layout.setSpacing(10)
         
-        # Set layout for popup itself (transparent wrapper)
-        popup_layout = QVBoxLayout()
-        popup_layout.setContentsMargins(0, 0, 0, 0)
-        popup_layout.setSpacing(0)
-        self.setLayout(popup_layout)
-        popup_layout.addWidget(self.container_frame)
-        
-        # Set layout for inner frame
-        container_layout = QVBoxLayout(self.container_frame)
-        container_layout.setContentsMargins(0, 0, 0, 0)
-        container_layout.setSpacing(0)
-        
+        # Header
+        header_label = QLabel(tr("player.filter_tags") if tr("player.filter_tags") != "player.filter_tags" else "Tags")
+        header_label.setObjectName("popupHeaderLabel")
+        header_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        main_layout.addWidget(header_label)
+
         # Helper layout for buttons
         btn_layout = QHBoxLayout()
-        btn_layout.setContentsMargins(5, 5, 5, 5)
         btn_layout.setSpacing(5)
         
         self.btn_select_all = QPushButton(tr("library.select_all"))
         self.btn_select_all.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_select_all.setObjectName("audioFilterBtn") # Re-use audio filter btn style for compact look
         self.btn_select_all.clicked.connect(self.select_all)
         
         self.btn_deselect_all = QPushButton(tr("library.deselect_all"))
         self.btn_deselect_all.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_deselect_all.setObjectName("audioFilterBtn")
         self.btn_deselect_all.clicked.connect(self.deselect_all)
 
         btn_layout.addWidget(self.btn_select_all)
         btn_layout.addWidget(self.btn_deselect_all)
         
-        # Container for buttons
-        btn_container = QWidget()
-        btn_container.setLayout(btn_layout)
-        container_layout.addWidget(btn_container)
+        main_layout.addLayout(btn_layout)
         
-        # Separator line
-        line = QFrame()
-        line.setObjectName("popupSeparator")
-        line.setFrameShape(QFrame.Shape.HLine)
-        line.setFrameShadow(QFrame.Shadow.Plain)
-        container_layout.addWidget(line)
-        
+        # List
         self.list_widget = QListWidget()
-        self.list_widget.setObjectName("popupTagList")
+        self.list_widget.setObjectName("tagFilterList")
         self.list_widget.setSelectionMode(QListWidget.SelectionMode.NoSelection)
+        self.list_widget.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.list_widget.itemChanged.connect(self._on_item_changed)
         
         # Populate list
@@ -81,21 +68,30 @@ class TagFilterPopup(QWidget):
                 item.setData(Qt.ItemDataRole.UserRole, tag['id'])
                 
                 if tag.get('color'):
+                    # Use slightly larger icon to match new context menu style? Or keep standard?
+                    # Let's keep specific 14x14 for now, or match context menu 16x16
                     pixmap = QPixmap(14, 14)
                     pixmap.fill(QColor(tag['color']))
                     item.setIcon(QIcon(pixmap))
                 
                 self.list_widget.addItem(item)
                 
-        # Calculate size
-        rows = self.list_widget.count()
-        row_height = self.list_widget.sizeHintForRow(0) if rows > 0 else 24
-        height = min(400, rows * row_height + 25 + 45)
-        width = 220
+        main_layout.addWidget(self.list_widget)
+
+        # Calculate size behavior similar to VolumePopup (adjustSize or fixed width)
+        # VolumePopup uses setMinimumWidth(380) but that's because of horizontal layout
+        # Tags are vertical list.
+        self.setMinimumWidth(250)
         
-        self.list_widget.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self.resize(width, height)
-        container_layout.addWidget(self.list_widget)
+        rows = self.list_widget.count()
+        # Cap height reasonable for a popup
+        row_height = self.list_widget.sizeHintForRow(0) if rows > 0 else 24
+        list_height = rows * row_height + 5 
+        list_height = min(400, max(100, list_height))
+        
+        # Total height approximation
+        self.list_widget.setFixedHeight(list_height)
+        self.adjustSize()
 
     def select_all(self):
         self._set_all_checked(Qt.CheckState.Checked)

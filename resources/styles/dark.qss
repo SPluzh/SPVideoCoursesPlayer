@@ -1095,13 +1095,13 @@ PreviewPopup QLabel {
    SUBTITLE & VOLUME POPUPS
    ============================================================ */
 
-#subtitlePopup, #volumePopup {
+#subtitlePopup, #volumePopup, #tagFilterPopup {
     background-color: #444444;
-    border: 1px solid #555;
+    border: 1px solid @border;
     border-radius: 3px;
 }
 
-#subtitleList, #audioList {
+#subtitleList, #audioList, #tagFilterList {
     background-color: #3a3a3a;
     border: none;
     outline: none;

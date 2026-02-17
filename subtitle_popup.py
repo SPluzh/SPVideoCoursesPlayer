@@ -19,7 +19,9 @@ class SubtitlePopup(QWidget):
     subtitleToggled = pyqtSignal(bool)
     
     def __init__(self, parent=None):
-        super().__init__(parent, Qt.WindowType.Popup)
+        super().__init__(parent, Qt.WindowType.Popup | Qt.WindowType.FramelessWindowHint)
+        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground)
+        
         main_layout = QHBoxLayout(self)  # Horizontal main layout
         main_layout.setContentsMargins(8, 8, 8, 8)
         main_layout.setSpacing(8)

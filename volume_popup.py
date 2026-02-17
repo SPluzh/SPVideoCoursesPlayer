@@ -26,7 +26,8 @@ class VolumePopup(QWidget):
     delayChanged = pyqtSignal(float) # seconds
 
     def __init__(self, parent=None):
-        super().__init__(parent, Qt.WindowType.Popup)
+        super().__init__(parent, Qt.WindowType.Popup | Qt.WindowType.FramelessWindowHint)
+        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground)
         self.setObjectName("volumePopup")
         
         main_layout = QVBoxLayout(self)
