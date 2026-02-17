@@ -311,6 +311,8 @@ QTreeWidget {
 /* Исключаем скругление для дерева видеокурсов */
 HoverTreeWidget {
     border-radius: 0px;
+    outline: none;
+    show-decoration-selected: 0;
 }
 
 /* Нормальное состояние */
@@ -341,6 +343,26 @@ QTreeWidget::item:selected:!active {
 QTreeWidget::item[playing="true"] {
     background-color: @accent !important;
     color: @text-light !important;
+}
+
+/* Убираем выделение для элементов библиотеки (HoverTreeWidget) */
+/* Убираем выделение для элементов библиотеки (HoverTreeWidget) */
+HoverTreeWidget::item:selected:active {
+    background-color: transparent;
+    color: @text-item;
+    border: none;
+}
+
+HoverTreeWidget::item:selected:!active {
+    background-color: transparent;
+    color: @text-item;
+    border: none;
+}
+
+HoverTreeWidget::item:selected:hover {
+    background-color: @bg-hover;
+    color: @text-light;
+    border-radius: 0px;
 }
 
 
