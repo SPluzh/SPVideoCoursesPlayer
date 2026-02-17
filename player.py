@@ -998,26 +998,6 @@ class VideoPlayerWidget(QWidget):
             logging.error(f"Error loading audio tracks: {e}")
 
     def change_audio_track(self, index):
-        """Switch audio track."""
-        if not self.player or index < 0 or index >= len(self.audio_track_ids):
-            return
-            
-        track_id = self.audio_track_ids[index]
-        if track_id is None: return
-
-        try:
-            self.player.aid = track_id
-            
-            if self.db and self.current_file:
-                self.db.save_audio_track(self.current_file, track_id)
-            logging.info(f"Switched to audio track: {track_id}")
-        except Exception as e:
-            logging.error(f"Error switching audio track: {e}")
-
-        except Exception as e:
-            logging.error(f"Error loading audio tracks: {e}", exc_info=True)
-
-    def change_audio_track(self, index):
         """Switch audio track on selection."""
         if not self.player: return
         if index < 0 or not self.current_file:
@@ -1715,23 +1695,6 @@ class VideoPlayerWidget(QWidget):
         except Exception as e:
             logging.error(f"Error stopping playback: {e}", exc_info=True)
 
-    def unload_video(self):
-        """Unload current video and show placeholder"""
-        try:
-            if self.player:
-                self.player.command('stop')
-        except:
-            pass
-            
-        self.current_file = None
-        self.play_btn.setEnabled(False)
-        self.progress_slider.setEnabled(False)
-        self.progress_slider.setValue(0)
-        self.time_label.setText("00:00 / 00:00")
-        self.frame_back_btn.setEnabled(False)
-        self.frame_step_btn.setEnabled(False)
-        self.screenshot_btn.setEnabled(False)
-        self.video_widget.update() # Force repaint for placeholder
 
     def position_updated(self, position_ms):
         if self.is_seeking_slider:

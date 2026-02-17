@@ -1295,36 +1295,47 @@ class VideoCourseBrowser(QMainWindow):
 
     def toggle_favorite(self, item):
         """Toggle favorite status for item."""
-        file_path = item.data(0, Qt.ItemDataRole.UserRole)
-        data = item.data(0, Qt.ItemDataRole.UserRole + 2)
-        
-        # Determine current state
-        is_fav = False
-        if isinstance(data, VideoItemData):
-            is_fav = data.is_favorite
-        elif data and len(data) >= 10:
-            is_fav = bool(data[9])
+        try:
+            logging.debug(f"toggle_favorite called for item: {item}")
+            file_path = item.data(0, Qt.ItemDataRole.UserRole)
+            logging.debug(f"file_path: {file_path}")
+            data = item.data(0, Qt.ItemDataRole.UserRole + 2)
+            logging.debug(f"current data type: {type(data)}")
             
-        new_state = not is_fav
-
-        if self.db.toggle_favorite(file_path, new_state):
-            # Refresh this item's data
+            # Determine current state
+            is_fav = False
             if isinstance(data, VideoItemData):
-                data.is_favorite = new_state
-                item.setData(0, Qt.ItemDataRole.UserRole + 2, data)
+                is_fav = data.is_favorite
             elif data and len(data) >= 10:
-                lst = list(data)
-                # Ensure list is long enough
-                while len(lst) < 10:
-                    lst.append(0)
-                if len(lst) == 10:
-                     lst.append([]) # tags
+                is_fav = bool(data[9])
                 
-                lst[9] = 1 if new_state else 0 # Toggle
-                item.setData(0, Qt.ItemDataRole.UserRole + 2, tuple(lst))
+            new_state = not is_fav
+            logging.debug(f"Toggling favorite to: {new_state}")
+
+            if self.db.toggle_favorite(file_path, new_state):
+                # Refresh this item's data
+                if isinstance(data, VideoItemData):
+                    data.is_favorite = new_state
+                    item.setData(0, Qt.ItemDataRole.UserRole + 2, data)
+                elif data and len(data) >= 10:
+                    lst = list(data)
+                    # Ensure list is long enough
+                    while len(lst) < 10:
+                        lst.append(0)
+                    if len(lst) == 10:
+                        lst.append([]) # tags
+                    
+                    lst[9] = 1 if new_state else 0 # Toggle
+                    item.setData(0, Qt.ItemDataRole.UserRole + 2, tuple(lst))
+                else:
+                    logging.debug("Data format not recognized or incomplete, reloading courses")
+                    self.load_courses() # Fallback
+                self.course_tree.viewport().update()
             else:
-                self.load_courses() # Fallback
-            self.course_tree.viewport().update()
+                logging.error("Failed to toggle favorite in DB")
+        except Exception as e:
+            logging.error(f"Error in toggle_favorite: {e}", exc_info=True)
+            QMessageBox.critical(self, tr('error.title'), f"Error toggling favorite: {e}")
 
     def edit_tags(self, item):
         """Open tags dialog."""
@@ -2051,7 +2062,7 @@ def main():
     app.setStyleSheet(DARK_STYLE)
 
     try:
-        logging.basicConfig(level=logging.WARNING, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
         logging.debug("Application starting...")
         window = VideoCourseBrowser()
         logging.debug("Window created")

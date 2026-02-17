@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.7]
+- **Availability Tracking**: Implemented smart file availability tracking:
+    - **Scanner**: Updated scan logic to mark missing videos/folders as unavailable instead of removing them.
+    - **Library**: Filtered view to show only available items, preserving play history and tags for temporarily missing files.
+
 ## [1.2.6]
 - **Audio Enhancements**: Integrated professional audio processing tools:
     - **Denoise**: Added Noise Reduction with Standard and AI (`arnndn`) modes.

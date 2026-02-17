@@ -36,6 +36,7 @@ class DatabaseManager:
                     root_path TEXT,
                     is_folder INTEGER DEFAULT 1,
                     is_expanded INTEGER DEFAULT 0,
+                    is_available INTEGER DEFAULT 1,
                     video_count INTEGER DEFAULT 0,
                     total_duration REAL DEFAULT 0,
                     total_size INTEGER DEFAULT 0,
@@ -65,6 +66,7 @@ class DatabaseManager:
                     selected_subtitle_id INTEGER DEFAULT NULL,
                     volume INTEGER DEFAULT 100,
                     subtitles_enabled INTEGER DEFAULT 0,
+                    is_available INTEGER DEFAULT 1,
                     FOREIGN KEY(folder_path) REFERENCES folders(path) ON DELETE CASCADE,
                     FOREIGN KEY(selected_audio_id) REFERENCES audio_tracks(id) ON DELETE SET NULL,
                     FOREIGN KEY(selected_subtitle_id) REFERENCES subtitle_tracks(id) ON DELETE SET NULL
@@ -180,6 +182,8 @@ class DatabaseManager:
                 c.execute("ALTER TABLE video_files ADD COLUMN is_favorite INTEGER DEFAULT 0")
             if 'selected_subtitle_id' not in columns:
                 c.execute("ALTER TABLE video_files ADD COLUMN selected_subtitle_id INTEGER DEFAULT NULL")
+            if 'is_available' not in columns:
+                c.execute("ALTER TABLE video_files ADD COLUMN is_available INTEGER DEFAULT 1")
 
 
             # Migration for video_markers
@@ -187,6 +191,12 @@ class DatabaseManager:
             columns = [col[1] for col in c.fetchall()]
             if 'color' not in columns:
                 c.execute("ALTER TABLE video_markers ADD COLUMN color TEXT DEFAULT '#FFD700'")
+
+            # Check folders table for is_available
+            c.execute("PRAGMA table_info(folders)")
+            folder_columns = [col[1] for col in c.fetchall()]
+            if 'is_available' not in folder_columns:
+                c.execute("ALTER TABLE folders ADD COLUMN is_available INTEGER DEFAULT 1")
 
             conn.commit()
 
@@ -350,7 +360,7 @@ class DatabaseManager:
                 c = conn.cursor()
                 
                 # Get all folders
-                c.execute("SELECT * FROM folders ORDER BY path")
+                c.execute("SELECT * FROM folders WHERE is_available = 1 ORDER BY path")
                 folders = [dict(row) for row in c.fetchall()]
                 
                 # Get all videos
@@ -358,6 +368,7 @@ class DatabaseManager:
                     SELECT v.*, 
                     (SELECT COUNT(*) FROM video_markers WHERE video_id = v.id) as marker_count
                     FROM video_files v 
+                    WHERE v.is_available = 1
                     ORDER BY v.folder_path, v.track_number, v.file_name
                 """)
                 videos = [dict(row) for row in c.fetchall()]
@@ -635,19 +646,26 @@ class DatabaseManager:
             pass
 
     # ===================== FAVORITES & TAGS =====================
-    def toggle_favorite(self, file_path):
+    def toggle_favorite(self, file_path, new_state=None):
         """Toggles the is_favorite status of a video."""
         try:
             with self.get_connection() as conn:
                 c = conn.cursor()
-                # Get current status
-                c.execute("SELECT is_favorite FROM video_files WHERE file_path = ?", (str(file_path),))
-                row = c.fetchone()
-                if row:
-                    new_status = 0 if row[0] else 1
-                    c.execute("UPDATE video_files SET is_favorite = ? WHERE file_path = ?", (new_status, str(file_path)))
-                    conn.commit()
-                    return True
+                if new_state is None:
+                    # Get current status if not provided
+                    c.execute("SELECT is_favorite FROM video_files WHERE file_path = ?", (str(file_path),))
+                    row = c.fetchone()
+                    if row:
+                        new_state = 0 if row[0] else 1
+                    else:
+                        new_state = 1 # Default to favorite if adding? Or strict? 
+                        # Actually logic in main.py handles defaults, here we just update.
+                        # But if row doesn't exist, we can't update.
+                        return False
+                
+                c.execute("UPDATE video_files SET is_favorite = ? WHERE file_path = ?", (1 if new_state else 0, str(file_path)))
+                conn.commit()
+                return True
         except Exception as e:
             logging.error(f"Error toggling favorite: {e}", exc_info=True)
         return False
@@ -739,3 +757,67 @@ class DatabaseManager:
         except Exception as e:
             logging.error(f"Error getting video tags: {e}", exc_info=True)
             return []
+
+    def mark_files_unavailable(self, root_path, except_file_paths):
+        """
+        Marks all video files in root_path as unavailable, 
+        EXCEPT those in the except_file_paths list.
+        """
+        try:
+            with self.get_connection() as conn:
+                c = conn.cursor()
+                
+                escaped_root = str(root_path).replace('%', '\\%').replace('_', '\\_')
+                root_pattern = f"{escaped_root}\\%"
+
+                c.execute("CREATE TEMP TABLE IF NOT EXISTS available_files (path TEXT PRIMARY KEY)")
+                c.execute("DELETE FROM available_files")
+                
+                if except_file_paths:
+                    c.executemany("INSERT INTO available_files (path) VALUES (?)", [(p,) for p in except_file_paths])
+                
+                # Update video_files
+                # We need to join with folders to check root_path
+                c.execute("""
+                    UPDATE video_files
+                    SET is_available = 0
+                    WHERE id IN (
+                        SELECT v.id FROM video_files v
+                        JOIN folders f ON v.folder_path = f.path
+                        WHERE f.root_path = ?
+                        AND v.file_path NOT IN (SELECT path FROM available_files)
+                    )
+                """, (str(root_path),))
+                
+                c.execute("DROP TABLE available_files")
+                conn.commit()
+        except Exception as e:
+            logging.error(f"Error marking files unavailable: {e}", exc_info=True)
+
+    def mark_folders_unavailable(self, root_path, except_folder_paths):
+        """
+        Marks all folders in root_path as unavailable, 
+        EXCEPT those in the except_folder_paths list.
+        """
+        try:
+            with self.get_connection() as conn:
+                c = conn.cursor()
+                
+                c.execute("CREATE TEMP TABLE IF NOT EXISTS available_folders (path TEXT PRIMARY KEY)")
+                c.execute("DELETE FROM available_folders")
+                
+                if except_folder_paths:
+                    c.executemany("INSERT INTO available_folders (path) VALUES (?)", [(p,) for p in except_folder_paths])
+                
+                c.execute("""
+                    UPDATE folders
+                    SET is_available = 0
+                    WHERE root_path = ?
+                    AND path NOT IN (SELECT path FROM available_folders)
+                """, (str(root_path),))
+                
+                c.execute("DROP TABLE available_folders")
+                conn.commit()
+        except Exception as e:
+            logging.error(f"Error marking folders unavailable: {e}", exc_info=True)
+

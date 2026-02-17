@@ -150,48 +150,53 @@ class VideoItemDelegate(QStyledItemDelegate):
             painter.save()
             data = index.data(Qt.ItemDataRole.UserRole + 2)
             if not data:
-                logging.debug(f"paint - no data for index {index.row()}")
+                # logging.debug(f"paint - no data for index {index.row()}")
                 painter.restore()
                 return
 
             # Unpack with flexibility for new fields
             # Expects: VideoItemData object or tuple
-            if isinstance(data, VideoItemData):
-                filename = data.filename
-                duration = data.duration
-                resolution = data.resolution
-                file_size = data.file_size
-                watched_percent = data.watched_percent
-                thumbnail_path = data.thumbnail_path
-                thumbnails_list = data.thumbnails_list
-                last_position = data.last_position
-                marker_count = data.marker_count
-                is_favorite = data.is_favorite
-                tags = data.tags
-            elif isinstance(data, (tuple, list)):
-                 # Backwards compatibility
-                 if len(data) >= 11:
-                     filename, duration, resolution, file_size, watched_percent, thumbnail_path, thumbnails_list, last_position, marker_count, is_favorite, tags = data[:11]
-                 elif len(data) == 9: 
-                      filename, duration, resolution, file_size, watched_percent, thumbnail_path, thumbnails_list, last_position, marker_count = data
-                      is_favorite = 0
-                      tags = []
-                 else:
-
-                      # Fallback
-                      filename = "Error"
-                      duration = 0
-                      resolution = ""
-                      file_size = 0
-                      watched_percent = 0
-                      thumbnail_path = None
-                      thumbnails_list = []
-                      last_position = 0
-                      marker_count = 0
-                      is_favorite = 0
-                      tags = []
-            else:
-                # Invalid data type
+            try:
+                if isinstance(data, VideoItemData):
+                    filename = data.filename
+                    duration = data.duration
+                    resolution = data.resolution
+                    file_size = data.file_size
+                    watched_percent = data.watched_percent
+                    thumbnail_path = data.thumbnail_path
+                    thumbnails_list = data.thumbnails_list
+                    last_position = data.last_position
+                    marker_count = data.marker_count
+                    is_favorite = data.is_favorite
+                    tags = data.tags
+                elif isinstance(data, (tuple, list)):
+                     # Backwards compatibility
+                     if len(data) >= 11:
+                         filename, duration, resolution, file_size, watched_percent, thumbnail_path, thumbnails_list, last_position, marker_count, is_favorite, tags = data[:11]
+                     elif len(data) == 9: 
+                          filename, duration, resolution, file_size, watched_percent, thumbnail_path, thumbnails_list, last_position, marker_count = data
+                          is_favorite = 0
+                          tags = []
+                     else:
+                          # Fallback
+                          filename = "Error"
+                          duration = 0
+                          resolution = ""
+                          file_size = 0
+                          watched_percent = 0
+                          thumbnail_path = None
+                          thumbnails_list = []
+                          last_position = 0
+                          marker_count = 0
+                          is_favorite = 0
+                          tags = []
+                else:
+                    # Invalid data type
+                    logging.warning(f"Invalid data type in paint: {type(data)}")
+                    painter.restore()
+                    return
+            except Exception as e:
+                logging.error(f"Error unpacking data in paint: {e}, data={data}")
                 painter.restore()
                 return
 

@@ -1029,6 +1029,9 @@ class VideoScanner:
         total_embedded_subs = 0
         total_external_subs = 0
 
+        processed_video_paths = set()
+        processed_folder_paths = set()
+
         # Search for folders with video
         print(f"\n{tr('scanner.scan_searching')}")
         
@@ -1105,15 +1108,18 @@ class VideoScanner:
                     
                     # Insert/update folder record
                     c.execute("""
-                        INSERT INTO folders (path, parent_path, name, video_count, root_path, total_duration, total_size)
-                        VALUES (?, ?, ?, ?, ?, 0, 0)
+                        INSERT INTO folders (path, parent_path, name, video_count, root_path, total_duration, total_size, is_available)
+                        VALUES (?, ?, ?, ?, ?, 0, 0, 1)
                         ON CONFLICT(path) DO UPDATE SET
                             parent_path = excluded.parent_path,
                             name = excluded.name,
                             video_count = excluded.video_count,
                             root_path = excluded.root_path,
-                            last_updated = CURRENT_TIMESTAMP
+                            last_updated = CURRENT_TIMESTAMP,
+                            is_available = 1
                     """, (str(rel_path), str(parent), folder.name, video_count, root_str))
+
+                    processed_folder_paths.add(str(rel_path))
 
                     # Save video results to DB
                     for result in results:
@@ -1135,9 +1141,9 @@ class VideoScanner:
                             INSERT INTO video_files
                             (folder_path, file_path, file_name, track_number,
                              duration, resolution, file_size, codec,
-                             thumbnail_path, thumbnails_json, watched_percent, last_position,
+                             thumbnail_path, thumbnails_json, watched_percent, last_position, is_available,
                              audio_track_count, selected_audio_id, subtitle_track_count, selected_subtitle_id)
-                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, NULL)
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, NULL, ?, NULL)
                             ON CONFLICT(file_path) DO UPDATE SET
                                 folder_path = excluded.folder_path,
                                 file_name = excluded.file_name,
@@ -1148,6 +1154,7 @@ class VideoScanner:
                                 codec = excluded.codec,
                                 thumbnail_path = excluded.thumbnail_path,
                                 thumbnails_json = excluded.thumbnails_json,
+                                is_available = 1,
                                 audio_track_count = excluded.audio_track_count,
                                 subtitle_track_count = excluded.subtitle_track_count
                         """, (
@@ -1157,6 +1164,8 @@ class VideoScanner:
                             result['thumbnails_json'], result['watched_percent'], result['last_position'],
                             result['audio_track_count'], result['subtitle_track_count']
                         ))
+
+                        processed_video_paths.add(result['file_path'])
                         
                         # Video ID
                         c.execute("SELECT id FROM video_files WHERE file_path = ?", (result['file_path'],))
@@ -1284,12 +1293,18 @@ class VideoScanner:
                     if current not in added:
                         parent = str(Path(current).parent) if str(Path(current).parent) != '.' else ''
                         c.execute("""
-                            INSERT INTO folders (path, parent_path, name, is_folder, video_count, root_path)
-                            VALUES (?, ?, ?, 1, 0, ?)
-                            ON CONFLICT(path) DO NOTHING
+                            INSERT INTO folders (path, parent_path, name, is_folder, video_count, root_path, is_available)
+                            VALUES (?, ?, ?, 1, 0, ?, 1)
+                            ON CONFLICT(path) DO UPDATE SET is_available = 1
                         """, (current, parent, Path(current).name, root_str))
+                        
+                        processed_folder_paths.add(current)
                         added.add(current)
             conn.commit()
+
+        print(f"\n{tr('scanner.availability_check')}")
+        self.db.mark_files_unavailable(root_str, list(processed_video_paths))
+        self.db.mark_folders_unavailable(root_str, list(processed_folder_paths))
 
         # Final statistics
         total_time = time.time() - total_start_time
