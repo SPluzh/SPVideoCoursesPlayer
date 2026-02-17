@@ -180,8 +180,7 @@ class DatabaseManager:
                 c.execute("ALTER TABLE video_files ADD COLUMN is_favorite INTEGER DEFAULT 0")
             if 'selected_subtitle_id' not in columns:
                 c.execute("ALTER TABLE video_files ADD COLUMN selected_subtitle_id INTEGER DEFAULT NULL")
-            if 'is_favorite' not in columns:
-                c.execute("ALTER TABLE video_files ADD COLUMN is_favorite INTEGER DEFAULT 0")
+
 
             # Migration for video_markers
             c.execute("PRAGMA table_info(video_markers)")

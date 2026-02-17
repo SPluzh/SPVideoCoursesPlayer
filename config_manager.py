@@ -30,7 +30,7 @@ class ConfigManager:
             'window_width': '1400',
             'window_height': '800',
             'video_row_height': '110',
-            'folder_row_height': '35',
+            'folder_row_height': '70',
         },
         'Thumbnails': {
             'render_width': '320',
@@ -59,7 +59,15 @@ class ConfigManager:
         'Performance': {
             'max_workers': '8',
             'thumbnail_workers': '4',
-            'ffmpeg_timeout': '5',
+            'ffmpeg_timeout': '15',
+        },
+        'Folder_Style': {
+            'icon_size': '24',
+            'row_height': '35',
+            'font_bold': 'True',
+            'font_size': '10',
+            'text_color': '0,100,180',
+            'bg_color': '230,240,255',
         },
     }
 
@@ -162,6 +170,16 @@ class ConfigManager:
     def get_folder_row_height(self) -> int:
         config = self._read_config()
         return config.getint('Display', 'folder_row_height', fallback=70)
+
+    # --- Folder Style settings ---
+
+    def get_folder_icon_size(self) -> int:
+        config = self._read_config()
+        return config.getint('Folder_Style', 'icon_size', fallback=24)
+
+    def get_folder_style_row_height(self) -> int:
+        config = self._read_config()
+        return config.getint('Folder_Style', 'row_height', fallback=35)
 
     # --- Thumbnail settings ---
 
