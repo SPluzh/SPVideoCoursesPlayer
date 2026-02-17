@@ -110,7 +110,28 @@
         "delete_marker_confirm": "Are you sure you want to delete this marker?",
         "default_marker_label": "Marker",
         "no_markers": "No markers found",
-        "tooltip_pip": "Detach video"
+        "tooltip_pip": "Detach video",
+        "audio_delay": "Audio Delay",
+        "volume": "Volume",
+        "audio_track": "Audio Track",
+        "osd": {
+            "audio": "Audio",
+            "normal": "Normal",
+            "noise": "Denoise",
+            "deess": "De-esser",
+            "comp": "Compressor",
+            "channel": "Channel"
+        },
+        "audio_tools": {
+            "noise": "Noise",
+            "noise_tooltip": "Noise Reduction (Off/Standard/AI)",
+            "comp": "Comp",
+            "comp_tooltip": "Compressor (Dynamic Normalizer)",
+            "deess": "De-esser",
+            "deess_tooltip": "De-esser",
+            "mono": "Mono",
+            "mono_tooltip": "Mono Mode"
+        }
     },
     "status": {
         "ready": "Ready",

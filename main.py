@@ -37,7 +37,6 @@ from about_dialog import AboutDialog
 from settings_dialog import SettingsDialog, ScanProgressDialog
 from folder_stats_dialog import FolderStatsDialog
 from subtitle_popup import SubtitlePopup, SubtitleButton
-from volume_popup import VolumePopup, VolumeButton
 from placeholders import draw_video_placeholder, draw_library_placeholder
 
 from video_item_data import VideoItemData
@@ -322,6 +321,10 @@ class VideoCourseBrowser(QMainWindow):
             self.video_player.toggle_marker_gallery()
         elif action == "toggle_pip":
             self.toggle_pip_mode()
+        elif action == "audio_delay_up":
+            self.video_player.adjust_audio_delay(0.05)
+        elif action == "audio_delay_down":
+            self.video_player.adjust_audio_delay(-0.05)
 
     def toggle_fullscreen(self):
         if self.isFullScreen():

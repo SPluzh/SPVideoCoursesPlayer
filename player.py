@@ -2,7 +2,7 @@
 import sys
 from pathlib import Path
 import logging
-from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QSlider, QSizePolicy, QStylePainter, QStyleOptionSlider, QStyle, QToolTip, QMenu
+from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QSlider, QSizePolicy, QStylePainter, QStyleOptionSlider, QStyle, QToolTip, QMenu, QComboBox, QFrame
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal, QPoint, QRect
 from PyQt6.QtGui import QIcon, QColor, QPalette, QPainter, QPen, QBrush
 
@@ -185,6 +185,16 @@ class VideoPlayerWidget(QWidget):
         self.thumb_provider = ThumbnailProvider(self)
         self.thumb_provider.finished.connect(self._on_marker_thumbnail_ready)
         self.thumb_provider.finished.connect(self._on_marker_thumbnail_ready)
+        # Audio Processing State
+        self.audio_opts = {
+            'noise_mode': 'off',
+            'compressor': False,
+            'deesser': False,
+            'channel_mode': 'normal',
+            'delay': 0.0,
+        }
+        self.audio_track_ids = []
+        
         self.marker_gallery = None # Created in setup_ui
         logging.debug("Calling setup_ui")
         self.setup_ui()
@@ -289,17 +299,27 @@ class VideoPlayerWidget(QWidget):
 
 
 
+        panel_layout.addWidget(self.progress_slider, 1)
+
+        self.time_label = QLabel("00:00 / 00:00")
+        panel_layout.addWidget(self.time_label)
+
         self.subtitle_btn = SubtitleButton()
         self.subtitle_btn.subtitleToggled.connect(self.toggle_subtitles)
         self.subtitle_btn.subtitleChanged.connect(self.change_subtitle_track)
         self.subtitle_btn.popup.styleChanged.connect(self.change_subtitle_style)
         panel_layout.addWidget(self.subtitle_btn)
 
-
-
         self.volume_btn = VolumeButton()
         self.volume_btn.volumeChanged.connect(self.change_volume)
         self.volume_btn.audioChanged.connect(self.change_audio_track)
+        
+        # Audio Tools connections from VolumePopup
+        self.volume_btn.noiseModeChanged.connect(self.set_noise_mode)
+        self.volume_btn.compressorToggled.connect(self.toggle_compressor)
+        self.volume_btn.deesserToggled.connect(self._on_deesser_toggled)
+        self.volume_btn.channelModeChanged.connect(self._on_channel_mode_changed)
+        self.volume_btn.delayChanged.connect(self._on_audio_delay_changed)
         panel_layout.addWidget(self.volume_btn)
 
         self.speed_slider = QSlider(Qt.Orientation.Horizontal)
@@ -389,7 +409,7 @@ class VideoPlayerWidget(QWidget):
         try:
             is_muted = getattr(self.player, 'mute', False)
             self.player.mute = not is_muted
-            # Update volume button UI if needed
+            # Update volume UI
             current_vol = self.player.volume
             self.volume_btn._update_icon(0 if self.player.mute else current_vol)
         except Exception as e:
@@ -400,17 +420,27 @@ class VideoPlayerWidget(QWidget):
         if not self.player: return
         try:
             current = self.player.volume or 0
-            new_vol = max(0, min(100, current + delta))
+            new_vol = max(0, min(150, current + delta))
             self.player.volume = new_vol
+            
             # Update UI
             self.volume_btn.popup.slider.blockSignals(True)
             self.volume_btn.popup.slider.setValue(int(new_vol))
             self.volume_btn.popup.slider.blockSignals(False)
             self.volume_btn._update_icon(int(new_vol))
-            if hasattr(self.volume_btn.popup, '_update_label'):
-                self.volume_btn.popup._update_label(int(new_vol))
         except Exception as e:
             logging.error(f"Error adjusting volume: {e}")
+
+    def change_volume(self, value):
+        """Handle volume slider change."""
+        if not self.player: return
+        try:
+            self.player.volume = value
+            self.volume_btn._update_icon(value)
+        except Exception as e:
+            logging.error(f"Error setting volume: {e}")
+
+    # Removed _update_volume_icon as it's now back in VolumeButton
 
     def adjust_speed(self, delta):
         """Adjust playback speed by delta."""
@@ -425,6 +455,191 @@ class VideoPlayerWidget(QWidget):
             # change_speed is already connected to valueChanged
         except Exception as e:
             logging.error(f"Error adjusting speed: {e}")
+
+    # ==========================
+    # Audio Processing Methods
+    # ==========================
+
+    def adjust_audio_delay(self, delta):
+        """Adjust audio delay by delta seconds."""
+        if not self.player: return
+        try:
+            current = self.player.audio_delay or 0
+            new_val = current + delta
+            self.player.audio_delay = new_val
+            # Show OSD
+            ms_val = int(new_val * 1000)
+            sign = "+" if ms_val > 0 else ""
+            self.player.show_text(f"{tr('player.audio_delay')}: {sign}{ms_val} ms")
+        except Exception as e:
+            logging.error(f"Error adjusting delay: {e}")
+
+    def set_audio_delay(self, value):
+        """Set absolute audio delay in seconds."""
+        if not self.player: return
+        try:
+            self.player.audio_delay = value
+            ms = int(value * 1000)
+            sign = "+" if ms > 0 else ""
+            self.player.show_text(f"{tr('player.audio_delay')}: {sign}{ms} ms")
+        except Exception as e:
+            logging.error(f"Error setting delay: {e}")
+
+    @staticmethod
+    def _escape_lavfi_path(path) -> str:
+        """Build an FFmpeg-safe path string for use inside lavfi=[...] filters.
+        
+        Two levels of escaping are required (MPV option parser → FFmpeg filter parser).
+        Strategy:
+          1. Try relative path (no drive letter = no colon = no problem).
+          2. Fallback: absolute path with double-escaped colon (\\\\: in Python → \\: in string → : in FFmpeg).
+        Forward slashes are always used to avoid backslash escaping issues.
+        """
+        from pathlib import Path as P
+        abs_path = P(path).resolve()
+        
+        # Prefer relative path to avoid the colon in drive letter entirely
+        try:
+            rel = abs_path.relative_to(P.cwd().resolve())
+            return str(rel).replace('\\', '/')
+        except ValueError:
+            pass
+        
+        # Absolute path: must double-escape colon for MPV→FFmpeg two-level parsing
+        # MPV parses first:  \\: → \:
+        # FFmpeg parses next: \: → :   (literal colon)
+        s = str(abs_path).replace('\\', '/')
+        s = s.replace(':', '\\\\:')  # double backslash + colon
+        return s
+
+    def _update_audio_filters(self):
+        """Rebuild and apply audio filter chain."""
+        if not self.player: return
+        
+        filters = []
+        logging.debug(f"DEBUG: player._update_audio_filters() with opts: {self.audio_opts}")
+        
+        try:
+            # 1. Noise Reduction
+            mode = self.audio_opts.get('noise_mode', 'off')
+            if mode == 'standard':
+                filters.append("afftdn=nf=-25")
+            elif mode == 'ai':
+                if self.has_ai_model():
+                    rnn_path = RESOURCES_DIR / "bin" / "bd.rnn"
+                    escaped = self._escape_lavfi_path(rnn_path.absolute())
+                    filters.append(f"arnndn=m={escaped}")
+                else:
+                    logging.warning("AI Model (bd.rnn) not found")
+
+            # 2. De-esser
+            if self.audio_opts.get('deesser', False):
+                filters.append("deesser=i=0.4:f=0.5:m=0.5")
+
+            # 3. Compressor
+            if self.audio_opts.get('compressor', False):
+                filters.append("dynaudnorm=f=75:g=25:p=0.55")
+
+            # 4. Channel Mapping
+            ch_mode = self.audio_opts.get('channel_mode', 'normal')
+            if ch_mode == 'mono':
+                filters.append("pan=stereo|c0=c0+c1|c1=c0+c1")
+            elif ch_mode == 'swap':
+                filters.append("pan=stereo|c0=c1|c1=c0")
+
+            if filters:
+                af_cmd = "lavfi=[" + ",".join(filters) + "]"
+                logging.debug(f"DEBUG: Applying audio filters: {af_cmd}")
+                self.player.af = af_cmd
+                
+                # OSD Feedback
+                active = []
+                if mode != 'off':
+                    active.append(f"{tr('player.osd.noise')}: {mode.capitalize()}")
+                if self.audio_opts.get('deesser'):
+                    active.append(tr('player.osd.deess'))
+                if self.audio_opts.get('compressor'):
+                    active.append(tr('player.osd.comp'))
+                if self.audio_opts.get('channel_mode') != 'normal':
+                    active.append(f"{tr('player.osd.channel')}: {self.audio_opts['channel_mode'].capitalize()}")
+                
+                prefix = tr('player.osd.audio')
+                normal = tr('player.osd.normal')
+                text = f"{prefix}: " + ", ".join(active) if active else f"{prefix}: {normal}"
+                self.player.show_text(text)
+                
+            else:
+                logging.debug("DEBUG: Clearing audio filters")
+                self.player.af = ""
+        except Exception as e:
+            logging.error(f"Error applying audio filters: {e}", exc_info=True)
+
+    def set_noise_mode(self, mode):
+        logging.debug(f"DEBUG: player.set_noise_mode('{mode}')")
+        if self.audio_opts['noise_mode'] == mode:
+            return # No change
+            
+        self.audio_opts['noise_mode'] = mode
+        # Sync to popup button
+        if hasattr(self, 'volume_btn'):
+            self.volume_btn.popup.blockSignals(True)
+            self.volume_btn.popup.setNoiseMode(mode)
+            self.volume_btn.popup.blockSignals(False)
+        self._update_audio_filters()
+
+    def toggle_compressor(self, enabled):
+        logging.debug(f"DEBUG: player.toggle_compressor({enabled})")
+        if self.audio_opts['compressor'] == enabled:
+            return
+            
+        self.audio_opts['compressor'] = enabled
+        if hasattr(self, 'volume_btn'):
+            self.volume_btn.popup.blockSignals(True)
+            self.volume_btn.popup.comp_btn.setChecked(enabled)
+            self.volume_btn.popup.blockSignals(False)
+        self._update_audio_filters()
+
+    def _on_deesser_toggled(self, enabled):
+        logging.debug(f"DEBUG: player._on_deesser_toggled({enabled})")
+        if self.audio_opts['deesser'] == enabled:
+            return
+            
+        self.audio_opts['deesser'] = enabled
+        if hasattr(self, 'volume_btn'):
+            self.volume_btn.popup.blockSignals(True)
+            self.volume_btn.popup.deess_btn.setChecked(enabled)
+            self.volume_btn.popup.blockSignals(False)
+        self._update_audio_filters()
+
+    def _on_channel_mode_changed(self, mode):
+        logging.debug(f"DEBUG: player._on_channel_mode_changed('{mode}')")
+        if self.audio_opts['channel_mode'] == mode:
+            return
+            
+        self.audio_opts['channel_mode'] = mode
+        if hasattr(self, 'volume_btn'):
+            self.volume_btn.popup.blockSignals(True)
+            self.volume_btn.popup.mono_btn.setChecked(mode == 'mono')
+            self.volume_btn.popup.blockSignals(False)
+        self._update_audio_filters()
+
+    def _on_audio_delay_changed(self, delay_sec):
+        """Update audio delay in MPV."""
+        self.audio_opts['delay'] = delay_sec
+        if self.player:
+            try:
+                self.player['audio-delay'] = delay_sec
+                # Show OSD
+                ms = int(delay_sec * 1000)
+                sign = "+" if ms > 0 else ""
+                self.player.show_text(f"{tr('player.audio_delay')}: {sign}{ms} ms")
+                logging.debug(f"DEBUG: Audio delay set to {delay_sec}s")
+            except Exception as e:
+                logging.error(f"Error setting audio delay: {e}")
+
+
+    def has_ai_model(self):
+        return (RESOURCES_DIR / "bin" / "bd.rnn").exists()
 
     def seek_relative(self, seconds):
         """Seek relative to current position."""
@@ -481,7 +696,7 @@ class VideoPlayerWidget(QWidget):
                 keep_open=True,
                 idle=True,
                 osc=False,
-                osd_level=0,
+                osd_level=1,
                 osd_bar=False,
                 osd_on_seek=False,
                 input_default_bindings=False,
@@ -492,7 +707,7 @@ class VideoPlayerWidget(QWidget):
                 audio_fallback_to_null='yes',  # Do not stop on audio error
                 demuxer_lavf_o='fflags=+genpts+igndts',  # Ignore timing problems
                 log_handler=print,
-                loglevel='warn'
+                loglevel='info'
             )
             
             # Apply initial subtitle styles
@@ -522,11 +737,39 @@ class VideoPlayerWidget(QWidget):
 
             @self.player.property_observer('playback-restart')
             def playback_restart_observer(_name, value):
-                if value and self.is_loading:
-                    self.is_loading = False
-                    if self.auto_play_pending:
-                        QTimer.singleShot(50, self._ensure_playing)
-                        self.auto_play_pending = False
+                if value:
+                    is_loading = getattr(self, 'is_loading', False)
+                    auto_pending = getattr(self, 'auto_play_pending', False)
+                    saved_pos = getattr(self, 'saved_position', 0)
+                    attempted = getattr(self, 'position_restore_attempted', True)
+
+                    logging.debug(f"DEBUG: playback-restart event. value={value}, is_loading={is_loading}, auto_pending={auto_pending}, saved={saved_pos}, attempted={attempted}")
+                    
+                    if is_loading:
+                        self.is_loading = False
+                        if auto_pending:
+                            logging.debug("DEBUG: Triggering _ensure_playing after restart")
+                            QTimer.singleShot(20, self._ensure_playing)
+                            self.auto_play_pending = False
+                    
+                    # Robust position restoration
+                    if saved_pos > 0 and not attempted:
+                        logging.info(f"DEBUG: Found saved position {saved_pos}, scheduling restoration")
+                        QTimer.singleShot(50, self.restore_position)
+                    elif saved_pos > 0:
+                        logging.debug(f"DEBUG: Skip restoration: saved={saved_pos}, attempted={attempted}")
+
+            @self.player.property_observer('core-idle')
+            def core_idle_observer(_name, value):
+                logging.debug(f"DEBUG: core-idle={value}")
+
+            @self.player.event_callback('file-loaded')
+            def file_loaded_callback(_event):
+                logging.info("DEBUG: MPV Event: file-loaded")
+                # If restoration hasn't happened yet by file-loaded, try it here too
+                if getattr(self, 'saved_position', 0) > 0 and not getattr(self, 'position_restore_attempted', True):
+                    logging.info(f"DEBUG: Restoration not yet triggered by playback-restart, trying on file-loaded")
+                    QTimer.singleShot(50, self.restore_position)
 
             self.video_widget.set_player(self.player)
             logging.info("MPV initialized successfully")
@@ -535,8 +778,6 @@ class VideoPlayerWidget(QWidget):
         except Exception as e:
             logging.error(f"Error initializing MPV: {e}")
             # Do not raise here to allow app to start even without libmpv
-            self.player = None
-
             self.player = None
 
     def _timer_wrapper(self, name, func, *args):
@@ -586,10 +827,10 @@ class VideoPlayerWidget(QWidget):
 
         self.current_file = file_path
         self.saved_position = saved_position
-        self.saved_position = saved_position
         self.position_restore_attempted = False
         self.is_loading = True
         self.auto_play_pending = auto_play
+        logging.debug(f"DEBUG: load_video setup: path={file_path}, saved={saved_position}, auto={auto_play}")
         
         # Update preview popup video path
         if hasattr(self, 'preview_popup'):
@@ -613,11 +854,11 @@ class VideoPlayerWidget(QWidget):
                 self.volume_btn.popup.slider.setValue(int(volume))
                 self.volume_btn.popup.slider.blockSignals(False)
                 self.volume_btn._update_icon(int(volume))
-                if hasattr(self.volume_btn.popup, '_update_label'):
-                    self.volume_btn.popup._update_label(int(volume))
 
+            logging.debug(f"DEBUG: Calling self.player.loadfile('{file_path}')")
             self.player.sid = 'no'
             self.player.loadfile(file_path)
+            logging.debug(f"DEBUG: loadfile returned")
             self._apply_subtitle_styles()
             self.play_btn.setEnabled(True)
             self.progress_slider.setEnabled(True)
@@ -698,8 +939,7 @@ class VideoPlayerWidget(QWidget):
         if not self.player: return
         try:
             self.player.pause = True
-            if self.saved_position > 0 and not self.position_restore_attempted:
-                QTimer.singleShot(150, self.restore_position)
+            # Position restoration now handled by playback-restart event
             logging.debug(f"_load_paused finished")
         except Exception as e:
             logging.error(f"Error loading paused: {e}")
@@ -711,8 +951,7 @@ class VideoPlayerWidget(QWidget):
         try:
             if self.player.pause:
                 self.player.pause = False
-            if self.saved_position > 0 and not self.position_restore_attempted:
-                QTimer.singleShot(150, self.restore_position)
+            # Position restoration now handled by playback-restart event
             logging.debug(f"_start_playback finished")
         except Exception as e:
             logging.error(f"Error starting playback: {e}")
@@ -722,6 +961,7 @@ class VideoPlayerWidget(QWidget):
         """Load list of audio tracks from DB."""
         logging.debug(f"load_audio_tracks called")
         self.volume_btn.popup.clearAudio()
+        self.audio_track_ids = []
 
         if not self.db:
             return
@@ -731,51 +971,48 @@ class VideoPlayerWidget(QWidget):
 
             if not tracks:
                 self.volume_btn.popup.addAudioItem(tr('player.no_tracks'), None)
-                logging.debug(f"load_audio_tracks finished (no tracks)")
+                self.audio_track_ids.append(None)
+                logging.debug(f"DEBUG: load_audio_tracks finished (no tracks) for {filepath}")
                 return
 
             selected_index = 0
-
-            for idx, track in enumerate(tracks):
-                track_id = track['id']
-                track_type = track['track_type']
-                stream_index = track['stream_index']
-                audio_file_name = track['audio_file_name']
-                language = track['language']
-                title = track['title']
-                codec = track['codec']
-                channels = track['channels']
-                is_default = track['is_default']
-
-                if track_type == 'embedded':
-                    label = f"{stream_index}"
-                    if language:
-                        label += f" [{language}]"
-                    if title:
-                        label += f" - {title}"
-                    if codec:
-                        label += f" ({codec})"
-                    if channels:
-                        label += f" {channels}ch"
-                else:  # external
-                    label = f"{audio_file_name or tr('player.external_audio')}"
-                    if language:
-                        label += f" [{language}]"
-
-                if is_default:
+            for i, track in enumerate(tracks):
+                track_id = track.get('id')
+                label = track.get('title') or track.get('audio_file_name') or f"Track {i+1}"
+                
+                if track.get('language'):
+                    label += f" [{track['language']}]"
+                if track.get('codec'):
+                    label += f" ({track['codec']})"
+                if track.get('is_default'):
                     label += f" [{tr('player.default')}]"
 
                 self.volume_btn.popup.addAudioItem(label, track_id)
-
+                self.audio_track_ids.append(track_id)
                 if track_id == selected_audio_id:
-                    selected_index = idx
+                    selected_index = i
+            
+            self.volume_btn.popup.setAudioIndex(selected_index)
+            logging.debug(f"DEBUG: load_audio_tracks finished, selected {selected_index} for video {filepath}")
+        except Exception as e:
+            logging.error(f"Error loading audio tracks: {e}")
 
+    def change_audio_track(self, index):
+        """Switch audio track."""
+        if not self.player or index < 0 or index >= len(self.audio_track_ids):
+            return
+            
+        track_id = self.audio_track_ids[index]
+        if track_id is None: return
 
-            if tracks:
-                self.volume_btn.popup.setAudioIndex(selected_index)
-
-
-            logging.debug(f"load_audio_tracks finished")
+        try:
+            self.player.aid = track_id
+            
+            if self.db and self.current_file:
+                self.db.save_audio_track(self.current_file, track_id)
+            logging.info(f"Switched to audio track: {track_id}")
+        except Exception as e:
+            logging.error(f"Error switching audio track: {e}")
 
         except Exception as e:
             logging.error(f"Error loading audio tracks: {e}", exc_info=True)
@@ -1402,16 +1639,29 @@ class VideoPlayerWidget(QWidget):
         self.progress_slider.set_markers(self.markers if hasattr(self, 'markers') else [], duration_ms / 1000.0)
 
     def restore_position(self):
-        logging.debug(f"restore_position called, saved_pos={self.saved_position}, attempted={self.position_restore_attempted}")
-        if self.saved_position > 0 and not self.position_restore_attempted:
-            try:
-                self.player.seek(self.saved_position, 'absolute', 'exact')
-                self.position_restore_attempted = True
-                logging.debug(f"restore_position finished")
-            except Exception as e:
-                logging.error(f"Error restoring position: {e}", exc_info=True)
-        else:
-             logging.debug(f"restore_position skipped")
+        logging.info(f"DEBUG: restore_position entry: saved={self.saved_position}, attempted={self.position_restore_attempted}")
+        if not self.player or self.saved_position <= 0 or self.position_restore_attempted:
+            logging.debug(f"DEBUG: restore_position skipped (ready conditions not met)")
+            return
+
+        try:
+            # Check if duration is available for bounds checking
+            duration = getattr(self.player, 'duration', 0)
+            if duration and duration > 0:
+                if self.saved_position >= duration:
+                    logging.warning(f"Saved position {self.saved_position} is beyond duration {duration}. Capping.")
+                    self.saved_position = max(0, duration - 1)
+            else:
+                logging.debug("DEBUG: Duration not yet available in restore_position, proceeding anyway")
+            
+            # Use 'absolute' + 'exact' to ensure we end up precisely where we want
+            logging.info(f"🚀 Restoring position to {self.saved_position:.2f}s")
+            self.player.seek(self.saved_position, 'absolute', 'exact')
+            self.position_restore_attempted = True
+            logging.debug(f"DEBUG: restore_position command successfully sent")
+        except Exception as e:
+            # -12 Error is often "Invalid Parameter". Logging it more clearly.
+            logging.error(f"❌ Error in restore_position: {e}", exc_info=True)
 
     def restart_video(self):
         try:

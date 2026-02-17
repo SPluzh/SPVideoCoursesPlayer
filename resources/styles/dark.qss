@@ -40,6 +40,10 @@
 @color-inactive: rgba(150, 150, 150, 180);
 @separator-color: #555555;
 
+/* Цвета полей ввода (Search, Delay) */
+@bg-input: @bg-dark;
+@border-input: @border;
+
 /* ============================================================
    ОСНОВНОЕ ОКНО И ВИДЖЕТЫ
    ============================================================ */
@@ -136,13 +140,76 @@ QPushButton#tagFilterBtn:checked:hover {
     background-color: @accent-hover;
 }
 
+/* Аудио-фильтры на панели */
+QPushButton#audioFilterBtn {
+    background-color: @bg-dark;
+    border: 1px solid @border;
+    border-radius: 2px;
+    padding: 2px;
+    font-size: 11px;
+}
+
+QPushButton#audioFilterBtn:hover {
+    background-color: @accent-hover;
+    border-color: @border-light;
+}
+
+QPushButton#audioFilterBtn:checked,
+QPushButton#audioFilterBtn[active="true"] {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 @accent-pressed, stop:1 @accent);
+    border: 1px solid @accent;
+    color: @text-light;
+}
+
+#delaySmallBtn {
+    background-color: @bg-dark;
+    border: 1px solid @border;
+    border-radius: 2px;
+    font-weight: bold;
+    font-size: 14px;
+    color: @text-light;
+    min-height: 24px;
+    max-height: 24px;
+    padding: 0;
+    margin: 0;
+}
+
+#delaySmallBtn:hover {
+    background-color: @accent-hover;
+    border-color: @border-light;
+    color: #ffffff;
+}
+
+#delaySmallBtn:pressed {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 @accent-pressed, stop:1 @accent);
+    border-color: @accent;
+}
+
+#delaySpin {
+    background-color: @bg-input;
+    border: 1px solid @border-input;
+    border-radius: 2px;
+    color: @text-item;
+    font-family: 'Consolas', monospace;
+    font-size: 11px;
+    min-height: 24px;
+    max-height: 24px;
+    padding: 0;
+    margin: 0;
+}
+
+QPushButton#audioFilterBtn:hover {
+    background-color: @bg-hover;
+    border-color: @border-light;
+}
+
 /* ============================================================
    ПОЛЯ ВВОДА
    ============================================================ */
 
 QLineEdit {
-    background-color: @bg-dark;
-    border: 1px solid @border;
+    background-color: @bg-input;
+    border: 1px solid @border-input;
     padding: 6px;
     min-height: 16px;
     color: @text-main;

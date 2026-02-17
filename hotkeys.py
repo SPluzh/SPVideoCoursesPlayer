@@ -147,6 +147,8 @@ class HotkeyManager(QObject):
             Qt.Key.Key_Right: "next_video",
             Qt.Key.Key_Up: "volume_up",
             Qt.Key.Key_Down: "volume_down",
+            Qt.Key.Key_Comma: "audio_delay_down", # Shift + <
+            Qt.Key.Key_Period: "audio_delay_up",  # Shift + >
         }
         
         # Navigation/Speed (no shift)

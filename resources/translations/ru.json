@@ -110,7 +110,28 @@
         "delete_marker_confirm": "Вы уверены, что хотите удалить эту метку?",
         "default_marker_label": "Метка",
         "no_markers": "Маркеры не найдены",
-        "tooltip_pip": "Открепить видео"
+        "tooltip_pip": "Открепить видео",
+        "audio_delay": "Задержка звука",
+        "volume": "Громкость",
+        "audio_track": "Аудиодорожка",
+        "osd": {
+            "audio": "Звук",
+            "normal": "Норма",
+            "noise": "Шумодав",
+            "deess": "Дэ-эссер",
+            "comp": "Компрессор",
+            "channel": "Канал"
+        },
+        "audio_tools": {
+            "noise": "Шум",
+            "noise_tooltip": "Шумоподавление (Выкл/Стандарт/AI)",
+            "comp": "Комп",
+            "comp_tooltip": "Компрессор (Динамическая нормализация)",
+            "deess": "Ди-эсс",
+            "deess_tooltip": "Де-эссер",
+            "mono": "Моно",
+            "mono_tooltip": "Моно режим"
+        }
     },
     "status": {
         "error": "Ошибка",
