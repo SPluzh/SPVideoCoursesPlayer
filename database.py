@@ -1,6 +1,7 @@
 import sqlite3
 import json
 import time
+import logging
 from pathlib import Path
 from translator import tr
 
@@ -202,7 +203,7 @@ class DatabaseManager:
                 row = c.fetchone()
                 return dict(row) if row else None
         except Exception as e:
-            print(f"Error getting video data: {e}")
+            logging.error(f"Error getting video data: {e}", exc_info=True)
             return None
 
     def save_progress(self, file_path, position_sec, duration_sec, watched_percent=None, volume=100):
@@ -223,7 +224,7 @@ class DatabaseManager:
                 """, (position_sec, watched_percent, volume, str(file_path)))
                 conn.commit()
         except Exception as e:
-            print(f"Error saving progress: {e}")
+            logging.error(f"Error saving progress: {e}", exc_info=True)
 
     def update_folder_expanded_state(self, path, expanded):
         """Saves folder expanded/collapsed state."""
@@ -234,7 +235,7 @@ class DatabaseManager:
                           (1 if expanded else 0, str(path)))
                 conn.commit()
         except Exception as e:
-            print(f"Error saving folder state: {e}")
+            logging.error(f"Error saving folder state: {e}", exc_info=True)
 
     def load_audio_tracks(self, file_path):
         """Loads all audio tracks for a given video file."""
@@ -261,7 +262,7 @@ class DatabaseManager:
                 tracks = [dict(row) for row in c.fetchall()]
                 return tracks, selected_id
         except Exception as e:
-            print(f"Error loading audio tracks: {e}")
+            logging.error(f"Error loading audio tracks: {e}", exc_info=True)
             return [], None
 
     def load_subtitle_tracks(self, file_path):
@@ -289,7 +290,7 @@ class DatabaseManager:
                 tracks = [dict(row) for row in c.fetchall()]
                 return tracks, selected_id, enabled
         except Exception as e:
-            print(f"Error loading subtitles: {e}")
+            logging.error(f"Error loading subtitles: {e}", exc_info=True)
             return [], None, 0
 
     def get_track_info(self, table_name, track_id):
@@ -302,7 +303,7 @@ class DatabaseManager:
                 row = c.fetchone()
                 return dict(row) if row else None
         except Exception as e:
-            print(f"Error getting track info from {table_name}: {e}")
+            logging.error(f"Error getting track info from {table_name}: {e}", exc_info=True)
             return None
 
     def save_selected_audio(self, file_path, track_id):
@@ -314,7 +315,7 @@ class DatabaseManager:
                           (track_id, str(file_path)))
                 conn.commit()
         except Exception as e:
-            print(f"Error saving audio selection: {e}")
+            logging.error(f"Error saving audio selection: {e}", exc_info=True)
 
     def save_selected_subtitle(self, file_path, track_id, enabled=None):
         """Saves the selected subtitle track and enabled state."""
@@ -329,7 +330,7 @@ class DatabaseManager:
                               (track_id, str(file_path)))
                 conn.commit()
         except Exception as e:
-            print(f"Error saving subtitle selection: {e}")
+            logging.error(f"Error saving subtitle selection: {e}", exc_info=True)
 
     def update_subtitle_enabled(self, file_path, enabled):
         """Only updates the subtitle enabled/disabled state."""
@@ -340,7 +341,7 @@ class DatabaseManager:
                           (1 if enabled else 0, str(file_path)))
                 conn.commit()
         except Exception as e:
-            print(f"Error updating subtitle state: {e}")
+            logging.error(f"Error updating subtitle state: {e}", exc_info=True)
 
     def get_courses(self):
         """Loads all data for the library view."""
@@ -385,7 +386,7 @@ class DatabaseManager:
                 
                 return folders, videos
         except Exception as e:
-            print(f"Error loading courses: {e}")
+            logging.error(f"Error loading courses: {e}", exc_info=True)
             return [], []
 
     def clear_all_metadata(self):
@@ -400,7 +401,7 @@ class DatabaseManager:
                 conn.commit()
                 return True
         except Exception as e:
-            print(f"Error clearing metadata: {e}")
+            logging.error(f"Error clearing metadata: {e}", exc_info=True)
             return False
 
     def mark_video_as_watched(self, file_path):
@@ -412,7 +413,7 @@ class DatabaseManager:
                           (str(file_path),))
                 conn.commit()
         except Exception as e:
-            print(f"Error marking as watched: {e}")
+            logging.error(f"Error marking as watched: {e}", exc_info=True)
 
     def mark_folder_as_watched(self, folder_path):
         """Marks all videos in a folder as fully watched."""
@@ -423,7 +424,7 @@ class DatabaseManager:
                           (str(folder_path),))
                 conn.commit()
         except Exception as e:
-            print(f"Error marking folder as watched: {e}")
+            logging.error(f"Error marking folder as watched: {e}", exc_info=True)
 
     def reset_folder_progress(self, folder_path):
         """Resets playback progress for all videos in a folder."""
@@ -434,7 +435,7 @@ class DatabaseManager:
                           (str(folder_path),))
                 conn.commit()
         except Exception as e:
-            print(f"Error resetting folder progress: {e}")
+            logging.error(f"Error resetting folder progress: {e}", exc_info=True)
 
     def reset_video_progress(self, file_path):
         """Resets playback progress for a video."""
@@ -445,7 +446,7 @@ class DatabaseManager:
                           (str(file_path),))
                 conn.commit()
         except Exception as e:
-            print(f"Error resetting progress: {e}")
+            logging.error(f"Error resetting progress: {e}", exc_info=True)
 
     def get_video_progress(self, file_path):
         """Retrieves last position and volume for a video."""
@@ -458,7 +459,7 @@ class DatabaseManager:
                 if row:
                     return {'last_position': row['last_position'], 'volume': row['volume'] or 100}
         except Exception as e:
-            print(f"Error getting video progress: {e}")
+            logging.error(f"Error getting video progress: {e}", exc_info=True)
         return None
 
     def get_marker_count(self, file_path):
@@ -474,7 +475,7 @@ class DatabaseManager:
                     c.execute("SELECT COUNT(*) FROM video_markers WHERE video_id = ?", (video_id,))
                     return c.fetchone()[0]
         except Exception as e:
-            print(f"Error getting marker count: {e}")
+            logging.error(f"Error getting marker count: {e}", exc_info=True)
         return 0
 
     def get_video_info(self, file_path):
@@ -487,7 +488,7 @@ class DatabaseManager:
                 row = c.fetchone()
                 return dict(row) if row else None
         except Exception as e:
-            print(f"Error getting video info: {e}")
+            logging.error(f"Error getting video info: {e}", exc_info=True)
         return None
 
     def get_folder_statistics(self, folder_path):
@@ -552,7 +553,7 @@ class DatabaseManager:
                 }
                 
         except Exception as e:
-            print(f"Error calculating folder stats: {e}")
+            logging.error(f"Error calculating folder stats: {e}", exc_info=True)
             return None
 
     # ===================== MARKERS =====================
@@ -575,7 +576,7 @@ class DatabaseManager:
                 conn.commit()
                 return c.lastrowid
         except Exception as e:
-            print(f"Error adding marker: {e}")
+            logging.error(f"Error adding marker: {e}", exc_info=True)
             return None
 
     def get_markers(self, file_path):
@@ -592,7 +593,7 @@ class DatabaseManager:
                 """, (str(file_path),))
                 return [dict(row) for row in c.fetchall()]
         except Exception as e:
-            print(f"Error getting markers: {e}")
+            logging.error(f"Error getting markers: {e}", exc_info=True)
             return []
 
     def delete_marker(self, marker_id):
@@ -604,7 +605,7 @@ class DatabaseManager:
                 conn.commit()
                 return True
         except Exception as e:
-            print(f"Error deleting marker: {e}")
+            logging.error(f"Error deleting marker: {e}", exc_info=True)
             return False
 
     def update_marker(self, marker_id, label, color, position=None):
@@ -619,7 +620,7 @@ class DatabaseManager:
                 conn.commit()
                 return True
         except Exception as e:
-            print(f"Error updating marker: {e}")
+            logging.error(f"Error updating marker: {e}", exc_info=True)
             return False
 
     def close(self):
@@ -649,7 +650,7 @@ class DatabaseManager:
                     conn.commit()
                     return True
         except Exception as e:
-            print(f"Error toggling favorite: {e}")
+            logging.error(f"Error toggling favorite: {e}", exc_info=True)
         return False
 
     def get_tags(self):
@@ -661,7 +662,7 @@ class DatabaseManager:
                 c.execute("SELECT * FROM tags ORDER BY name")
                 return [dict(row) for row in c.fetchall()]
         except Exception as e:
-            print(f"Error getting tags: {e}")
+            logging.error(f"Error getting tags: {e}", exc_info=True)
             return []
 
     def create_tag(self, name, color="#3498db"):
@@ -675,7 +676,7 @@ class DatabaseManager:
         except sqlite3.IntegrityError:
             return None # Tag likely exists
         except Exception as e:
-            print(f"Error creating tag: {e}")
+            logging.error(f"Error creating tag: {e}", exc_info=True)
             return None
 
     def delete_tag(self, tag_id):
@@ -687,7 +688,7 @@ class DatabaseManager:
                 conn.commit()
                 return True
         except Exception as e:
-            print(f"Error deleting tag: {e}")
+            logging.error(f"Error deleting tag: {e}", exc_info=True)
             return False
 
     def add_tag_to_video(self, file_path, tag_id):
@@ -703,7 +704,7 @@ class DatabaseManager:
                     conn.commit()
                     return True
         except Exception as e:
-            print(f"Error adding tag to video: {e}")
+            logging.error(f"Error adding tag to video: {e}", exc_info=True)
             return False
 
     def remove_tag_from_video(self, file_path, tag_id):
@@ -719,7 +720,7 @@ class DatabaseManager:
                     conn.commit()
                     return True
         except Exception as e:
-            print(f"Error removing tag from video: {e}")
+            logging.error(f"Error removing tag from video: {e}", exc_info=True)
             return False
 
     def get_video_tags(self, file_path):
@@ -737,5 +738,5 @@ class DatabaseManager:
                 """, (str(file_path),))
                 return [dict(row) for row in c.fetchall()]
         except Exception as e:
-            print(f"Error getting video tags: {e}")
+            logging.error(f"Error getting video tags: {e}", exc_info=True)
             return []

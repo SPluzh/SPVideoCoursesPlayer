@@ -15,6 +15,7 @@ import locale
 locale.setlocale(locale.LC_NUMERIC, 'C')
 from database import DatabaseManager
 import json
+import logging
 import io
 from icon_manager import load_icons_dict
 from PyQt6.QtWidgets import (
@@ -341,7 +342,7 @@ class VideoCourseBrowser(QMainWindow):
         if tr.current_lang == lang_code:
             return
 
-        print(f"DEBUG: Changing language to {lang_code}...")
+        logging.debug(f"Changing language to {lang_code}...")
         tr.load_language(lang_code)
         self.save_language_setting(lang_code)
         # Defer UI update to avoid crashing while inside a menu action
@@ -356,24 +357,22 @@ class VideoCourseBrowser(QMainWindow):
 
     def update_all_texts(self):
         try:
-            print("DEBUG: update_all_texts started")
+            logging.debug("update_all_texts started")
             self.setWindowTitle(tr('app.title'))
-            print("DEBUG: Clearing menu bar")
+            logging.debug("Clearing menu bar")
             self.menuBar().clear()
-            print("DEBUG: Recreating menu bar")
+            logging.debug("Recreating menu bar")
             self.create_menu_bar()
             if hasattr(self, 'search_edit'):
                 self.search_edit.setPlaceholderText(tr('library.search_placeholder'))
             if hasattr(self, 'video_player') and self.video_player:
-                print("DEBUG: Updating player texts")
+                logging.debug("Updating player texts")
                 self.video_player.update_texts()
-            print("DEBUG: Loading courses")
+            logging.debug("Loading courses")
             self.load_courses()
-            print("DEBUG: update_all_texts finished")
+            logging.debug("update_all_texts finished")
         except Exception as e:
-            print(f"CRITICAL ERROR in update_all_texts: {e}")
-            import traceback
-            traceback.print_exc()
+            logging.critical(f"CRITICAL ERROR in update_all_texts: {e}", exc_info=True)
 
     def on_item_expanded(self, item):
         item_type = item.data(0, Qt.ItemDataRole.UserRole + 1)
@@ -425,7 +424,7 @@ class VideoCourseBrowser(QMainWindow):
                     geometry = QByteArray.fromHex(bytes(state['geometry'], 'utf-8'))
                     self.restoreGeometry(geometry)
                 except Exception as e:
-                    print(f"Error restoring geometry: {e}")
+                    logging.error(f"Error restoring geometry: {e}")
                     self.resize(self.window_width, self.window_height)
             else:
                 self.resize(self.window_width, self.window_height)
@@ -446,20 +445,20 @@ class VideoCourseBrowser(QMainWindow):
                         else:
                             self.splitter.setSizes([400, 1000])
                 except Exception as e:
-                    print(f"Error restoring splitter: {e}")
+                    logging.error(f"Error restoring splitter: {e}")
 
             if 'playback_speed' in state:
                 try:
                     speed_value = int(state['playback_speed'])
                     self.video_player.speed_slider.setValue(speed_value)
                 except Exception as e:
-                    print(f"Error restoring playback speed: {e}")
+                    logging.error(f"Error restoring playback speed: {e}")
                     
             if 'pip_geometry' in state:
                 try:
                     self.pip_manager.pip_geometry = QByteArray.fromHex(bytes(state['pip_geometry'], 'utf-8'))
                 except Exception as e:
-                    print(f"Error restoring PiP geometry: {e}")
+                    logging.error(f"Error restoring PiP geometry: {e}")
         else:
             self.resize(self.window_width, self.window_height)
         
@@ -692,7 +691,7 @@ class VideoCourseBrowser(QMainWindow):
 
     def save_progress(self, position_sec, file_path):
         """Save playback progress."""
-        # print(f"DEBUG: save_progress called for {file_path}", flush=True)
+        # logging.debug(f"save_progress called for {file_path}")
         try:
             # Calculate percent here or let database.py handle it. 
             # Current database.py save_progress expects (file_path, position_sec, duration_sec)
@@ -703,13 +702,13 @@ class VideoCourseBrowser(QMainWindow):
                 return
 
             try:
-                # print("DEBUG: accessing player properties...", flush=True)
+                # logging.debug("accessing player properties...")
                 position = self.video_player.player.time_pos or 0.0
                 duration = int(self.video_player.player.duration or 0)
                 current_volume = int(self.video_player.player.volume or 100)
-                # print(f"DEBUG: properties: pos={position}, dur={duration}", flush=True)
+                # logging.debug(f"properties: pos={position}, dur={duration}")
             except Exception as e:
-                print(f"DEBUG: error accessing properties: {e}", flush=True)
+                logging.debug(f"error accessing properties: {e}")
                 return
             
             if duration > 0:
@@ -722,12 +721,12 @@ class VideoCourseBrowser(QMainWindow):
             
             self.db.save_progress(file_path, position, duration, percent, current_volume)
         except Exception as e:
-            print(f"Error saving progress: {e}")
+            logging.error(f"Error saving progress: {e}")
 
     def periodic_progress_save(self):
-        print("DEBUG: periodic_progress_save START", flush=True)
+        # logging.debug("periodic_progress_save START")
         if not self.video_player.current_file:
-            print("DEBUG: periodic_progress_save aborted (no file)", flush=True)
+            # logging.debug("periodic_progress_save aborted (no file)")
             return
 
         file_path = self.video_player.current_file
@@ -737,8 +736,8 @@ class VideoCourseBrowser(QMainWindow):
             duration = int(self.video_player.player.duration or 0)
             current_volume = int(self.video_player.player.volume or 100)
         except Exception as e:
-            print(f"DEBUG: periodic_progress_save error getting properties: {e}", flush=True)
-            # print(f"Error getting player state for save: {e}")
+            logging.debug(f"periodic_progress_save error getting properties: {e}")
+            # logging.error(f"Error getting player state for save: {e}")
             return
 
         if duration > 0:
@@ -750,14 +749,14 @@ class VideoCourseBrowser(QMainWindow):
             try:
                 self.db.save_progress(file_path, position, duration, percent, current_volume)
             except Exception as e:
-                print(f"Error saving progress to DB: {e}", flush=True)
+                logging.error(f"Error saving progress to DB: {e}")
                 return
 
             try:
-                print(f"DEBUG: calling update_video_item_display", flush=True)
+                logging.debug("calling update_video_item_display")
                 self.update_video_item_display(file_path, percent, position)
             except Exception as e:
-                print(f"DEBUG: error in update_video_item_display: {e}", flush=True)
+                logging.debug(f"error in update_video_item_display: {e}")
             # Update folder stats every 60 seconds (approx)
             # Use specific attribute to track last update for playing file
             current_time = time.time()
@@ -767,7 +766,7 @@ class VideoCourseBrowser(QMainWindow):
             if current_time - self._last_stats_update >= 60:
                 self.update_folder_stats_display(file_path, position, duration, percent)
                 self._last_stats_update = current_time
-        print("DEBUG: periodic_progress_save END", flush=True)
+        # logging.debug("periodic_progress_save END")
 
     def update_folder_stats_display(self, file_path, position, duration, percent):
         """Update stats of parent folders for the currently playing video."""
@@ -961,7 +960,7 @@ class VideoCourseBrowser(QMainWindow):
             self.db.mark_video_as_watched(file_path)
             self.load_courses()
         except Exception as e:
-            print(f"Error in delayed video completion: {e}")
+            logging.error(f"Error in delayed video completion: {e}")
 
     def clear_metadata(self):
         """Clear all metadata via main window button."""
@@ -970,7 +969,7 @@ class VideoCourseBrowser(QMainWindow):
     def clear_metadata_force(self):
         """Clear all metadata from DB and remove thumbnail cache."""
         if not self.db:
-            print("❌ Database manager not initialized")
+            logging.error("Database manager not initialized")
             return False
             
         try:
@@ -995,7 +994,7 @@ class VideoCourseBrowser(QMainWindow):
                         except:
                             pass # Skip if file is busy
                 except Exception as e:
-                    print(f"Warning clearing thumbnails: {e}")
+                    logging.warning(f"Warning clearing thumbnails: {e}")
                 
             # 4. Unload current video from player
             if hasattr(self, 'video_player'):
@@ -1006,7 +1005,7 @@ class VideoCourseBrowser(QMainWindow):
             return True
             
         except Exception as e:
-            print(f"Error clearing metadata: {e}")
+            logging.error(f"Error clearing metadata: {e}")
             return False
 
     def _find_folder_image(self, folder_path):
@@ -1038,7 +1037,7 @@ class VideoCourseBrowser(QMainWindow):
                 if count > 50: # Don't scan forever
                     break
         except Exception as e:
-            print(f"Error scanning for folder image: {e}")
+            logging.error(f"Error scanning for folder image: {e}")
             
         return None
 
@@ -1271,7 +1270,7 @@ class VideoCourseBrowser(QMainWindow):
                 )
 
         except Exception as e:
-            print(f"Error populating audio submenu: {e}")
+            logging.error(f"Error populating audio submenu: {e}")
 
     def set_audio_track_for_file(self, track_id, filepath, item):
         """Set audio track for file."""
@@ -1289,7 +1288,7 @@ class VideoCourseBrowser(QMainWindow):
                         break
 
         except Exception as e:
-            print(f"Error setting audio track: {e}")
+            logging.error(f"Error setting audio track: {e}")
 
     def toggle_favorite(self, item):
         """Toggle favorite status for item."""
@@ -1466,9 +1465,9 @@ class VideoCourseBrowser(QMainWindow):
             iterator += 1
 
     def play_video_in_player(self, item, resume=True, auto_play=True):
-        print(f"DEBUG: play_video_in_player called", flush=True)
+        logging.debug("play_video_in_player called")
         file_path = item.data(0, Qt.ItemDataRole.UserRole)
-        print(f"DEBUG: file_path: {file_path}", flush=True)
+        logging.debug(f"file_path: {file_path}")
         
         self.last_played_path = file_path
 
@@ -1527,7 +1526,7 @@ class VideoCourseBrowser(QMainWindow):
             folder = Path(root_path) / path
 
             if folder.exists():
-                print(folder)
+                logging.debug(folder)
                 os.startfile(folder)
             else:
                 QMessageBox.warning(self, tr('error.title'), tr('error.folder_not_found', folder=folder))
@@ -1638,7 +1637,7 @@ class VideoCourseBrowser(QMainWindow):
 
     def load_courses(self):
         """Load courses from DB and build tree."""
-        print("DEBUG: load_courses start") # DEBUG
+        logging.debug("load_courses start")
         folder_font = QFont()
         folder_font.setBold(True)
 
@@ -1863,9 +1862,7 @@ class VideoCourseBrowser(QMainWindow):
                     )
                     video_item.setData(0, Qt.ItemDataRole.UserRole + 2, video_data)
                 except Exception as e:
-                    print(f"CRITICAL ERROR creating VideoItemData for {v.get('file_name')}: {e}")
-                    import traceback
-                    traceback.print_exc()
+                    logging.critical(f"CRITICAL ERROR creating VideoItemData for {v.get('file_name')}: {e}", exc_info=True)
                 
                 video_item.setIcon(0, self.video_icon)
                 # Disable selection for video rows
@@ -2017,7 +2014,7 @@ class VideoCourseBrowser(QMainWindow):
         return is_visible
 
     def showEvent(self, event):
-        print("DEBUG: showEvent start") # DEBUG
+        logging.debug("showEvent start")
         super().showEvent(event)
         self.setFocus()
         if self.taskbar_progress:
@@ -2026,7 +2023,7 @@ class VideoCourseBrowser(QMainWindow):
                 self.taskbar_progress.set_hwnd(hwnd)
                 self.taskbar_progress.set_normal()
             except Exception as e:
-                print(f"Taskbar error: {e}")
+                logging.error(f"Taskbar error: {e}")
 
     def closeEvent(self, event):
         self.save_window_state()
@@ -2038,7 +2035,7 @@ class VideoCourseBrowser(QMainWindow):
             try:
                 self.video_player.cleanup()
             except Exception as e:
-                print(f"Error cleaning up video player: {e}")
+                logging.error(f"Error cleaning up video player: {e}")
 
         self.close_db_connection()
         self.taskbar_progress.clear()
@@ -2051,13 +2048,14 @@ def main():
     app.setStyleSheet(DARK_STYLE)
 
     try:
-        print("DEBUG: Application starting...") # DEBUG
+        logging.basicConfig(level=logging.WARNING, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        logging.debug("Application starting...")
         window = VideoCourseBrowser()
-        print("DEBUG: Window created") # DEBUG
+        logging.debug("Window created")
         is_maximized = window.restore_window_state()
-        print("DEBUG: Window state restored") # DEBUG
+        logging.debug("Window state restored")
         window.show()
-        print("DEBUG: Window shown") # DEBUG
+        logging.debug("Window shown")
         if is_maximized:
             # Explicitly synchronize screen association before maximizing
             center = window.geometry().center()
@@ -2071,7 +2069,7 @@ def main():
     except Exception as e:
         import traceback
         error_msg = traceback.format_exc()
-        print(error_msg)
+        logging.critical(error_msg, exc_info=True)
         
         # Write to file
         try:

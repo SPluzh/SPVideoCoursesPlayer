@@ -2,6 +2,7 @@
 import sys
 import os
 import configparser
+import logging
 from pathlib import Path
 
 from PyQt6.QtWidgets import QFrame, QApplication
@@ -30,7 +31,7 @@ def setup_mpv_dll():
         # Specifically for Python 3.8+ on Windows
         if hasattr(os, 'add_dll_directory'):
             os.add_dll_directory(str(bin_dir))
-        print(f"MPV DLL path set: {bin_dir}")
+        logging.debug(f"MPV DLL path set: {bin_dir}")
         return True
     else:
         # Try to find in current folder (backward compatibility)
@@ -39,10 +40,10 @@ def setup_mpv_dll():
             os.environ["PATH"] = str(ROOT_DIR) + os.pathsep + os.environ.get("PATH", "")
             if hasattr(os, 'add_dll_directory'):
                 os.add_dll_directory(str(ROOT_DIR))
-            print(f"MPV DLL path set: {ROOT_DIR} (legacy)")
+            logging.debug(f"MPV DLL path set: {ROOT_DIR} (legacy)")
             return True
         else:
-            print(f"WARNING: libmpv-2.dll not found at {dll_path}")
+            logging.warning(f"WARNING: libmpv-2.dll not found at {dll_path}")
             return False
 
 class MPVVideoWidget(QFrame):
@@ -135,7 +136,7 @@ class MPVVideoWidget(QFrame):
                 self.player.video_pan_x = 0.0
                 self.player.video_pan_y = 0.0
         except Exception as e:
-            print(f"Error setting zoom: {e}")
+            logging.error(f"Error setting zoom: {e}", exc_info=True)
 
     def keyPressEvent(self, event: QKeyEvent):
         if event.key() == Qt.Key.Key_Escape and self.is_fullscreen:
@@ -208,7 +209,7 @@ class MPVVideoWidget(QFrame):
                 self.player.video_pan_x = self.pan_x
                 self.player.video_pan_y = self.pan_y
             except Exception as e:
-                print(f"Error setting pan: {e}")
+                logging.error(f"Error setting pan: {e}", exc_info=True)
             event.accept()
         else:
             if self.z_key_pressed:
@@ -312,7 +313,7 @@ class MPVVideoWidget(QFrame):
                 self.player.video_pan_y = 0.0
                 self.zoom_changed.emit(0.0)
             except Exception as e:
-                print(f"Error resetting zoom/pan: {e}")
+                logging.error(f"Error resetting zoom/pan: {e}", exc_info=True)
 
     def get_zoom_percent(self):
         """Get current zoom in percent."""
@@ -326,7 +327,7 @@ class MPVVideoWidget(QFrame):
                     self.player.pause = True
                 self.player.frame_step()
             except Exception as e:
-                print(f"Error frame step: {e}")
+                logging.error(f"Error frame step: {e}", exc_info=True)
 
     def frame_back_step(self):
         """Step backward one frame."""
@@ -336,7 +337,7 @@ class MPVVideoWidget(QFrame):
                     self.player.pause = True
                 self.player.frame_back_step()
             except Exception as e:
-                print(f"Error frame back step: {e}")
+                logging.error(f"Error frame back step: {e}", exc_info=True)
 
     def screenshot_to_clipboard(self):
         """Take screenshot of current frame to clipboard."""
@@ -356,13 +357,13 @@ class MPVVideoWidget(QFrame):
                 pixmap = QPixmap(temp_path)
                 if not pixmap.isNull():
                     QApplication.clipboard().setPixmap(pixmap)
-                    print(f"Screenshot copied to clipboard ({pixmap.width()}x{pixmap.height()})")
+                    logging.info(f"Screenshot copied to clipboard ({pixmap.width()}x{pixmap.height()})")
                     os.remove(temp_path)
                     return True
                 else:
-                    print("Failed to load screenshot")
+                    logging.error("Failed to load screenshot")
                     os.remove(temp_path)
         except Exception as e:
-            print(f"Error taking screenshot: {e}")
+            logging.error(f"Error taking screenshot: {e}", exc_info=True)
 
         return False

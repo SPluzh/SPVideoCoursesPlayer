@@ -3,6 +3,7 @@ from PyQt6.QtGui import QKeyEvent
 import ctypes
 from ctypes import wintypes
 import time
+import logging
 
 class GlobalHotkeyThread(QThread):
     action_triggered = pyqtSignal(str)
@@ -23,7 +24,7 @@ class GlobalHotkeyThread(QThread):
         self.VK_Z = 0x5A
 
     def run(self):
-        print("DEBUG: GlobalHotkeyThread run enter") # DEBUG
+        logging.debug("GlobalHotkeyThread run enter") # DEBUG
         try:
             user32 = ctypes.windll.user32
             kernel32 = ctypes.windll.kernel32
@@ -78,9 +79,7 @@ class GlobalHotkeyThread(QThread):
                 
                 time.sleep(0.01)
         except Exception as e:
-            print(f"❌ CRASH in GlobalHotkeyThread: {e}")
-            import traceback
-            traceback.print_exc()
+            logging.error(f"❌ CRASH in GlobalHotkeyThread: {e}", exc_info=True)
 
     def stop(self):
         self.running = False
@@ -175,12 +174,12 @@ class HotkeyManager(QObject):
         }
         
         # Start global listener thread
-        print("DEBUG: Starting GlobalHotkeyThread") # DEBUG
+        logging.debug("Starting GlobalHotkeyThread") # DEBUG
         self.global_thread = GlobalHotkeyThread()
         self.global_thread.action_triggered.connect(self.global_action_triggered.emit)
         self.global_thread.action_state_changed.connect(self.global_action_state_changed.emit)
         self.global_thread.start() 
-        print("DEBUG: GlobalHotkeyThread started successfully") # DEBUG
+        logging.debug("GlobalHotkeyThread started successfully") # DEBUG
 
     def stop(self):
         if hasattr(self, 'global_thread'):

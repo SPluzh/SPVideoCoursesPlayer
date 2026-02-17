@@ -2,6 +2,7 @@
 import sys
 import os
 import tempfile
+import logging
 from pathlib import Path
 from PyQt6.QtWidgets import QWidget, QLabel, QVBoxLayout
 from PyQt6.QtCore import Qt, QTimer, QSize, QPoint
@@ -72,7 +73,7 @@ class PreviewPopup(QWidget):
         try:
             self._temp_dir.mkdir(exist_ok=True)
         except Exception as e:
-            print(f"Error creating temp dir for previews: {e}")
+            logging.error(f"Error creating temp dir for previews: {e}")
         
         # Debounce Timer
         self.debounce_timer = QTimer()
@@ -96,7 +97,7 @@ class PreviewPopup(QWidget):
                 try:
                     self.preview_mpv.loadfile(file_path)
                 except Exception as e:
-                    print(f"Preview MPV loadfile error: {e}")
+                    logging.error(f"Preview MPV loadfile error: {e}")
 
     def _init_preview_mpv(self):
         """Initialize the hidden MPV instance for previews."""
@@ -116,9 +117,9 @@ class PreviewPopup(QWidget):
                 hr_seek='yes',       # Precise seeking
                 demuxer_max_bytes='30MiB', # Buffer for fast seeking
             )
-            # print("Preview MPV initialized")
+            # logging.debug("Preview MPV initialized")
         except Exception as e:
-            print(f"Failed to create preview MPV: {e}")
+            logging.error(f"Failed to create preview MPV: {e}")
             self.preview_mpv = None
 
     def update_content(self, seconds, global_pos):
@@ -179,7 +180,7 @@ class PreviewPopup(QWidget):
             QTimer.singleShot(5, lambda: self._capture_frame(time_key))
             
         except Exception as e:
-            print(f"Preview seek error: {e}")
+            logging.error(f"Preview seek error: {e}")
 
     def _capture_frame(self, time_key):
         """Capture screenshot to temp file and load it."""
@@ -224,7 +225,7 @@ class PreviewPopup(QWidget):
                  self.thumb_label.setText("...")
                 
         except Exception as e:
-            print(f"Preview capture error: {e}")
+            logging.error(f"Preview capture error: {e}")
 
     def display_pixmap(self, pixmap):
         self.thumb_label.setPixmap(pixmap)
@@ -247,4 +248,4 @@ class PreviewPopup(QWidget):
                     except:
                         pass
             except Exception as e:
-                print(f"Error cleaning temp dir: {e}")
+                logging.error(f"Error cleaning temp dir: {e}")

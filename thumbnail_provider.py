@@ -1,5 +1,6 @@
 import os
 import hashlib
+import logging
 from pathlib import Path
 from PyQt6.QtCore import QObject, QProcess, pyqtSignal, QSize
 from PyQt6.QtGui import QPixmap
@@ -20,7 +21,7 @@ class ThumbnailProvider(QObject):
 
     def get_thumbnail(self, video_path, timestamp, marker_id=None):
         """Get thumbnail from cache or generate it."""
-        print(f"DEBUG: ThumbnailProvider.get_thumbnail for ts={timestamp}, id={marker_id}")
+        # logging.debug(f"ThumbnailProvider.get_thumbnail for ts={timestamp}, id={marker_id}")
         video_path = str(video_path)
         # Unique ID for cache
         video_id = hashlib.md5(video_path.encode()).hexdigest()
@@ -32,7 +33,7 @@ class ThumbnailProvider(QObject):
         cache_path = target_dir / f"{file_id}.jpg"
 
         if cache_path.exists():
-            print(f"DEBUG: Found cached thumbnail for {file_id}")
+            # logging.debug(f"Found cached thumbnail for {file_id}")
             pixmap = QPixmap(str(cache_path))
             # Even if cached, emit signal so UI updates if it was just created/cleared
             self.finished.emit(str(file_id), pixmap)
@@ -52,11 +53,11 @@ class ThumbnailProvider(QObject):
 
     def _generate(self, video_path, timestamp, cache_path, request_id):
         if self.process.state() != QProcess.ProcessState.NotRunning:
-            print(f"DEBUG: ThumbnailProvider busy, queueing {request_id}")
+            # logging.debug(f"ThumbnailProvider busy, queueing {request_id}")
             self.queue.append((video_path, timestamp, cache_path, request_id))
             return
 
-        print(f"DEBUG: Generating thumbnail for {request_id} at {timestamp}s")
+        # logging.debug(f"Generating thumbnail for {request_id} at {timestamp}s")
         self.current_request = (request_id, cache_path)
         
         args = [
@@ -77,11 +78,11 @@ class ThumbnailProvider(QObject):
         if self.current_request:
             req_id, path = self.current_request
             if path.exists():
-                print(f"DEBUG: Thumbnail generated successfully: {req_id}")
+                # logging.debug(f"Thumbnail generated successfully: {req_id}")
                 pixmap = QPixmap(str(path))
                 self.finished.emit(str(req_id), pixmap)
             else:
-                print(f"DEBUG: Thumbnail generation failed for {req_id} (file not created)")
+                logging.error(f"Thumbnail generation failed for {req_id} (file not created)")
         self.current_request = None
         
         # Process next in queue

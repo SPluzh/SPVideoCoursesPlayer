@@ -8,6 +8,7 @@ import threading
 import sqlite3
 import configparser
 import hashlib
+import logging
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from translator import tr
@@ -792,7 +793,7 @@ class VideoScanner:
                     for pattern, lang in lang_patterns:
                         if re.search(pattern, sub_name, re.IGNORECASE):
                             language = lang
-                            print(f"DEBUG: Found subtitle language {lang} for {sub_name}")
+                            logging.debug(f"Found subtitle language {lang} for {sub_name}")
                             break
                     
                     # Determine if subtitles are forced
@@ -996,7 +997,7 @@ class VideoScanner:
         print(f"\n{tr('scanner.scan_path', path=root)}")
 
         if not root.exists():
-            print(f"\n{tr('scanner.scan_error_not_exists')}")
+            logging.error(tr('scanner.scan_error_not_exists'))
             return 0, 0
 
         # Initial stats check - short transaction
@@ -1265,9 +1266,7 @@ class VideoScanner:
                 print(tr('scanner.process_info', info=' | '.join(info_parts)))
 
             except Exception as e:
-                print(tr('scanner.process_error', error=f"{type(e).__name__}: {e}"))
-                import traceback
-                traceback.print_exc()
+                logging.error(tr('scanner.process_error', error=f"{type(e).__name__}: {e}"), exc_info=True)
                 continue
         
         # Create folder hierarchy - Short transaction

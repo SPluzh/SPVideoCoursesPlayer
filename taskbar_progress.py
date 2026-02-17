@@ -3,6 +3,7 @@
 Требует: pip install comtypes
 """
 import sys
+import logging
 
 COMTYPES_AVAILABLE = False
 
@@ -16,7 +17,7 @@ if sys.platform == 'win32':
         import comtypes.client
         COMTYPES_AVAILABLE = True
     except ImportError:
-        print("comtypes is not installed. Install it: pip install comtypes")
+        logging.warning("comtypes is not installed. Install it: pip install comtypes")
 
 
 if COMTYPES_AVAILABLE:
@@ -99,7 +100,7 @@ class TaskbarProgress:
             self._initialized = True
             
         except Exception as e:
-            print(f"Failed to initialize TaskbarProgress: {e}")
+            logging.error(f"Failed to initialize TaskbarProgress: {e}")
             self._initialized = False
     
     @property
@@ -136,7 +137,7 @@ class TaskbarProgress:
             self.taskbar.SetProgressValue(self.hwnd, current_int, total_int)
             
         except Exception as e:
-            print(f"Error setting taskbar progress: {e}")
+            logging.error(f"Error setting taskbar progress: {e}")
     
     def set_progress_percent(self, percent: int):
         """
@@ -161,7 +162,7 @@ class TaskbarProgress:
             self.taskbar.SetProgressState(self.hwnd, state)
             self._current_state = state
         except Exception as e:
-            print(f"Error setting taskbar states: {e}")
+            logging.error(f"Error setting taskbar states: {e}")
     
     def set_normal(self):
         """Sets normal state (green progress)."""
@@ -205,9 +206,3 @@ class TaskbarProgress:
         self.set_progress(current, total)
 
 
-if __name__ == '__main__':
-    print(f"COMTYPES_AVAILABLE: {COMTYPES_AVAILABLE}")
-    
-    if COMTYPES_AVAILABLE:
-        tp = TaskbarProgress()
-        print(f"Initialized: {tp._initialized}")

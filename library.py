@@ -1,4 +1,5 @@
 from pathlib import Path
+import logging
 
 from PyQt6.QtWidgets import QTreeWidget, QStyledItemDelegate, QWidget, QLabel
 from PyQt6.QtCore import Qt, QTimer, QRect, QPoint, QRectF, QPointF
@@ -129,12 +130,10 @@ class VideoItemDelegate(QStyledItemDelegate):
     def paint(self, painter, option, index): # Overridden
         try:
             if not index.isValid():
-                print(f"DEBUG: paint - invalid index at row {index.row()}")
+                logging.debug(f"paint - invalid index at row {index.row()}")
                 return
 
-            # The original code had a commented-out debug print here.
-            # The instruction asks for debug prints, so let's keep it.
-            # print(f"DEBUG: paint index {index.row()}") 
+            # logging.debug(f"paint index {index.row()}") 
             item_type = index.data(Qt.ItemDataRole.UserRole + 1)
             
             # Handle Folder Rendering
@@ -151,7 +150,7 @@ class VideoItemDelegate(QStyledItemDelegate):
             painter.save()
             data = index.data(Qt.ItemDataRole.UserRole + 2)
             if not data:
-                print(f"DEBUG: paint - no data for index {index.row()}")
+                logging.debug(f"paint - no data for index {index.row()}")
                 painter.restore()
                 return
 
@@ -178,7 +177,7 @@ class VideoItemDelegate(QStyledItemDelegate):
                       is_favorite = 0
                       tags = []
                  else:
-                      # print(f"DEBUG: paint - unexpected data length: {len(data)}")
+
                       # Fallback
                       filename = "Error"
                       duration = 0
@@ -471,9 +470,7 @@ class VideoItemDelegate(QStyledItemDelegate):
 
             painter.restore()
         except Exception as e:
-            print(f"Error in VideoItemDelegate.paint: {e}")
-            import traceback
-            traceback.print_exc()
+            logging.error(f"Error in VideoItemDelegate.paint: {e}", exc_info=True)
             painter.restore()
 
     def paint_folder(self, painter, option, index):
@@ -706,18 +703,18 @@ class HoverTreeWidget(QTreeWidget):
 
     def mouseMoveEvent(self, event):
         try:
-            # print(f"DEBUG: mouseMoveEvent {event.pos()}")
+            # logging.debug(f"mouseMoveEvent {event.pos()}")
             self.mouse_pos = event.pos()
             super().mouseMoveEvent(event)
             index = self.indexAt(event.pos())
 
             if index.isValid():
                 item_type = index.data(Qt.ItemDataRole.UserRole + 1)
-                # print(f"DEBUG: mouseMove valid index, type={item_type}")
+                # logging.debug(f"mouseMove valid index, type={item_type}")
                 if item_type == 'video':
                     delegate = self.itemDelegate()
                     if isinstance(delegate, VideoItemDelegate):
-                        # print("DEBUG: Check hover play rect")
+                        # logging.debug("Check hover play rect")
                         # Check hover over play button to change cursor
                         play_rect = delegate.get_play_button_rect(self.visualRect(index))
                         
@@ -728,7 +725,7 @@ class HoverTreeWidget(QTreeWidget):
 
                         # Update hover state in delegate
                         if index != self.current_hover_index:
-                            print(f"DEBUG: New hover index: {index.row()}")
+                            logging.debug(f"New hover index: {index.row()}")
                             self.current_hover_index = index
                             self.thumbnail_frame = 0
                             delegate.set_hovered_index(index, 0, mouse_pos=event.pos())
@@ -739,7 +736,7 @@ class HoverTreeWidget(QTreeWidget):
                         self.viewport().update()
                         return
                     else:
-                        print(f"DEBUG: Delegate is not VideoItemDelegate: {type(delegate)}")
+                        logging.debug(f"Delegate is not VideoItemDelegate: {type(delegate)}")
                 else:
                     self.viewport().setCursor(Qt.CursorShape.ArrowCursor)
             else:
@@ -748,9 +745,7 @@ class HoverTreeWidget(QTreeWidget):
 
             self.stop_hover()
         except Exception as e:
-            print(f"ERROR in mouseMoveEvent: {e}")
-            import traceback
-            traceback.print_exc()
+            logging.error(f"ERROR in mouseMoveEvent: {e}", exc_info=True)
 
     def mousePressEvent(self, event):
         index = self.indexAt(event.pos())
@@ -788,7 +783,7 @@ class HoverTreeWidget(QTreeWidget):
             else:
                 super().paintEvent(event)
         except Exception as e:
-            print(f"Error in HoverTreeWidget.paintEvent: {e}")
+            logging.error(f"Error in HoverTreeWidget.paintEvent: {e}")
             super().paintEvent(event)
 
     def leaveEvent(self, event):
@@ -807,7 +802,7 @@ class HoverTreeWidget(QTreeWidget):
 
     def _on_hover_timer(self):
         try:
-            # print("DEBUG: _on_hover_timer")
+            # logging.debug("_on_hover_timer")
             if not self.current_hover_index:
                 self.stop_hover()
                 return
@@ -818,10 +813,10 @@ class HoverTreeWidget(QTreeWidget):
                 # We trust mouseMoveEvent to call stop_hover if we leave
                 # But we should update frame
                 self.thumbnail_frame += 1
-                # print(f"DEBUG: timer update frame {self.thumbnail_frame}")
+                # logging.debug(f"timer update frame {self.thumbnail_frame}")
                 delegate.set_hovered_index(self.current_hover_index, self.thumbnail_frame, self.mouse_pos)
                 self.viewport().update(self.visualRect(self.current_hover_index))
         except Exception as e:
-            print(f"ERROR in _on_hover_timer: {e}")
+            logging.error(f"ERROR in _on_hover_timer: {e}", exc_info=True)
             self.stop_hover()
 

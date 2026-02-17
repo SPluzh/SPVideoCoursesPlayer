@@ -1,3 +1,4 @@
+import logging
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QPushButton, QMenu, QHBoxLayout
 from PyQt6.QtCore import Qt, pyqtSignal, QPoint, QRect, QEvent
 from PyQt6.QtGui import QCursor, QAction, QIcon
@@ -115,7 +116,7 @@ class FloatingVideoWindow(QWidget):
                     return True
 
         return super().eventFilter(obj, event)
-        print("DEBUG: FloatingVideoWindow initialized")
+
 
     def closeEvent(self, event):
         self.closed.emit()
@@ -127,7 +128,7 @@ class FloatingVideoWindow(QWidget):
             try:
                 self.taskbar_progress.set_hwnd(int(self.winId()))
             except Exception as e:
-                print(f"Error setting taskbar HWND: {e}")
+                logging.error(f"Error setting taskbar HWND: {e}")
 
     def center_on_screen(self):
         if self.screen():
@@ -335,37 +336,37 @@ class PiPManager:
 
     def toggle(self):
         """Toggle Picture-in-Picture mode."""
-        print("DEBUG: toggle_pip_mode called")
+        logging.debug("toggle_pip_mode called")
         if self.is_active:
-            print("DEBUG: Floating window visible, exiting PiP")
+            logging.debug("Floating window visible, exiting PiP")
             self.exit_pip()
         else:
-            print("DEBUG: Floating window not visible/exists, entering PiP")
+            logging.debug("Floating window not visible/exists, entering PiP")
             self.enter_pip()
 
     def enter_pip(self):
         """Enter Picture-in-Picture mode."""
-        print("DEBUG: enter_pip_mode start")
+        logging.debug("enter_pip_mode start")
         if self.is_active:
-            print("DEBUG: Already in PiP mode, ignoring")
+            logging.debug("Already in PiP mode, ignoring")
             return
 
         if not self.video_player.current_file:
-            print("DEBUG: No current file, cannot enter PiP")
+            logging.debug("No current file, cannot enter PiP")
             return
 
         try:
             # Detach video widget
-            print("DEBUG: Detaching video widget...")
+            logging.debug("Detaching video widget...")
             video_widget = self.video_player.detach_video_widget()
-            print(f"DEBUG: Detached widget: {video_widget}")
+            logging.debug(f"Detached widget: {video_widget}")
 
             # Create floating window
-            print("DEBUG: Creating FloatingVideoWindow...")
+            logging.debug("Creating FloatingVideoWindow...")
             self.floating_window = FloatingVideoWindow(video_widget)
-            print("DEBUG: Connecting pip_exit_requested...")
+            logging.debug("Connecting pip_exit_requested...")
             self.floating_window.pip_exit_requested.connect(self.exit_pip)
-            print("DEBUG: Showing floating window...")
+            logging.debug("Showing floating window...")
             if self.pip_geometry:
                 self.floating_window.restoreGeometry(self.pip_geometry)
             self.floating_window.show()
@@ -373,46 +374,46 @@ class PiPManager:
             self.floating_window_active = True
 
             # Hide main window
-            print("DEBUG: Hiding main window...")
+            logging.debug("Hiding main window...")
             self.main_window.hide()
 
             # Swap taskbar progress to PiP window (after show, so HWND is set)
             if self.floating_window.taskbar_progress._initialized:
                 self.video_player.taskbar_progress = self.floating_window.taskbar_progress
-            print("DEBUG: enter_pip_mode finished")
+            logging.debug("enter_pip_mode finished")
 
         except Exception as e:
-            print(f"ERROR in enter_pip_mode: {e}")
+            logging.error(f"ERROR in enter_pip_mode: {e}")
             import traceback
             traceback.print_exc()
 
     def exit_pip(self):
         """Exit Picture-in-Picture mode."""
-        print("DEBUG: exit_pip_mode start")
+        logging.debug("exit_pip_mode start")
         if not self.floating_window:
-            print("DEBUG: No floating window to exit")
+            logging.debug("No floating window to exit")
             return
 
         try:
             # Get widget back
-            print("DEBUG: Getting video widget back...")
+            logging.debug("Getting video widget back...")
             video_widget = self.floating_window.video_widget
             if not video_widget:
-                 print("ERROR: Floating window has no video widget!")
+                 logging.error("Floating window has no video widget!")
 
-            print("DEBUG: Reattaching video widget...")
+            logging.debug("Reattaching video widget...")
             self.video_player.reattach_video_widget(video_widget)
 
             # Destroy floating window
             if self.floating_window:
                 self.pip_geometry = self.floating_window.saveGeometry()
-                print("DEBUG: Closing floating window...")
+                logging.debug("Closing floating window...")
                 self.floating_window.close()
                 self.floating_window = None
             self.floating_window_active = False
 
             # Show main window
-            print("DEBUG: Showing main window...")
+            logging.debug("Showing main window...")
 
             # Restore taskbar progress to main window
             self.video_player.taskbar_progress = self.taskbar_progress
@@ -420,10 +421,10 @@ class PiPManager:
             self.main_window.show()
             self.main_window.raise_()
             self.main_window.activateWindow()
-            print("DEBUG: exit_pip_mode finished")
+            logging.debug("exit_pip_mode finished")
 
         except Exception as e:
-            print(f"ERROR in exit_pip_mode: {e}")
+            logging.error(f"ERROR in exit_pip_mode: {e}")
             import traceback
             traceback.print_exc()
 

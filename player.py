@@ -1,6 +1,7 @@
 
 import sys
 from pathlib import Path
+import logging
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QSlider, QSizePolicy, QStylePainter, QStyleOptionSlider, QStyle, QToolTip, QMenu
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal, QPoint, QRect
 from PyQt6.QtGui import QIcon, QColor, QPalette, QPainter, QPen, QBrush
@@ -40,14 +41,14 @@ class ClickableSlider(QSlider):
     def paintEvent(self, event):
         """Custom paint to draw marker ticks."""
         try:
-            # print("DEBUG: ClickableSlider paintEvent start") # DEBUG
+
             super().paintEvent(event)
             
             # Ensure duration is a valid number
             duration = self.duration if self.duration is not None else 0
             
             if not self.markers or duration <= 0:
-                # print("DEBUG: No markers or zero duration") # DEBUG
+
                 return
 
             painter = QPainter(self)
@@ -73,11 +74,9 @@ class ClickableSlider(QSlider):
                 painter.drawLine(x, y, x, y + tick_h)
             
             painter.end()
-            # print("DEBUG: ClickableSlider paintEvent end") # DEBUG
+            # logging.debug("ClickableSlider paintEvent end") # DEBUG
         except Exception as e:
-            print(f"❌ ERROR in ClickableSlider.paintEvent: {e}")
-            import traceback
-            traceback.print_exc()
+            logging.error(f"❌ ERROR in ClickableSlider.paintEvent: {e}", exc_info=True)
 
     def mousePressEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
@@ -139,9 +138,7 @@ class ClickableSlider(QSlider):
             elif delete_action and action == delete_action:
                 self.marker_delete_requested.emit(target_marker.get('id'))
         except Exception as e:
-            print(f"❌ Error in ClickableSlider.contextMenuEvent: {e}")
-            import traceback
-            traceback.print_exc()
+            logging.error(f"❌ Error in ClickableSlider.contextMenuEvent: {e}", exc_info=True)
 
 
 class VideoPlayerWidget(QWidget):
@@ -167,7 +164,7 @@ class VideoPlayerWidget(QWidget):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        print("DEBUG: VideoPlayerWidget init start") # DEBUG
+        logging.debug("VideoPlayerWidget init start")
         self.db = None
         self.current_file = None
         self.saved_position = 0
@@ -187,16 +184,17 @@ class VideoPlayerWidget(QWidget):
         # Marker Gallery & Thumbnailing
         self.thumb_provider = ThumbnailProvider(self)
         self.thumb_provider.finished.connect(self._on_marker_thumbnail_ready)
+        self.thumb_provider.finished.connect(self._on_marker_thumbnail_ready)
         self.marker_gallery = None # Created in setup_ui
-        print("DEBUG: Calling setup_ui") # DEBUG
+        logging.debug("Calling setup_ui")
         self.setup_ui()
-        print("DEBUG: Calling setup_mpv") # DEBUG
+        logging.debug("Calling setup_mpv")
         self.setup_mpv()
-        print("DEBUG: VideoPlayerWidget init done") # DEBUG
+        logging.debug("VideoPlayerWidget init done")
 
     def cleanup(self):
         """Cleanup resources."""
-        print("DEBUG: VideoPlayerWidget cleanup called")
+        logging.debug("VideoPlayerWidget cleanup called")
         if hasattr(self, 'preview_popup'):
             self.preview_popup.cleanup()
             
@@ -209,7 +207,7 @@ class VideoPlayerWidget(QWidget):
             try:
                 self.player.terminate()
             except Exception as e:
-                print(f"Error terminating player: {e}")
+                logging.error(f"Error terminating player: {e}")
             self.player = None
 
     def setup_ui(self):
@@ -395,7 +393,7 @@ class VideoPlayerWidget(QWidget):
             current_vol = self.player.volume
             self.volume_btn._update_icon(0 if self.player.mute else current_vol)
         except Exception as e:
-            print(f"Error toggling mute: {e}")
+            logging.error(f"Error toggling mute: {e}")
 
     def adjust_volume(self, delta):
         """Adjust volume by delta percentage."""
@@ -412,7 +410,7 @@ class VideoPlayerWidget(QWidget):
             if hasattr(self.volume_btn.popup, '_update_label'):
                 self.volume_btn.popup._update_label(int(new_vol))
         except Exception as e:
-            print(f"Error adjusting volume: {e}")
+            logging.error(f"Error adjusting volume: {e}")
 
     def adjust_speed(self, delta):
         """Adjust playback speed by delta."""
@@ -426,7 +424,7 @@ class VideoPlayerWidget(QWidget):
             self.speed_slider.setValue(new_val)
             # change_speed is already connected to valueChanged
         except Exception as e:
-            print(f"Error adjusting speed: {e}")
+            logging.error(f"Error adjusting speed: {e}")
 
     def seek_relative(self, seconds):
         """Seek relative to current position."""
@@ -434,7 +432,7 @@ class VideoPlayerWidget(QWidget):
         try:
             self.player.seek(seconds, 'relative')
         except Exception as e:
-            print(f"Error seeking: {e}")
+            logging.error(f"Error seeking: {e}")
 
     def frame_step(self):
         """Step forward one frame."""
@@ -531,11 +529,11 @@ class VideoPlayerWidget(QWidget):
                         self.auto_play_pending = False
 
             self.video_widget.set_player(self.player)
-            print("MPV initialized successfully")
-            print("libmpv version:", self.player.mpv_version)
+            logging.info("MPV initialized successfully")
+            logging.info(f"libmpv version: {self.player.mpv_version}")
 
         except Exception as e:
-            print(f"Error initializing MPV: {e}")
+            logging.error(f"Error initializing MPV: {e}")
             # Do not raise here to allow app to start even without libmpv
             self.player = None
 
@@ -543,14 +541,12 @@ class VideoPlayerWidget(QWidget):
 
     def _timer_wrapper(self, name, func, *args):
         """Debug wrapper for timers"""
-        print(f"DEBUG: Timer [{name}] START", flush=True)
+        logging.debug(f"Timer [{name}] START")
         try:
             func(*args)
         except Exception as e:
-            print(f"DEBUG: Timer [{name}] EXCEPTION: {e}", flush=True)
-            import traceback
-            traceback.print_exc()
-        print(f"DEBUG: Timer [{name}] END", flush=True)
+            logging.error(f"Timer [{name}] EXCEPTION: {e}", exc_info=True)
+        logging.debug(f"Timer [{name}] END")
 
     def _ensure_playing(self):
         """Ensure video plays after loading."""
@@ -558,7 +554,7 @@ class VideoPlayerWidget(QWidget):
             if self.player and self.player.pause:
                 self.player.pause = False
         except Exception as e:
-            print(f"Error ensuring playback: {e}")
+            logging.error(f"Error ensuring playback: {e}")
 
     def set_ffmpeg_path(self, path):
         """Set FFmpeg path for preview generation."""
@@ -581,11 +577,11 @@ class VideoPlayerWidget(QWidget):
         if not self.player:
             # Try to re-initialize MPV if DLL was just downloaded or found
             if setup_mpv_dll():
-                print("VideoPlayerWidget: Attempting to initialize MPV (DLL found)...")
+                logging.debug("VideoPlayerWidget: Attempting to initialize MPV (DLL found)...")
                 self.setup_mpv()
             
             if not self.player:
-                print("VideoPlayerWidget: Cannot load video, player not initialized")
+                logging.debug("VideoPlayerWidget: Cannot load video, player not initialized")
                 return False
 
         self.current_file = file_path
@@ -609,7 +605,7 @@ class VideoPlayerWidget(QWidget):
             try:
                 self.player.volume = volume
             except Exception as e:
-                print(f"Error setting volume: {e}")
+                logging.error(f"Error setting volume: {e}")
 
             # Update volume UI
             if hasattr(self, 'volume_btn'):
@@ -631,33 +627,33 @@ class VideoPlayerWidget(QWidget):
             # Serialize initialization to debug crash
             # 1. Load subtitles info (100ms)
             QTimer.singleShot(100, lambda: self._timer_wrapper("load_subtitle_tracks", self.load_subtitle_tracks, file_path))
-            print(f"DEBUG: Scheduled load_subtitle_tracks (100ms)", flush=True)
+            logging.debug(f"Scheduled load_subtitle_tracks (100ms)")
             
             # 2. Start playback/pause (300ms) -> triggers restore_position
             if auto_play:
                 QTimer.singleShot(300, lambda: self._timer_wrapper("_start_playback", self._start_playback))
-                print(f"DEBUG: Scheduled _start_playback (300ms)", flush=True)
+                logging.debug(f"Scheduled _start_playback (300ms)")
             else:
                 QTimer.singleShot(300, lambda: self._timer_wrapper("_load_paused", self._load_paused))
-                print(f"DEBUG: Scheduled _load_paused (300ms)", flush=True)
+                logging.debug(f"Scheduled _load_paused (300ms)")
 
             # 3. Load audio tracks (500ms) -> triggers restore_audio_track
             QTimer.singleShot(500, lambda: self._timer_wrapper("load_audio_tracks", self.load_audio_tracks, file_path))
-            print(f"DEBUG: Scheduled load_audio_tracks (500ms)", flush=True)
+            logging.debug(f"Scheduled load_audio_tracks (500ms)")
 
             # 4. Restore subtitle track (700ms)
             QTimer.singleShot(700, lambda: self._timer_wrapper("restore_subtitle_track", self.restore_subtitle_track, file_path))
-            print(f"DEBUG: Scheduled restore_subtitle_track (700ms)", flush=True)
+            logging.debug(f"Scheduled restore_subtitle_track (700ms)")
             
             # Load markers
-            print(f"DEBUG: Calling load_markers", flush=True)
+            logging.debug(f"Calling load_markers")
             self.load_markers(file_path)
-            print(f"DEBUG: load_markers returned", flush=True)
+            logging.debug(f"load_markers returned")
 
             return True
 
         except Exception as e:
-            print(f"Error loading video: {e}", flush=True)
+            logging.error(f"Error loading video: {e}")
             self.is_loading = False
             self.auto_play_pending = False
             return False
@@ -669,7 +665,7 @@ class VideoPlayerWidget(QWidget):
         
         try:
             file_to_unload = self.current_file
-            print(f"🎬 Unloading video: {file_to_unload}")
+            logging.info(f"Unloading video: {file_to_unload}")
             
             # Reset current file FIRST so other methods (like save_progress) know we're stopping
             self.current_file = None
@@ -694,37 +690,37 @@ class VideoPlayerWidget(QWidget):
                 self.video_widget.update()
                 
         except Exception as e:
-            print(f"Error unloading video: {e}")
+            logging.error(f"Error unloading video: {e}")
 
     def _load_paused(self):
         """Load video in paused mode."""
-        print(f"DEBUG: _load_paused called")
+        logging.debug(f"_load_paused called")
         if not self.player: return
         try:
             self.player.pause = True
             if self.saved_position > 0 and not self.position_restore_attempted:
                 QTimer.singleShot(150, self.restore_position)
-            print(f"DEBUG: _load_paused finished")
+            logging.debug(f"_load_paused finished")
         except Exception as e:
-            print(f"Error loading paused: {e}")
+            logging.error(f"Error loading paused: {e}")
 
     def _start_playback(self):
         """Start playback after loading."""
-        print(f"DEBUG: _start_playback called")
+        logging.debug(f"_start_playback called")
         if not self.player: return
         try:
             if self.player.pause:
                 self.player.pause = False
             if self.saved_position > 0 and not self.position_restore_attempted:
                 QTimer.singleShot(150, self.restore_position)
-            print(f"DEBUG: _start_playback finished")
+            logging.debug(f"_start_playback finished")
         except Exception as e:
-            print(f"Error starting playback: {e}")
+            logging.error(f"Error starting playback: {e}")
 
     # ADDED: Methods for audio tracks
     def load_audio_tracks(self, filepath):
         """Load list of audio tracks from DB."""
-        print(f"DEBUG: load_audio_tracks called")
+        logging.debug(f"load_audio_tracks called")
         self.volume_btn.popup.clearAudio()
 
         if not self.db:
@@ -735,7 +731,7 @@ class VideoPlayerWidget(QWidget):
 
             if not tracks:
                 self.volume_btn.popup.addAudioItem(tr('player.no_tracks'), None)
-                print(f"DEBUG: load_audio_tracks finished (no tracks)")
+                logging.debug(f"load_audio_tracks finished (no tracks)")
                 return
 
             selected_index = 0
@@ -774,16 +770,15 @@ class VideoPlayerWidget(QWidget):
                 if track_id == selected_audio_id:
                     selected_index = idx
 
+
             if tracks:
                 self.volume_btn.popup.setAudioIndex(selected_index)
 
 
-            print(f"DEBUG: load_audio_tracks finished")
+            logging.debug(f"load_audio_tracks finished")
 
         except Exception as e:
-            print(f"Error loading audio tracks: {e}")
-            import traceback
-            traceback.print_exc()
+            logging.error(f"Error loading audio tracks: {e}", exc_info=True)
 
     def change_audio_track(self, index):
         """Switch audio track on selection."""
@@ -801,11 +796,11 @@ class VideoPlayerWidget(QWidget):
         try:
             track = self.db.get_track_info('audio_tracks', track_id)
         except Exception as e:
-            print(f"❌ DB error: {e}")
+            logging.error(f"❌ DB error: {e}")
             return
 
         if not track:
-            print("❌ Track not found")
+            logging.warning("❌ Track not found")
             return
 
         track_type = track['track_type']
@@ -813,7 +808,7 @@ class VideoPlayerWidget(QWidget):
         audio_file_path = track['audio_file_path']
 
         try:
-            print(f"🔄 Switching: {track_type}, stream={stream_index}")
+            logging.info(f"🔄 Switching: {track_type}, stream={stream_index}")
             
             was_playing = not self.player.pause
             self.player.pause = True
@@ -834,7 +829,7 @@ class VideoPlayerWidget(QWidget):
                 
                 # Now switch to embedded
                 self.player.aid = aid
-                print(f"✅ Embedded aid={aid}")
+                logging.info(f"✅ Embedded aid={aid}")
 
             elif track_type == 'external' and audio_file_path:
                 if Path(audio_file_path).exists():
@@ -849,9 +844,9 @@ class VideoPlayerWidget(QWidget):
                     
                     # Add and select new one
                     self.player.command('audio-add', audio_file_path, 'select')
-                    print(f"✅ External: {audio_file_path}")
+                    logging.info(f"✅ External: {audio_file_path}")
                 else:
-                    print(f"❌ File not found: {audio_file_path}")
+                    logging.error(f"❌ File not found: {audio_file_path}")
 
             # Resume playback
             QTimer.singleShot(200, lambda: setattr(self.player, 'pause', not was_playing))
@@ -860,23 +855,21 @@ class VideoPlayerWidget(QWidget):
             self.db.save_selected_audio(self.current_file, track_id)
 
         except Exception as e:
-            print(f"❌ Switch error: {e}")
-            import traceback
-            traceback.print_exc()
+            logging.error(f"❌ Switch error: {e}", exc_info=True)
 
 
     def restore_audio_track(self, filepath):
         """Restore saved audio track when loading video."""
-        print(f"DEBUG: restore_audio_track called")
+        logging.debug(f"restore_audio_track called")
         if not self.db or not self.player:
-            print(f"DEBUG: restore_audio_track aborted (no db or player)")
+            logging.debug(f"restore_audio_track aborted (no db or player)")
             return
 
         try:
             tracks, selected_audio_id = self.db.load_audio_tracks(filepath)
             
             if not selected_audio_id:
-                print("⏩ No saved audio track - selecting first available")
+                logging.info("⏩ No saved audio track - selecting first available")
                 if tracks:
                     track = tracks[0]
                     track_id = track['id']
@@ -886,7 +879,7 @@ class VideoPlayerWidget(QWidget):
                     stream_index = track['stream_index']
                     audio_file_path = track['audio_file_path']
                     
-                    print(f"💾 Saved first track: {track_type}, stream={stream_index}")
+                    logging.info(f"💾 Saved first track: {track_type}, stream={stream_index}")
                     
                     if track_type == 'embedded':
                         aid = int(stream_index) if stream_index is not None else 1
@@ -899,12 +892,12 @@ class VideoPlayerWidget(QWidget):
                         if self.volume_btn.popup.audioItemData(i) == track_id:
                             self.volume_btn.popup.setAudioIndex(i)
                             break
-                print(f"DEBUG: restore_audio_track finished (default)")
+                logging.debug(f"restore_audio_track finished (default)")
                 return
 
             track = self.db.get_track_info('audio_tracks', selected_audio_id)
             if not track:
-                print(f"DEBUG: restore_audio_track finished (track not found)")
+                logging.debug(f"restore_audio_track finished (track not found)")
                 return
 
             track_type = track['track_type']
@@ -912,33 +905,31 @@ class VideoPlayerWidget(QWidget):
             audio_file_path = track['audio_file_path']
             
             # Application logic (outside DB lock)
-            print(f"🔄 Restoring saved: {track_type}, stream={stream_index}")
+            logging.info(f"🔄 Restoring saved: {track_type}, stream={stream_index}")
 
             if track_type == 'embedded':
                 aid = int(stream_index) if stream_index is not None else 1
                 self.player.aid = aid
-                print(f"✅ Restored embedded aid={aid}")
+                logging.info(f"✅ Restored embedded aid={aid}")
 
             elif track_type == 'external' and audio_file_path:
                 if Path(audio_file_path).exists():
                     self.player.command('audio-add', audio_file_path, 'select')
-                    print(f"✅ Restored external: {audio_file_path}")
+                    logging.info(f"✅ Restored external: {audio_file_path}")
                 else:
-                    print(f"❌ External file not found: {audio_file_path}")
+                    logging.error(f"❌ External file not found: {audio_file_path}")
 
-            print(f"DEBUG: restore_audio_track finished")
+            logging.debug(f"restore_audio_track finished")
 
         except Exception as e:
-            print(f"❌ Restore error: {e}")
-            import traceback
-            traceback.print_exc()
+            logging.error(f"❌ Restore error: {e}", exc_info=True)
 
     def detach_video_widget(self):
         """Detach video widget for PiP mode."""
-        print("DEBUG: detach_video_widget called")
+        logging.debug("detach_video_widget called")
         # Included in layout?
         if self.video_widget.parent() == self.video_container:
-             print("DEBUG: Removing video_widget from video_container layout")
+             logging.debug("Removing video_widget from video_container layout")
              self.video_container.layout().removeWidget(self.video_widget)
         
         # The widget will be reparented by FloatingVideoWindow
@@ -948,23 +939,23 @@ class VideoPlayerWidget(QWidget):
 
     def reattach_video_widget(self, widget):
         """Reattach video widget after PiP mode."""
-        print("DEBUG: reattach_video_widget called")
+        logging.debug("reattach_video_widget called")
         if widget != self.video_widget:
-            print("ERROR: trying to reattach different widget")
+            logging.error("trying to reattach different widget")
             return
             
         # Add back to our layout
-        print("DEBUG: Adding video_widget back to container layout")
+        logging.debug("Adding video_widget back to container layout")
         self.video_container.layout().addWidget(self.video_widget)
         # Ensure it is visible and has focus if needed
         self.video_widget.show()
         self.video_widget.setFocus()
-        print("DEBUG: reattach_video_widget finished")
+        logging.debug("reattach_video_widget finished")
 
     # ===================== SUBTITLES =====================
     def load_subtitle_tracks(self, filepath):
         """Load list of subtitles from DB."""
-        print(f"DEBUG: load_subtitle_tracks called")
+        logging.debug(f"load_subtitle_tracks called")
         popup = self.subtitle_btn.popup
         popup.clear()
 
@@ -975,7 +966,7 @@ class VideoPlayerWidget(QWidget):
             tracks, selected_subtitle_id, subtitles_enabled = self.db.load_subtitle_tracks(filepath)
             
             if not tracks:
-                print(f"DEBUG: load_subtitle_tracks finished (no tracks)")
+                logging.debug(f"load_subtitle_tracks finished (no tracks)")
                 return
 
             selected_index = 0
@@ -1023,10 +1014,10 @@ class VideoPlayerWidget(QWidget):
 
             # Restore state is now handled in load_video for better timing control
             # QTimer.singleShot(400, lambda: self.restore_subtitle_track(filepath))
-            print(f"DEBUG: load_subtitle_tracks finished")
+            logging.debug(f"load_subtitle_tracks finished")
 
         except Exception as e:
-            print(f"Error loading subtitle tracks: {e}")
+            logging.error(f"Error loading subtitle tracks: {e}", exc_info=True)
 
     def toggle_subtitles(self, enabled):
         """Toggle subtitles on/off."""
@@ -1043,7 +1034,7 @@ class VideoPlayerWidget(QWidget):
             # Turn off
             try:
                 self.player.sid = 'no'
-                print("🔇 Subtitles disabled")
+                logging.info("🔇 Subtitles disabled")
             except:
                 pass
             self._save_selected_subtitle(None)
@@ -1072,13 +1063,13 @@ class VideoPlayerWidget(QWidget):
                 self.player.sub_color = f"#FF{hex_color.upper()}"
                 self.sub_color = value
                 self.subtitle_style_changed.emit("sub-color", value)
-                print(f"📝 Subtitle color: {value}")
+                logging.info(f"📝 Subtitle color: {value}")
             elif property_name == "sub-border-color":
                 hex_color = value.lstrip('#')
                 self.player.sub_border_color = f"#FF{hex_color.upper()}"
                 self.sub_border_color = value
                 self.subtitle_style_changed.emit("sub-border-color", value)
-                print(f"📝 Subtitle border color: {value}")
+                logging.info(f"📝 Subtitle border color: {value}")
             elif property_name == "sub-scale":
                 # value is delta (+5 or -5)
                 current_scale = getattr(self.player, 'sub_scale', 1.0)
@@ -1086,9 +1077,9 @@ class VideoPlayerWidget(QWidget):
                 self.player.sub_scale = new_scale
                 self.sub_scale = new_scale
                 self.subtitle_style_changed.emit("sub-scale", new_scale)
-                print(f"📝 Subtitle scale: {new_scale:.2f}")
+                logging.info(f"📝 Subtitle scale: {new_scale:.2f}")
         except Exception as e:
-            print(f"Error changing subtitle style: {e}")
+            logging.error(f"Error changing subtitle style: {e}", exc_info=True)
 
     # ===================== MARKERS =====================
     def load_markers(self, file_path):
@@ -1107,9 +1098,9 @@ class VideoPlayerWidget(QWidget):
 
     def add_marker(self, timestamp=None):
         """Add marker at specified position or current position."""
-        print("DEBUG: add_marker called") # DEBUG
+        logging.debug("add_marker called") # DEBUG
         if not self.player or not self.current_file:
-            print("DEBUG: No player or file") # DEBUG
+            logging.debug("No player or file") # DEBUG
             return
             
         # Get position
@@ -1118,9 +1109,9 @@ class VideoPlayerWidget(QWidget):
         else:
             try:
                 pos = self.player.time_pos or 0
-                print(f"DEBUG: Current pos: {pos}") # DEBUG
+                logging.debug(f"Current pos: {pos}") # DEBUG
             except Exception as e:
-                print(f"DEBUG: Error getting time_pos: {e}") # DEBUG
+                logging.debug(f"Error getting time_pos: {e}") # DEBUG
                 pos = 0
             
         # Pause playback
@@ -1135,7 +1126,7 @@ class VideoPlayerWidget(QWidget):
             
             # Show dialog - Pass empty label to keep field clear
             duration = self.progress_slider.maximum() / 1000.0
-            print(f"DEBUG: Opening dialog... Default label fallback: {default_label}, duration: {duration}") # DEBUG
+            logging.debug(f"Opening dialog... Default label fallback: {default_label}, duration: {duration}") # DEBUG
             dlg = MarkerDialog(self, pos, label="", max_duration=duration)
             if dlg.exec():
                 label, color, new_pos = dlg.get_data()
@@ -1144,25 +1135,23 @@ class VideoPlayerWidget(QWidget):
                 if not label:
                     label = default_label
                 
-                print(f"DEBUG: Dialog accepted, label: '{label}', color: '{color}', pos: {new_pos}") # DEBUG
+                logging.debug(f"Dialog accepted, label: '{label}', color: '{color}', pos: {new_pos}") # DEBUG
                 
                 if label:
                     # Save to DB
                     if self.db:
-                        print(f"DEBUG: Saving to DB: {self.current_file}, {new_pos}, {label}, {color}") # DEBUG
+                        logging.debug(f"Saving to DB: {self.current_file}, {new_pos}, {label}, {color}") # DEBUG
                         self.db.add_marker(self.current_file, new_pos, label, color)
                         # Reload to update UI
-                        print("DEBUG: Reloading markers...") # DEBUG
+                        logging.debug("Reloading markers...") # DEBUG
                         self.load_markers(self.current_file)
                         self.markers_changed.emit(self.current_file)
                     else:
-                        print("DEBUG: Error - self.db is None") # DEBUG
+                        logging.error("Error - self.db is None") # DEBUG
             else:
-                print("DEBUG: Dialog rejected") # DEBUG
+                logging.debug("Dialog rejected") # DEBUG
         except Exception as e:
-            import traceback
-            print(f"❌ CRASH in add_marker: {e}")
-            traceback.print_exc()
+            logging.error(f"❌ CRASH in add_marker: {e}", exc_info=True)
         
         # Resume if needed
         if was_playing:
@@ -1194,14 +1183,14 @@ class VideoPlayerWidget(QWidget):
                     self.load_markers(self.current_file)
                     self.markers_changed.emit(self.current_file)
         except Exception as e:
-            print(f"Error editing marker: {e}")
+            logging.error(f"Error editing marker: {e}", exc_info=True)
             
         if was_playing:
             self.player.pause = False
 
     def toggle_marker_gallery(self):
         """Toggle marker gallery visibility."""
-        print(f"DEBUG: toggle_marker_gallery, visible={self.marker_gallery.isVisible() if self.marker_gallery else 'None'}")
+        logging.debug(f"toggle_marker_gallery, visible={self.marker_gallery.isVisible() if self.marker_gallery else 'None'}")
         if not self.marker_gallery:
             return
         
@@ -1218,16 +1207,16 @@ class VideoPlayerWidget(QWidget):
 
     def _on_marker_thumbnail_ready(self, request_id, pixmap):
         """Slot called when a marker thumbnail is generated."""
-        print(f"DEBUG: VideoPlayerWidget._on_marker_thumbnail_ready: req_id={request_id}")
+        logging.debug(f"VideoPlayerWidget._on_marker_thumbnail_ready: req_id={request_id}")
         if self.marker_gallery:
             # request_id is marker_{id} or ts_{timestamp}
             if request_id.startswith("marker_"):
                 m_id = int(request_id.replace("marker_", ""))
-                print(f"DEBUG: Updating gallery thumbnail for marker_id={m_id}")
+                logging.debug(f"Updating gallery thumbnail for marker_id={m_id}")
                 # self.marker_gallery.update_thumbnail(m_id, pixmap)
-                print(f"DEBUG: SKIPPED updating gallery thumbnail (testing crash isolation)")
+                logging.debug(f"SKIPPED updating gallery thumbnail (testing crash isolation)")
             else:
-                print(f"DEBUG: Unknown request_id format: {request_id}")
+                logging.error(f"Unknown request_id format: {request_id}")
 
     def _on_marker_gallery_seek(self, seconds):
         """Seek to marker position and hide gallery."""
@@ -1285,7 +1274,7 @@ class VideoPlayerWidget(QWidget):
             # Scale
             self.player.sub_scale = self.sub_scale
         except Exception as e:
-            print(f"Error applying subtitle styles: {e}")
+            logging.error(f"Error applying subtitle styles: {e}", exc_info=True)
 
     def change_subtitle_track(self, index):
         """Switch subtitles on selection."""
@@ -1302,7 +1291,7 @@ class VideoPlayerWidget(QWidget):
         if track_id is None:
             try:
                 self.player.sid = 'no'
-                print("🔇 Subtitles disabled")
+                logging.info("🔇 Subtitles disabled")
             except:
                 pass
             self._save_selected_subtitle(None)
@@ -1324,24 +1313,24 @@ class VideoPlayerWidget(QWidget):
                 # Use sid for embedded subtitles
                 try:
                     self.player.sid = stream_index
-                    print(f"📝 Switched to embedded subtitle track {stream_index}")
+                    logging.info(f"📝 Switched to embedded subtitle track {stream_index}")
                 except Exception as e:
-                    print(f"Error setting subtitle track: {e}")
+                    logging.error(f"Error setting subtitle track: {e}", exc_info=True)
             else:
                 # Use sub-add for external subtitles
                 if subtitle_file_path and Path(subtitle_file_path).exists():
                     try:
                         self.player.command('sub-add', subtitle_file_path, 'select')
-                        print(f"📝 Loaded external subtitle: {subtitle_file_path}")
+                        logging.info(f"📝 Loaded external subtitle: {subtitle_file_path}")
                     except Exception as e:
-                        print(f"Error loading external subtitle: {e}")
+                        logging.error(f"Error loading external subtitle: {e}", exc_info=True)
                 else:
-                    print(f"❌ Subtitle file not found: {subtitle_file_path}")
+                    logging.error(f"❌ Subtitle file not found: {subtitle_file_path}")
 
             self._save_selected_subtitle(track_id)
 
         except Exception as e:
-            print(f"Error changing subtitle track: {e}")
+            logging.error(f"Error changing subtitle track: {e}", exc_info=True)
 
     def _save_selected_subtitle(self, track_id):
         """Save selected subtitles to DB."""
@@ -1353,57 +1342,57 @@ class VideoPlayerWidget(QWidget):
             subtitles_enabled = 0 if track_id is None else 1
             self.db.save_selected_subtitle(self.current_file, track_id, subtitles_enabled)
         except Exception as e:
-            print(f"Error saving selected subtitle: {e}")
+            logging.error(f"Error saving selected subtitle: {e}", exc_info=True)
 
     def restore_subtitle_track(self, filepath):
         """Restore saved subtitles when loading video."""
-        print(f"DEBUG: restore_subtitle_track called")
+        logging.debug(f"restore_subtitle_track called")
         if not self.db or not self.player:
-            print(f"DEBUG: restore_subtitle_track aborted (no db or player)")
+            logging.debug(f"restore_subtitle_track aborted (no db or player)")
             return
 
         try:
             tracks, selected_subtitle_id, subtitles_enabled = self.db.load_subtitle_tracks(filepath)
             
             if not subtitles_enabled:
-                print(f"DEBUG: restoring subtitles disabled", flush=True)
+                logging.debug(f"restoring subtitles disabled")
                 try:
-                    print("DEBUG: Setting sid='no'...", flush=True)
+                    logging.debug("Setting sid='no'...")
                     self.player.sid = 'no'
-                    print("DEBUG: sid='no' set successfully", flush=True)
+                    logging.debug("sid='no' set successfully")
                 except Exception as e:
-                    print(f"DEBUG: Error setting sid='no': {e}", flush=True)
+                    logging.error(f"Error setting sid='no': {e}", exc_info=True)
                 return
             
             if not selected_subtitle_id:
-                print(f"DEBUG: no selected_subtitle_id")
+                logging.debug(f"no selected_subtitle_id")
                 return
 
             track = self.db.get_track_info('subtitle_tracks', selected_subtitle_id)
             if not track:
-                print(f"DEBUG: subtitle track {selected_subtitle_id} not found in DB")
+                logging.error(f"subtitle track {selected_subtitle_id} not found in DB")
                 return
 
             track_type = track['track_type']
             stream_index = track['stream_index']
             subtitle_file_path = track['subtitle_file_path']
-            print(f"DEBUG: restoring subtitle: type={track_type}, stream={stream_index}, path={subtitle_file_path}")
+            logging.debug(f"restoring subtitle: type={track_type}, stream={stream_index}, path={subtitle_file_path}")
 
             if track_type == 'embedded':
                 try:
                     self.player.sid = stream_index
                 except Exception as e:
-                    print(f"❌ Error restoring subtitle: {e}")
+                    logging.error(f"❌ Error restoring subtitle: {e}", exc_info=True)
             else:
                 if subtitle_file_path and Path(subtitle_file_path).exists():
                     self.player.command('sub-add', subtitle_file_path, 'select')
                 else:
-                    print(f"❌ External subtitle file not found: {subtitle_file_path}")
+                    logging.error(f"❌ External subtitle file not found: {subtitle_file_path}")
             
-            print(f"DEBUG: restore_subtitle_track finished")
+            logging.debug(f"restore_subtitle_track finished")
 
         except Exception as e:
-            print(f"❌ Subtitle restore error: {e}")
+            logging.error(f"❌ Subtitle restore error: {e}", exc_info=True)
 
 
 
@@ -1413,16 +1402,16 @@ class VideoPlayerWidget(QWidget):
         self.progress_slider.set_markers(self.markers if hasattr(self, 'markers') else [], duration_ms / 1000.0)
 
     def restore_position(self):
-        print(f"DEBUG: restore_position called, saved_pos={self.saved_position}, attempted={self.position_restore_attempted}")
+        logging.debug(f"restore_position called, saved_pos={self.saved_position}, attempted={self.position_restore_attempted}")
         if self.saved_position > 0 and not self.position_restore_attempted:
             try:
                 self.player.seek(self.saved_position, 'absolute', 'exact')
                 self.position_restore_attempted = True
-                print(f"DEBUG: restore_position finished")
+                logging.debug(f"restore_position finished")
             except Exception as e:
-                print(f"Error restoring position: {e}")
+                logging.error(f"Error restoring position: {e}", exc_info=True)
         else:
-             print(f"DEBUG: restore_position skipped")
+             logging.debug(f"restore_position skipped")
 
     def restart_video(self):
         try:
@@ -1432,14 +1421,14 @@ class VideoPlayerWidget(QWidget):
             if self.player.pause:
                 self.player.pause = False
         except Exception as e:
-            print(f"Error restarting video: {e}")
+            logging.error(f"Error restarting video: {e}", exc_info=True)
 
     def set_position(self, position_ms):
         if not self.slider_updating:
             try:
                 self.player.seek(position_ms / 1000.0, 'absolute')
             except Exception as e:
-                print(f"Error seeking: {e}")
+                logging.error(f"Error seeking: {e}", exc_info=True)
 
     def _on_slider_pressed(self):
         self.is_seeking_slider = True
@@ -1467,14 +1456,14 @@ class VideoPlayerWidget(QWidget):
                     self.taskbar_progress.set_normal()
 
         except Exception as e:
-            print(f"Error toggling playback: {e}")
+            logging.error(f"Error toggling playback: {e}", exc_info=True)
 
     def stop(self):
         try:
             if self.player:
                 self.player.stop()
         except Exception as e:
-            print(f"Error stopping playback: {e}")
+            logging.error(f"Error stopping playback: {e}", exc_info=True)
 
     def unload_video(self):
         """Unload current video and show placeholder"""
@@ -1542,7 +1531,7 @@ class VideoPlayerWidget(QWidget):
             if self.player:
                 self.player.volume = value
         except Exception as e:
-            print(f"Error changing volume: {e}")
+            logging.error(f"Error changing volume: {e}", exc_info=True)
 
     def change_speed(self, value):
         speed = value / 10.0
@@ -1551,7 +1540,7 @@ class VideoPlayerWidget(QWidget):
                 self.player.speed = speed
                 self.speed_label.setText(tr('player.speed', speed=f'{speed:.1f}'))
         except Exception as e:
-            print(f"Error changing speed: {e}")
+            logging.error(f"Error changing speed: {e}", exc_info=True)
 
     @staticmethod
     def format_time(seconds):

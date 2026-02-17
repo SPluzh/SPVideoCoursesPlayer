@@ -1,3 +1,4 @@
+import logging
 from pathlib import Path
 
 # Path to dark.qss file
@@ -42,7 +43,7 @@ class StyleManager:
                 
             return qss
         except Exception as e:
-            print(f"Error loading stylesheet: {e}")
+            logging.error(f"Error loading stylesheet: {e}")
             return ""
 
     @staticmethod

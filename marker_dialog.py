@@ -1,3 +1,4 @@
+import logging
 from PyQt6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton, QButtonGroup, QDialogButtonBox, QGridLayout
 from PyQt6.QtCore import QRegularExpression
 from PyQt6.QtGui import QRegularExpressionValidator
@@ -7,7 +8,7 @@ class MarkerDialog(QDialog):
     """Simple dialog to add/edit a marker."""
     def __init__(self, parent=None, timestamp=0.0, label="", color="#FFD700", max_duration=0.0):
         super().__init__(parent)
-        print(f"DEBUG: MarkerDialog init, timestamp={timestamp}, max_duration={max_duration}") # DEBUG
+        logging.debug(f"MarkerDialog init, timestamp={timestamp}, max_duration={max_duration}") 
         self.setWindowTitle(tr('player.add_marker_title'))
         self.setFixedWidth(350)
         self.selected_color = color

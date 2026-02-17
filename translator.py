@@ -2,6 +2,7 @@
 Translator module for managing translations across the application.
 """
 import json
+import logging
 from pathlib import Path
 
 
@@ -17,7 +18,7 @@ class Translator:
         """Load language file"""
         lang_file = self.lang_dir / f'{lang_code}.json'
         if not lang_file.exists():
-            print(f"Language file not found: {lang_file}")
+            logging.warning(f"Language file not found: {lang_file}")
             return False
         try:
             with open(lang_file, 'r', encoding='utf-8') as f:
@@ -25,7 +26,7 @@ class Translator:
             self.current_lang = lang_code
             return True
         except Exception as e:
-            print(f"Error loading language file: {e}")
+            logging.error(f"Error loading language file: {e}")
             return False
 
     def get(self, key, **kwargs):
