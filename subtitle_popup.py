@@ -56,9 +56,8 @@ class SubtitlePopup(QWidget):
         list_section.setContentsMargins(0, 0, 0, 0)
         
         self.list_title_label = QLabel(tr('player.tooltip_subtitle_track'))
-        self.list_title_label.setObjectName("subtitleLabel")
-        self.list_title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.list_title_label.setFixedHeight(12)
+        self.list_title_label.setObjectName("popupHeaderLabel")
+        # Removing fixed height to allow QSS control
         list_section.addWidget(self.list_title_label)
 
         self.list_widget = QListWidget()
@@ -91,9 +90,7 @@ class SubtitlePopup(QWidget):
         size_layout.setSpacing(4)
         
         self.size_title_label = QLabel(tr('player.subtitle_size'))
-        self.size_title_label.setObjectName("subtitleLabel")
-        self.size_title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.size_title_label.setFixedHeight(12)
+        self.size_title_label.setObjectName("popupHeaderLabel")
         size_layout.addWidget(self.size_title_label)
         
         size_btns = QHBoxLayout()
@@ -113,9 +110,7 @@ class SubtitlePopup(QWidget):
         text_layout = QVBoxLayout()
         text_layout.setSpacing(2)
         self.text_title_label = QLabel(tr('player.subtitle_text'))
-        self.text_title_label.setObjectName("subtitleLabel")
-        self.text_title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.text_title_label.setFixedHeight(12)
+        self.text_title_label.setObjectName("popupHeaderLabel")
         self.text_title_label.setContentsMargins(0, 0, 0, 0)
         self.text_color_btn = QPushButton()
         self.text_color_btn.setFixedSize(64, 30)
@@ -131,9 +126,7 @@ class SubtitlePopup(QWidget):
         outline_layout = QVBoxLayout()
         outline_layout.setSpacing(2)
         self.outline_title_label = QLabel(tr('player.subtitle_outline'))
-        self.outline_title_label.setObjectName("subtitleLabel")
-        self.outline_title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.outline_title_label.setFixedHeight(12)
+        self.outline_title_label.setObjectName("popupHeaderLabel")
         self.outline_title_label.setContentsMargins(0, 0, 0, 0)
         self.outline_color_btn = QPushButton()
         self.outline_color_btn.setFixedSize(64, 30)

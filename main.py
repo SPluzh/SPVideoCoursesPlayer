@@ -1170,8 +1170,24 @@ class VideoCourseBrowser(QMainWindow):
                 
                 # Add color icon
                 color_hex = tag['color'] if tag['color'] else '#3498db'
-                pixmap = QPixmap(12, 12)
-                pixmap.fill(QColor(color_hex))
+                pixmap = QPixmap(16, 16)
+                pixmap.fill(Qt.GlobalColor.transparent)
+                
+                painter = QPainter(pixmap)
+                painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+                
+                # Draw colored circle/rounded rect background
+                painter.setBrush(QColor(color_hex))
+                painter.setPen(Qt.PenStyle.NoPen)
+                painter.drawRoundedRect(0, 0, 16, 16, 3, 3)
+                
+                # Draw dot if checked
+                if tag['id'] in current_tag_ids:
+                    painter.setBrush(QColor('white'))
+                    painter.drawEllipse(5, 5, 6, 6)
+                
+                painter.end()
+                
                 tag_action.setIcon(QIcon(pixmap))
                 
                 tag_action.triggered.connect(lambda checked, t=tag: self.toggle_video_tag_from_menu(item, t, checked))

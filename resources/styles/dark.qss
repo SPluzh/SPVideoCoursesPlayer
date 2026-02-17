@@ -458,6 +458,14 @@ QLabel#subtitleLabel {
     color: @text-meta;
 }
 
+QLabel#popupHeaderLabel {
+    font-size: 12px;
+    font-weight: bold;
+    color: @text-meta;
+    margin-bottom: 2px;
+    qproperty-alignment: AlignCenter;
+}
+
 QLabel#timeLabel {
     font-family: 'Consolas', 'Courier New', monospace;
     font-size: 13px;

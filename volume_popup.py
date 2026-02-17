@@ -84,8 +84,8 @@ class VolumePopup(QWidget):
         # Audio Delay Control
         dsp_main_layout.addSpacing(4)
         self.delay_lbl = QLabel(tr('player.audio_delay'))
-        self.delay_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.delay_lbl.setStyleSheet("font-size: 9px; color: #8a8a8a; border: none; margin-bottom: -2px;")
+        self.delay_lbl.setObjectName("popupHeaderLabel")
+        # Removed manual stylesheet
         dsp_main_layout.addWidget(self.delay_lbl)
         
         delay_row = QHBoxLayout()
@@ -131,7 +131,7 @@ class VolumePopup(QWidget):
         list_container.setSpacing(4)
         
         lbl = QLabel(tr('player.tooltip_audio_track'))
-        lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        lbl.setObjectName("popupHeaderLabel")
         self.audio_title_label = lbl
         list_container.addWidget(lbl)
         
