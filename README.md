@@ -25,23 +25,23 @@ SP Video Courses Player is a desktop application designed specifically for watch
 
 ### ✨ Features
 
-- **📚 Video Library Management** - Organize video courses in a hierarchical tree structure
-- **▶️ Built-in Video Player** - Powered by libmpv for smooth playback
-- **📊 Progress Tracking** - Automatically saves and restores playback position
-- **🖼️ Thumbnail Generation** - Creates preview thumbnails for easy navigation
-- **🔊 Multi-track Audio Support** - Switch between embedded and external audio tracks
-- **📝 Subtitle Support** - Load and display subtitles with customizable appearance
-- **⏩ Playback Speed Control** - Adjust speed from 0.5x to 3.0x
-- **🌐 Multi-language Interface** - English and Russian localization
-- **🎨 Dark Theme** - Modern dark interface with customizable styles
-- **📁 Folder Navigation** - Quick access to course folders from context menu
+- **📚 Library Management** - Hierarchical tree structure with **Favorites** and **Tags** filtering
+- **▶️ Advanced Player** - Built on **libmpv** with **Picture-in-Picture (PiP)** mode
+- **🔊 Professional Audio Tools** - **AI Noise Reduction**, Compressor, De-esser, Mono mix, and precise Sync Delay
+- **📊 Detailed Statistics** - Folder completion progress, watched duration, and remaining time
+- **🔖 Smart Markers** - Visual marker gallery, custom colors, and timeline previews
+- **🖼️ Instant Previews** - Hover over the timeline to see instantaneous video thumbnails
+- **📝 Subtitle Support** - Customizable subtitles with size, color, and outline settings
+- **⏩ Speed Control** - Adjust playback speed (0.5x - 3.0x) with pitch correction
+- **🎨 Modern UI** - Dark theme with custom icons and responsive layout
 
 ### 📖 Usage
 
 1. **Add Library Paths**: Go to `Library → Settings` and add folders containing your video courses
 2. **Scan Library**: Click `Library → Scan` to index your videos
 3. **Watch Videos**: Double-click any video to start playback
-4. **Resume Playback**: Your progress is automatically saved - just double-click to resume
+4. **Audio Tools**: Click the volume icon to access **AI Noise Reduction** and effects
+5. **Tools**: Use `P` for PiP mode, `G` for Markers, and Context Menu for Tags
 
 
 ### 🚀 Installation
@@ -102,23 +102,22 @@ SP Video Courses Player — это настольное приложение, с
 
 ### ✨ Возможности
 
-- **📚 Управление видеотекой** — организация видеокурсов в древовидной структуре
-- **▶️ Встроенный видеоплеер** — на базе libmpv для плавного воспроизведения
-- **📊 Отслеживание прогресса** — автоматическое сохранение и восстановление позиции воспроизведения
-- **🖼️ Генерация миниатюр** — создание превью для удобной навигации
-- **🔊 Поддержка нескольких аудиодорожек** — переключение между встроенными и внешними аудио
-- **📝 Поддержка субтитров** — загрузка и отображение субтитров с настраиваемым внешним видом
-- **⏩ Управление скоростью** — регулировка от 0.5x до 3.0x
-- **🌐 Многоязычный интерфейс** — русский и английский языки
-- **🎨 Тёмная тема** — современный тёмный интерфейс с настраиваемыми стилями
-- **📁 Навигация по папкам** — быстрый доступ к папкам курсов через контекстное меню
+- **📚 Управление библиотекой** — Древовидная структура с фильтрацией по **Избранному** и **Тегам**
+- **▶️ Продвинутый плеер** — На базе **libmpv** с режимом **Картинка-в-картинке (PiP)**
+- **🔊 Профессиональный звук** — **AI Шумоподавление**, Компрессор, Де-эссер, Моно-микс и точная настройка задержки
+- **📊 Детальная статистика** — Прогресс по папкам, просмотренное время и остаток
+- **🔖 Умные закладки** — Визуальная галерея маркеров, цветные метки и превью на таймлайне
+- **🖼️ Мгновенное превью** — Наведение на таймлайн показывает кадр из видео
+- **📝 Поддержка субтитров** — Настройка размера, цвета и обводки текста
+- **⏩ Управление скоростью** — Регулировка (0.5x - 3.0x) без искажения тона
+- **🎨 Современный UI** — Тёмная тема, адаптивный интерфейс и кастомные иконки
 
 ### 📖 Использование
 
-1. **Добавьте пути к библиотеке**: Перейдите в `Библиотека → Настройки` и добавьте папки с видеокурсами
-2. **Сканирование библиотеки**: Нажмите `Библиотека → Сканировать` для индексации видео
-3. **Просмотр видео**: Дважды щёлкните по видео для начала воспроизведения
-4. **Продолжение просмотра**: Ваш прогресс сохраняется автоматически — просто дважды щёлкните для продолжения
+1. **Добавьте пути**: `Библиотека → Настройки` — укажите папки с курсами
+2. **Сканирование**: `Библиотека → Сканировать` — индексация файлов
+3. **Аудио инструменты**: Клик по значку громкости открывает **AI Шумоподавление** и эффекты
+4. **Инструменты**: `P` — PiP режим, `G` — Маркеры, ПКМ — Теги и Избранное
 
 ### 🚀 Установка
 
