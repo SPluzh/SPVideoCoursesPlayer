@@ -1,6 +1,17 @@
 # Changelog
 
 All notable changes to this project will be documented in this file.
+
+## [1.2.6]
+- **Audio Enhancements**: Integrated professional audio processing tools:
+    - **Denoise**: Added Noise Reduction with Standard and AI (`arnndn`) modes.
+    - **Compressor**: Added Dynamic Range Compressor to normalize volume levels.
+    - **De-esser**: Added specialized filter for reducing harsh sibilance.
+    - **Mono Mode**: Added channel mixing to mono for single-speaker content.
+    - **Audio Delay**: Implemented precision sync adjustment (+/- 50ms) with auto-repeat.
+- **UI/OSD**: Improved visual feedback:
+    - Added localized OSD notifications for audio tools and delay changes.
+
 ## [1.2.5]
 - **Library Filter**: Introduced dedicated filter buttons for **Favorites** and **Tags** in the search area.
 - **Tags Filter**: Added a versatile multi-tag filtering system (OR logic) with persistent state and selection popup.
