@@ -19,7 +19,8 @@
         "screenshot": "Сделать скриншот",
         "frame_step": "Следующий кадр",
         "frame_back": "Предыдущий кадр",
-        "show_markers": "Показать закладки"
+        "show_markers": "Показать закладки",
+        "check_updates": "Проверить обновления..."
     },
     "library": {
         "search_placeholder": "Поиск...",
@@ -131,7 +132,8 @@
             "deess_tooltip": "Де-эссер",
             "mono": "Моно",
             "mono_tooltip": "Моно режим"
-        }
+        },
+        "filter_tags": "Фильтр по тегам"
     },
     "status": {
         "error": "Ошибка",
@@ -260,6 +262,7 @@
         "scan_existing_videos": "   • Видео: {count}",
         "scan_searching": "🔍 Поиск видеокурсов...",
         "scan_found_folders": "   Найдено папок: {count} ({time} сек)",
+        "availability_check": "🔍 Проверка доступности...",
         "process_title": "ОБРАБОТКА ВИДЕОКУРСОВ",
         "process_progress": "[{current}/{total}] ({percent}%) {name}...",
         "process_info": "   {info}",
@@ -355,5 +358,22 @@
         "watched_time": "Просмотрено",
         "progress": "Прогресс",
         "subtitle": "Всего видео: {total}"
+    },
+    "updater": {
+        "title": "Обновление приложения",
+        "checking": "Проверка обновлений...",
+        "available": "Доступна новая версия: {version}",
+        "current_version": "Текущая версия: {version}",
+        "new_version": "Новая версия: {version}",
+        "changelog": "Что нового:",
+        "update_now": "Обновить и перезапустить",
+        "later": "Позже",
+        "skip_version": "Пропустить эту версию",
+        "downloading": "Загрузка обновления...",
+        "extracting": "Установка обновления...",
+        "success": "Обновление загружено. Приложение перезапускается...",
+        "no_updates": "У вас установлена последняя версия ({version})",
+        "error": "Ошибка обновления: {error}",
+        "check_updates_auto": "Проверять обновления при запуске"
     }
 }

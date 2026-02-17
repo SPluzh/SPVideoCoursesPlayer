@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.3.0]
+- **Auto-Update**: Implemented a comprehensive auto-update system using GitHub Releases
+
 ## [1.2.7]
 - **Availability Tracking**: Implemented smart file availability tracking:
     - **Scanner**: Updated scan logic to mark missing videos/folders as unavailable instead of removing them.

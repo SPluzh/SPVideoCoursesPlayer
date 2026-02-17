@@ -18,6 +18,8 @@ class ConfigManager:
         'General': {
             'language': 'en',
             'show_preview_popup': 'True',
+            'check_updates_on_start': 'True',
+            'skip_version': '',
         },
         'Paths': {
             'paths': '',
@@ -131,6 +133,30 @@ class ConfigManager:
             except (ValueError, TypeError):
                 return set()
         return set()
+
+    # --- Update settings ---
+
+    def get_check_updates_on_start(self) -> bool:
+        config = self._read_config()
+        return config.getboolean('General', 'check_updates_on_start', fallback=True)
+
+    def set_check_updates_on_start(self, value: bool):
+        config = self._read_config()
+        if 'General' not in config:
+            config['General'] = {}
+        config['General']['check_updates_on_start'] = str(value)
+        self._write_config(config)
+
+    def get_skip_version(self) -> str:
+        config = self._read_config()
+        return config.get('General', 'skip_version', fallback='')
+
+    def set_skip_version(self, version: str):
+        config = self._read_config()
+        if 'General' not in config:
+            config['General'] = {}
+        config['General']['skip_version'] = version
+        self._write_config(config)
 
     # --- Path settings ---
 

@@ -231,6 +231,12 @@ class VideoCourseBrowser(QMainWindow):
         if hasattr(self, 'tag_filter_active'):
             self.tag_filter_btn.setChecked(self.tag_filter_active)
 
+        # Auto-update cleanup and check
+        from update_app import cleanup_update_artifacts
+        cleanup_update_artifacts()
+        if self.config.get_check_updates_on_start():
+            QTimer.singleShot(5000, self._check_for_update)
+
     def keyPressEvent(self, event: QKeyEvent):
         action = self.hotkey_manager.get_action(event)
         
@@ -623,8 +629,13 @@ class VideoCourseBrowser(QMainWindow):
         reload_styles_action.triggered.connect(self.reload_styles)
         view_menu.addAction(reload_styles_action)
 
-        # [Help] Menu
         help_menu = menubar.addMenu(tr('menu.help'))
+
+        check_updates_action = QAction(self.icons.get('upload', QIcon()), tr('menu.check_updates'), self)
+        check_updates_action.triggered.connect(lambda: self._check_for_update(force=True))
+        help_menu.addAction(check_updates_action)
+
+        help_menu.addSeparator()
 
         about_action = QAction(self.icons.get('menu_about', QIcon()), tr('menu.about'), self)
         about_action.triggered.connect(self.show_about)
@@ -691,6 +702,76 @@ class VideoCourseBrowser(QMainWindow):
     def show_about(self):
         dialog = AboutDialog(self)
         dialog.exec()
+
+    def _check_for_update(self, force=False):
+        """Check for app updates. If force=True, always show result."""
+        try:
+            from update_app import check_for_update, get_current_version
+            update_info = check_for_update()
+
+            if update_info:
+                # Skip if user chose to skip this version (unless forced)
+                if not force:
+                    skip = self.config.get_skip_version()
+                    if skip and skip == update_info['latest']:
+                        return
+
+                from update_dialog import UpdateDialog
+                dialog = UpdateDialog(self, update_info)
+                dialog.exec()
+
+                if dialog.result_action == UpdateDialog.UPDATE_NOW:
+                    self._do_app_update(update_info)
+                elif dialog.result_action == UpdateDialog.SKIP_VERSION:
+                    self.config.set_skip_version(update_info['latest'])
+            elif force:
+                current = get_current_version()
+                QMessageBox.information(
+                    self,
+                    tr('updater.title'),
+                    tr('updater.no_updates', version=current)
+                )
+        except Exception as e:
+            if force:
+                QMessageBox.warning(
+                    self,
+                    tr('updater.title'),
+                    tr('updater.error', error=str(e))
+                )
+
+    def _do_app_update(self, update_info: dict):
+        """Download update and launch updater script."""
+        try:
+            from update_app import download_update, create_updater_script, launch_updater_and_exit
+
+            self.info_label.setText(tr('updater.downloading'))
+            QApplication.processEvents()
+
+            # Download
+            zip_path = download_update(update_info['url'])
+
+            self.info_label.setText(tr('updater.extracting'))
+            QApplication.processEvents()
+
+            # Create bat script
+            bat_path = create_updater_script(zip_path, update_info['latest'])
+
+            self.info_label.setText(tr('updater.success'))
+            QApplication.processEvents()
+
+            # Save state before exit
+            self.save_window_state()
+
+            # Launch updater and quit
+            launch_updater_and_exit(bat_path)
+            QApplication.quit()
+
+        except Exception as e:
+            QMessageBox.critical(
+                self,
+                tr('updater.title'),
+                tr('updater.error', error=str(e))
+            )
 
     def save_progress(self, position_sec, file_path):
         """Save playback progress."""

@@ -19,7 +19,8 @@
         "screenshot": "Take Screenshot",
         "frame_step": "Next Frame",
         "frame_back": "Previous Frame",
-        "show_markers": "Show Bookmarks"
+        "show_markers": "Show Bookmarks",
+        "check_updates": "Check for Updates..."
     },
     "library": {
         "search_placeholder": "Search...",
@@ -131,7 +132,8 @@
             "deess_tooltip": "De-esser",
             "mono": "Mono",
             "mono_tooltip": "Mono Mode"
-        }
+        },
+        "filter_tags": "Filter by tags"
     },
     "status": {
         "ready": "Ready",
@@ -260,6 +262,7 @@
         "scan_existing_videos": "   • Videos: {count}",
         "scan_searching": "🔍 Searching for video courses...",
         "scan_found_folders": "   Found folders: {count} ({time} sec)",
+        "availability_check": "🔍 Checking availability...",
         "process_title": "PROCESSING VIDEO COURSES",
         "process_progress": "[{current}/{total}] ({percent}%) {name}...",
         "process_info": "   {info}",
@@ -355,5 +358,22 @@
         "watched_time": "Watched",
         "progress": "Progress",
         "subtitle": "Total videos: {total}"
+    },
+    "updater": {
+        "title": "Application Update",
+        "checking": "Checking for updates...",
+        "available": "New version available: {version}",
+        "current_version": "Current version: {version}",
+        "new_version": "New version: {version}",
+        "changelog": "What's new:",
+        "update_now": "Update and Restart",
+        "later": "Later",
+        "skip_version": "Skip this version",
+        "downloading": "Downloading update...",
+        "extracting": "Installing update...",
+        "success": "Update downloaded. Application restarting...",
+        "no_updates": "You have the latest version ({version})",
+        "error": "Update error: {error}",
+        "check_updates_auto": "Check for updates on startup"
     }
 }
