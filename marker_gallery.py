@@ -87,9 +87,11 @@ class MarkerItem(QFrame):
         """)
 
     def set_pixmap(self, pixmap):
+        print(f"DEBUG: MarkerItem.set_pixmap called for {self.marker_id}")
         scaled = pixmap.scaled(self.thumb_label.size(), Qt.AspectRatioMode.KeepAspectRatioByExpanding, Qt.TransformationMode.SmoothTransformation)
         self.thumb_label.setPixmap(scaled)
         self.thumb_label.setText("")
+        print(f"DEBUG: MarkerItem.set_pixmap finished for {self.marker_id}")
 
     def mousePressEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
@@ -192,9 +194,15 @@ class MarkerGalleryWidget(QFrame):
 
     def update_thumbnail(self, marker_id, pixmap):
         """Update thumbnail for a specific marker."""
+        print(f"DEBUG: MarkerGalleryWidget.update_thumbnail for {marker_id}")
         if marker_id in self.items:
+            print(f"DEBUG: Found marker_id {marker_id} in items")
             self.items[marker_id].set_pixmap(pixmap)
         # Also check if it's a timestamp-based ID (for new markers)
         elif f"ts_{marker_id}" in self.items:
+             print(f"DEBUG: Found ts_{marker_id} in items")
              self.items[f"ts_{marker_id}"].set_pixmap(pixmap)
+        else:
+             print(f"DEBUG: marker_id {marker_id} NOT found in items. Keys: {list(self.items.keys())}")
+        print(f"DEBUG: MarkerGalleryWidget.update_thumbnail finished for {marker_id}")
 

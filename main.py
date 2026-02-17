@@ -38,6 +38,8 @@ from folder_stats_dialog import FolderStatsDialog
 from subtitle_popup import SubtitlePopup, SubtitleButton
 from volume_popup import VolumePopup, VolumeButton
 from placeholders import draw_video_placeholder, draw_library_placeholder
+
+from video_item_data import VideoItemData
 from player import VideoPlayerWidget
 from library import HoverTreeWidget, VideoItemDelegate
 from hotkeys import HotkeyManager
@@ -690,6 +692,7 @@ class VideoCourseBrowser(QMainWindow):
 
     def save_progress(self, position_sec, file_path):
         """Save playback progress."""
+        # print(f"DEBUG: save_progress called for {file_path}", flush=True)
         try:
             # Calculate percent here or let database.py handle it. 
             # Current database.py save_progress expects (file_path, position_sec, duration_sec)
@@ -700,10 +703,13 @@ class VideoCourseBrowser(QMainWindow):
                 return
 
             try:
+                # print("DEBUG: accessing player properties...", flush=True)
                 position = self.video_player.player.time_pos or 0.0
                 duration = int(self.video_player.player.duration or 0)
                 current_volume = int(self.video_player.player.volume or 100)
-            except:
+                # print(f"DEBUG: properties: pos={position}, dur={duration}", flush=True)
+            except Exception as e:
+                print(f"DEBUG: error accessing properties: {e}", flush=True)
                 return
             
             if duration > 0:
@@ -719,7 +725,9 @@ class VideoCourseBrowser(QMainWindow):
             print(f"Error saving progress: {e}")
 
     def periodic_progress_save(self):
+        print("DEBUG: periodic_progress_save START", flush=True)
         if not self.video_player.current_file:
+            print("DEBUG: periodic_progress_save aborted (no file)", flush=True)
             return
 
         file_path = self.video_player.current_file
@@ -729,6 +737,7 @@ class VideoCourseBrowser(QMainWindow):
             duration = int(self.video_player.player.duration or 0)
             current_volume = int(self.video_player.player.volume or 100)
         except Exception as e:
+            print(f"DEBUG: periodic_progress_save error getting properties: {e}", flush=True)
             # print(f"Error getting player state for save: {e}")
             return
 
@@ -741,11 +750,14 @@ class VideoCourseBrowser(QMainWindow):
             try:
                 self.db.save_progress(file_path, position, duration, percent, current_volume)
             except Exception as e:
-                print(f"Error saving progress to DB: {e}")
+                print(f"Error saving progress to DB: {e}", flush=True)
                 return
 
-            self.update_video_item_display(file_path, percent, position)
-            
+            try:
+                print(f"DEBUG: calling update_video_item_display", flush=True)
+                self.update_video_item_display(file_path, percent, position)
+            except Exception as e:
+                print(f"DEBUG: error in update_video_item_display: {e}", flush=True)
             # Update folder stats every 60 seconds (approx)
             # Use specific attribute to track last update for playing file
             current_time = time.time()
@@ -755,6 +767,7 @@ class VideoCourseBrowser(QMainWindow):
             if current_time - self._last_stats_update >= 60:
                 self.update_folder_stats_display(file_path, position, duration, percent)
                 self._last_stats_update = current_time
+        print("DEBUG: periodic_progress_save END", flush=True)
 
     def update_folder_stats_display(self, file_path, position, duration, percent):
         """Update stats of parent folders for the currently playing video."""
@@ -771,13 +784,19 @@ class VideoCourseBrowser(QMainWindow):
         if not data:
             return
             
-        # Unpack stored data
-        # Tuple structure:
-        # 0:filename, 1:duration, 2:resolution, 3:file_size,
-        # 4:watched_percent, 5:thumbnail_path, 6:thumbnails_list, 
-        # 7:last_position, ...
-        stored_percent = data[4]
-        stored_pos = data[7]
+        stored_percent = 0
+        stored_pos = 0
+
+        if isinstance(data, VideoItemData):
+            stored_percent = data.watched_percent
+            stored_pos = data.last_position
+        elif isinstance(data, (tuple, list)):
+            # Tuple structure compatibility
+            if len(data) >= 8:
+                stored_percent = data[4]
+                stored_pos = data[7]
+        else:
+            return
         
         old_w = duration if stored_percent >= 90 else stored_pos
         
@@ -858,11 +877,16 @@ class VideoCourseBrowser(QMainWindow):
             parent = parent.parent()
 
         # Finally, update the own item's stored data so the next delta is correct relative to THIS moment
-        # We need to update existing tuple
-        lst = list(data)
-        lst[4] = percent # watched_percent
-        lst[7] = position # last_position
-        item.setData(0, Qt.ItemDataRole.UserRole + 2, tuple(lst))
+        if isinstance(data, VideoItemData):
+            data.watched_percent = percent
+            data.last_position = position
+            item.setData(0, Qt.ItemDataRole.UserRole + 2, data)
+        elif isinstance(data, (tuple, list)):
+            lst = list(data)
+            if len(lst) > 7:
+                lst[4] = percent # watched_percent
+                lst[7] = position # last_position
+                item.setData(0, Qt.ItemDataRole.UserRole + 2, tuple(lst))
         
         self.course_tree.viewport().update()
 
@@ -873,17 +897,22 @@ class VideoCourseBrowser(QMainWindow):
             if item.data(0, Qt.ItemDataRole.UserRole) == file_path:
                 data = item.data(0, Qt.ItemDataRole.UserRole + 2)
                 if data:
-                    # Handle new data fields safely
-                    if len(data) >= 11:
-                        filename, duration, resolution, file_size, _, thumbnail_path, thumbnails_list, _, marker_count, is_favorite, tags = data[:11]
+                    if isinstance(data, VideoItemData):
+                        data.watched_percent = percent
+                        data.last_position = position
+                        item.setData(0, Qt.ItemDataRole.UserRole + 2, data)
                     else:
-                        filename, duration, resolution, file_size, _, thumbnail_path, thumbnails_list, _, marker_count = data
-                        is_favorite = 0
-                        tags = []
-                        
-                    item.setData(0, Qt.ItemDataRole.UserRole + 2,
-                               (filename, duration, resolution, file_size,
-                                percent, thumbnail_path, thumbnails_list, position, marker_count, is_favorite, tags))
+                        # Handle tuple (legacy)
+                        if len(data) >= 11:
+                            filename, duration, resolution, file_size, _, thumbnail_path, thumbnails_list, _, marker_count, is_favorite, tags = data[:11]
+                        else:
+                            filename, duration, resolution, file_size, _, thumbnail_path, thumbnails_list, _, marker_count = data
+                            is_favorite = 0
+                            tags = []
+                            
+                        item.setData(0, Qt.ItemDataRole.UserRole + 2,
+                                   (filename, duration, resolution, file_size,
+                                    percent, thumbnail_path, thumbnails_list, position, marker_count, is_favorite, tags))
                 break
             iterator += 1
 
@@ -899,18 +928,22 @@ class VideoCourseBrowser(QMainWindow):
             if item.data(0, Qt.ItemDataRole.UserRole) == file_path:
                 data = item.data(0, Qt.ItemDataRole.UserRole + 2)
                 if data:
-                    # Handle new data fields safely
-                    if len(data) >= 11:
-                        filename, duration, resolution, file_size, percent, thumb, thumbs, pos, _, is_favorite, tags = data[:11]
+                    if isinstance(data, VideoItemData):
+                        data.marker_count = new_count
+                        item.setData(0, Qt.ItemDataRole.UserRole + 2, data)
                     else:
-                        filename, duration, resolution, file_size, percent, thumb, thumbs, pos, _ = data
-                        is_favorite = 0
-                        tags = []
-                        
-                    # Update count
-                    item.setData(0, Qt.ItemDataRole.UserRole + 2,
-                                (filename, duration, resolution, file_size,
-                                 percent, thumb, thumbs, pos, new_count, is_favorite, tags))
+                        # Handle new data fields safely (tuple)
+                        if len(data) >= 11:
+                            filename, duration, resolution, file_size, percent, thumb, thumbs, pos, _, is_favorite, tags = data[:11]
+                        else:
+                            filename, duration, resolution, file_size, percent, thumb, thumbs, pos, _ = data
+                            is_favorite = 0
+                            tags = []
+                            
+                        # Update count
+                        item.setData(0, Qt.ItemDataRole.UserRole + 2,
+                                    (filename, duration, resolution, file_size,
+                                     percent, thumb, thumbs, pos, new_count, is_favorite, tags))
                 break
             iterator += 1
         self.course_tree.viewport().update()
@@ -1102,7 +1135,10 @@ class VideoCourseBrowser(QMainWindow):
             # Favorites & Tags
             is_fav = False
             data = item.data(0, Qt.ItemDataRole.UserRole + 2)
-            if data and len(data) >= 10:
+            
+            if isinstance(data, VideoItemData):
+                is_fav = data.is_favorite
+            elif data and len(data) >= 10:
                 is_fav = bool(data[9]) # is_favorite at index 9
 
             fav_text = tr('context_menu.remove_favorite') if is_fav else tr('context_menu.add_favorite')
@@ -1118,7 +1154,10 @@ class VideoCourseBrowser(QMainWindow):
             
             # Get current video tags
             current_tag_ids = set()
-            if data and len(data) >= 11:
+            if isinstance(data, VideoItemData):
+                current_tags = data.tags
+                current_tag_ids = {t['id'] for t in current_tags}
+            elif data and len(data) >= 11:
                 current_tags = data[10]
                 current_tag_ids = {t['id'] for t in current_tags}
             
@@ -1255,14 +1294,31 @@ class VideoCourseBrowser(QMainWindow):
     def toggle_favorite(self, item):
         """Toggle favorite status for item."""
         file_path = item.data(0, Qt.ItemDataRole.UserRole)
-        if self.db.toggle_favorite(file_path):
+        data = item.data(0, Qt.ItemDataRole.UserRole + 2)
+        
+        # Determine current state
+        is_fav = False
+        if isinstance(data, VideoItemData):
+            is_fav = data.is_favorite
+        elif data and len(data) >= 10:
+            is_fav = bool(data[9])
+            
+        new_state = not is_fav
+
+        if self.db.toggle_favorite(file_path, new_state):
             # Refresh this item's data
-            # We can reload courses or just update this item
-            # Updating item is faster
-            data = item.data(0, Qt.ItemDataRole.UserRole + 2)
-            if data and len(data) >= 11:
+            if isinstance(data, VideoItemData):
+                data.is_favorite = new_state
+                item.setData(0, Qt.ItemDataRole.UserRole + 2, data)
+            elif data and len(data) >= 10:
                 lst = list(data)
-                lst[9] = 1 if not lst[9] else 0 # Toggle
+                # Ensure list is long enough
+                while len(lst) < 10:
+                    lst.append(0)
+                if len(lst) == 10:
+                     lst.append([]) # tags
+                
+                lst[9] = 1 if new_state else 0 # Toggle
                 item.setData(0, Qt.ItemDataRole.UserRole + 2, tuple(lst))
             else:
                 self.load_courses() # Fallback
@@ -1276,7 +1332,12 @@ class VideoCourseBrowser(QMainWindow):
             # We need to refresh the tags on the item
             new_tags = self.db.get_video_tags(file_path)
             data = item.data(0, Qt.ItemDataRole.UserRole + 2)
-            if data and len(data) >= 11:
+            
+            if isinstance(data, VideoItemData):
+                data.tags = new_tags
+                item.setData(0, Qt.ItemDataRole.UserRole + 2, data)
+                self.course_tree.viewport().update()
+            elif data and len(data) >= 11:
                 lst = list(data)
                 lst[10] = new_tags
                 item.setData(0, Qt.ItemDataRole.UserRole + 2, tuple(lst))
@@ -1296,7 +1357,21 @@ class VideoCourseBrowser(QMainWindow):
         if success:
             # Update item data
             data = item.data(0, Qt.ItemDataRole.UserRole + 2)
-            if data and len(data) >= 11:
+            
+            if isinstance(data, VideoItemData):
+                current_tags = list(data.tags) # Copy
+                if checked:
+                    if not any(t['id'] == tag['id'] for t in current_tags):
+                        current_tags.append(tag)
+                else:
+                    current_tags = [t for t in current_tags if t['id'] != tag['id']]
+                
+                data.tags = current_tags
+                # Trigger update
+                item.setData(0, Qt.ItemDataRole.UserRole + 2, data) 
+                self.course_tree.viewport().update()
+                
+            elif isinstance(data, (tuple, list)) and len(data) >= 11:
                 lst = list(data)
                 current_tags = list(lst[10]) # Copy the list of tags
                 
@@ -1391,7 +1466,10 @@ class VideoCourseBrowser(QMainWindow):
             iterator += 1
 
     def play_video_in_player(self, item, resume=True, auto_play=True):
+        print(f"DEBUG: play_video_in_player called", flush=True)
         file_path = item.data(0, Qt.ItemDataRole.UserRole)
+        print(f"DEBUG: file_path: {file_path}", flush=True)
+        
         self.last_played_path = file_path
 
         if file_path and Path(file_path).exists():
@@ -1768,16 +1846,26 @@ class VideoCourseBrowser(QMainWindow):
                     except:
                         pass
 
-                # Data for delegate
-                # Tuple structure:
-                # 0:filename, 1:duration, 2:resolution, 3:file_size,
-                # 4:watched_percent, 5:thumbnail_path, 6:thumbnails_list, 
-                # 7:last_position, 8:marker_count, 9:is_favorite, 10:tags
-                video_item.setData(0, Qt.ItemDataRole.UserRole + 2,
-                                  (v['file_name'], v['duration'], v['resolution'], v['file_size'],
-                                   v['watched_percent'] or 0, v['thumbnail_path'], thumbnails_list, 
-                                   v['last_position'] or 0, v['marker_count'] or 0,
-                                   v.get('is_favorite', 0), v.get('tags', [])))
+                # Data for delegate using VideoItemData
+                try:
+                    video_data = VideoItemData(
+                        filename=v['file_name'],
+                        duration=v['duration'],
+                        resolution=v['resolution'],
+                        file_size=v['file_size'],
+                        watched_percent=v['watched_percent'] or 0,
+                        thumbnail_path=v['thumbnail_path'],
+                        thumbnails_list=thumbnails_list,
+                        last_position=v['last_position'] or 0,
+                        marker_count=v['marker_count'] or 0,
+                        is_favorite=bool(v.get('is_favorite', 0)),
+                        tags=v.get('tags', [])
+                    )
+                    video_item.setData(0, Qt.ItemDataRole.UserRole + 2, video_data)
+                except Exception as e:
+                    print(f"CRITICAL ERROR creating VideoItemData for {v.get('file_name')}: {e}")
+                    import traceback
+                    traceback.print_exc()
                 
                 video_item.setIcon(0, self.video_icon)
                 # Disable selection for video rows

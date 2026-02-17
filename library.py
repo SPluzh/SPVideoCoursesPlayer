@@ -10,6 +10,7 @@ from PyQt6.QtGui import (
 
 from translator import tr
 from placeholders import draw_library_placeholder
+from video_item_data import VideoItemData
 
 class VideoItemDelegate(QStyledItemDelegate):
     def __init__(self, config, parent=None):
@@ -125,8 +126,14 @@ class VideoItemDelegate(QStyledItemDelegate):
                 self.thumbnail_cache[path] = None
         return self.thumbnail_cache.get(path)
 
-    def paint(self, painter, option, index):
+    def paint(self, painter, option, index): # Overridden
         try:
+            if not index.isValid():
+                print(f"DEBUG: paint - invalid index at row {index.row()}")
+                return
+
+            # The original code had a commented-out debug print here.
+            # The instruction asks for debug prints, so let's keep it.
             # print(f"DEBUG: paint index {index.row()}") 
             item_type = index.data(Qt.ItemDataRole.UserRole + 1)
             
@@ -139,38 +146,55 @@ class VideoItemDelegate(QStyledItemDelegate):
                 super().paint(painter, option, index)
                 return
 
+            # Re-implement paint_video logic here or call a method
+            # Using existing logic structure
             painter.save()
-            painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-            painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
-            
             data = index.data(Qt.ItemDataRole.UserRole + 2)
             if not data:
-                # print("DEBUG: paint - no data")
+                print(f"DEBUG: paint - no data for index {index.row()}")
                 painter.restore()
                 return
 
             # Unpack with flexibility for new fields
-            # Expects: filename, duration, resolution, file_size, watched_percent, thumbnail_path, thumbnails_list, last_position, marker_count, is_favorite, tags
-            if len(data) >= 11:
-                filename, duration, resolution, file_size, watched_percent, thumbnail_path, thumbnails_list, last_position, marker_count, is_favorite, tags = data[:11]
-            elif len(data) == 9: # Backwards compatibility
-                 filename, duration, resolution, file_size, watched_percent, thumbnail_path, thumbnails_list, last_position, marker_count = data
-                 is_favorite = 0
-                 tags = []
+            # Expects: VideoItemData object or tuple
+            if isinstance(data, VideoItemData):
+                filename = data.filename
+                duration = data.duration
+                resolution = data.resolution
+                file_size = data.file_size
+                watched_percent = data.watched_percent
+                thumbnail_path = data.thumbnail_path
+                thumbnails_list = data.thumbnails_list
+                last_position = data.last_position
+                marker_count = data.marker_count
+                is_favorite = data.is_favorite
+                tags = data.tags
+            elif isinstance(data, (tuple, list)):
+                 # Backwards compatibility
+                 if len(data) >= 11:
+                     filename, duration, resolution, file_size, watched_percent, thumbnail_path, thumbnails_list, last_position, marker_count, is_favorite, tags = data[:11]
+                 elif len(data) == 9: 
+                      filename, duration, resolution, file_size, watched_percent, thumbnail_path, thumbnails_list, last_position, marker_count = data
+                      is_favorite = 0
+                      tags = []
+                 else:
+                      # print(f"DEBUG: paint - unexpected data length: {len(data)}")
+                      # Fallback
+                      filename = "Error"
+                      duration = 0
+                      resolution = ""
+                      file_size = 0
+                      watched_percent = 0
+                      thumbnail_path = None
+                      thumbnails_list = []
+                      last_position = 0
+                      marker_count = 0
+                      is_favorite = 0
+                      tags = []
             else:
-                 print(f"DEBUG: paint - unexpected data length: {len(data)}")
-                 # Fallback
-                 filename = "Error"
-                 duration = 0
-                 resolution = ""
-                 file_size = 0
-                 watched_percent = 0
-                 thumbnail_path = None
-                 thumbnails_list = []
-                 last_position = 0
-                 marker_count = 0
-                 is_favorite = 0
-                 tags = []
+                # Invalid data type
+                painter.restore()
+                return
 
             display_width = self.config['display_width']
             display_height = self.config['display_height']
