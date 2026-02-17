@@ -730,7 +730,7 @@ class HoverTreeWidget(QTreeWidget):
 
                         # Update hover state in delegate
                         if index != self.current_hover_index:
-                            logging.debug(f"New hover index: {index.row()}")
+                            # logging.debug(f"New hover index: {index.row()}")
                             self.current_hover_index = index
                             self.thumbnail_frame = 0
                             delegate.set_hovered_index(index, 0, mouse_pos=event.pos())
@@ -745,10 +745,8 @@ class HoverTreeWidget(QTreeWidget):
                 else:
                     self.viewport().setCursor(Qt.CursorShape.ArrowCursor)
             else:
-                pass
-                # self.viewport().setCursor(Qt.CursorShape.ArrowCursor)
-
-            self.stop_hover()
+                self.viewport().setCursor(Qt.CursorShape.ArrowCursor)
+                self.stop_hover()
         except Exception as e:
             logging.error(f"ERROR in mouseMoveEvent: {e}", exc_info=True)
 
