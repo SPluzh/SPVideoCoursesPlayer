@@ -56,7 +56,7 @@ class SubtitlePopup(QWidget):
         list_section.setContentsMargins(0, 0, 0, 0)
         
         self.list_title_label = QLabel(tr('player.tooltip_subtitle_track'))
-        self.list_title_label.setStyleSheet("color: #aaa; font-size: 10px;")
+        self.list_title_label.setObjectName("subtitleLabel")
         self.list_title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.list_title_label.setFixedHeight(12)
         list_section.addWidget(self.list_title_label)
@@ -91,7 +91,7 @@ class SubtitlePopup(QWidget):
         size_layout.setSpacing(4)
         
         self.size_title_label = QLabel(tr('player.subtitle_size'))
-        self.size_title_label.setStyleSheet("color: #aaa; font-size: 10px;")
+        self.size_title_label.setObjectName("subtitleLabel")
         self.size_title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.size_title_label.setFixedHeight(12)
         size_layout.addWidget(self.size_title_label)
@@ -113,7 +113,7 @@ class SubtitlePopup(QWidget):
         text_layout = QVBoxLayout()
         text_layout.setSpacing(2)
         self.text_title_label = QLabel(tr('player.subtitle_text'))
-        self.text_title_label.setStyleSheet("color: #aaa; font-size: 10px;")
+        self.text_title_label.setObjectName("subtitleLabel")
         self.text_title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.text_title_label.setFixedHeight(12)
         self.text_title_label.setContentsMargins(0, 0, 0, 0)
@@ -131,7 +131,7 @@ class SubtitlePopup(QWidget):
         outline_layout = QVBoxLayout()
         outline_layout.setSpacing(2)
         self.outline_title_label = QLabel(tr('player.subtitle_outline'))
-        self.outline_title_label.setStyleSheet("color: #aaa; font-size: 10px;")
+        self.outline_title_label.setObjectName("subtitleLabel")
         self.outline_title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.outline_title_label.setFixedHeight(12)
         self.outline_title_label.setContentsMargins(0, 0, 0, 0)
@@ -151,51 +151,8 @@ class SubtitlePopup(QWidget):
         self.selected_index = -1
         self.items_data = []  # [(track_id, label), ...]
         
-        self.setStyleSheet("""
-            QWidget#subtitlePopup {
-                background-color: #444444;
-                border: 1px solid #555;
-                border-radius: 3px;
-            }
-            QListWidget#subtitleList {
-                background-color: #3a3a3a;
-                border: none;
-                outline: none;
-            }
-            QListWidget#subtitleList::item {
-                padding: 6px 10px;
-                color: #eaeaea;
-                border-bottom: 1px solid #484848;
-            }
-            QListWidget#subtitleList::item:hover {
-                background-color: #505050;
-            }
-            QListWidget#subtitleList::item:selected {
-                background-color: #018574;
-            }
-            QPushButton {
-                background-color: #373737;
-                color: #eaeaea;
-                border: 1px solid #808080;
-                padding: 0px;
-                margin: 0px;
-                font-weight: 500;
-                border-radius: 3px;
-                min-width: 30px;
-                min-height: 30px;
-            }
-            QPushButton:hover {
-                background-color: #018574;
-                border-color: #018574;
-            }
-            QPushButton:pressed {
-                background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #00634d, stop:1 #018574);
-            }
-            QLabel {
-                color: #aaa;
-                border: none;
-            }
-        """)
+        self.selected_index = -1
+        self.items_data = []  # [(track_id, label), ...]
         
         # Professional cinema text colors
         self.text_colors = [
@@ -215,7 +172,7 @@ class SubtitlePopup(QWidget):
     def _show_color_palette(self, target_btn, current_color, signal_name, colors):
         """Show mini color palette."""
         palette = QWidget(self, Qt.WindowType.Popup)
-        palette.setStyleSheet("background-color: #444; border: 1px solid #555; padding: 5px; border-radius: 3px;")
+        palette.setObjectName("colorPalette")
         layout = QGridLayout(palette)
         layout.setContentsMargins(5, 5, 5, 5)
         layout.setSpacing(3)
@@ -226,7 +183,7 @@ class SubtitlePopup(QWidget):
             col = i % cols
             btn = QPushButton()
             btn.setFixedSize(33, 33)
-            btn.setStyleSheet(f"background-color: {color}; border: 1px solid #666; border-radius: 3px; min-width: 0px; min-height: 0px;")
+            btn.setStyleSheet(f"background-color: {color};") # Keep background color in Python
             btn.clicked.connect(lambda checked, c=color: self._apply_color(c, target_btn, signal_name, palette))
             layout.addWidget(btn, row, col)
         
@@ -267,7 +224,7 @@ class SubtitlePopup(QWidget):
     
     def _apply_color(self, color, target_btn, signal_name, palette):
         """Apply selected color."""
-        target_btn.setStyleSheet(f"background-color: {color}; border: 1px solid #808080; border-radius: 3px; padding: 0px; margin: 0px; min-width: 64px; min-height: 30px;")
+        target_btn.setStyleSheet(f"background-color: {color};")
         if signal_name == "sub-color":
             self.text_color = color
         else:
@@ -346,10 +303,10 @@ class SubtitlePopup(QWidget):
         super().hideEvent(event)
 
     def _update_text_color_btn(self):
-        self.text_color_btn.setStyleSheet(f"background-color: {self.text_color}; border: 1px solid #808080; padding: 0px; margin: 0px; min-width: 64px; min-height: 30px;")
+        self.text_color_btn.setStyleSheet(f"background-color: {self.text_color};")
 
     def _update_outline_color_btn(self):
-        self.outline_color_btn.setStyleSheet(f"background-color: {self.outline_color}; border: 1px solid #808080; padding: 0px; margin: 0px; min-width: 64px; min-height: 30px;")
+        self.outline_color_btn.setStyleSheet(f"background-color: {self.outline_color};")
 
     def update_texts(self):
         """Update texts on language change."""

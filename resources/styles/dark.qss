@@ -800,6 +800,311 @@ QDialog#FolderStatsDialog {
     font-family: 'Segoe UI', Arial, sans-serif;
 }
 
+/* ============================================================
+   ABOUT DIALOG
+   ============================================================ */
+
+#aboutContainer {
+    background-color: #2b2b2b;
+    border: 1px solid #444;
+    border-radius: 3px;
+}
+
+#aboutContainer QLabel {
+    color: #ccc;
+}
+
+#aboutTitle {
+    font-size: 24px;
+    font-weight: bold;
+    color: white;
+}
+
+#aboutVersion {
+    font-size: 14px;
+    color: #888;
+    margin-bottom: 10px;
+}
+
+#aboutSeparator {
+    background-color: #444;
+}
+
+#aboutDescription {
+    font-size: 13px;
+    line-height: 140%;
+    margin: 10px 0;
+}
+
+#aboutCloseBtn {
+    background-color: #444;
+    color: white;
+    border: none;
+    padding: 8px;
+    border-radius: 3px;
+    font-weight: bold;
+}
+
+#aboutCloseBtn:hover {
+    background-color: #555;
+}
+
+#aboutCloseBtn:pressed {
+    background-color: #333;
+}
+
+/* ============================================================
+   PICTURE-IN-PICTURE (PIP)
+   ============================================================ */
+
+#pipCloseBtn {
+    background-color: rgba(0, 0, 0, 150);
+    color: white;
+    border: none;
+    font-weight: bold;
+    border-radius: 0px;
+}
+
+#pipCloseBtn:hover {
+    background-color: rgba(255, 0, 0, 200);
+}
+
+/* ============================================================
+   MARKER DIALOG
+   ============================================================ */
+
+.MarkerColorBtn {
+    border: 1px solid #808080;
+    border-radius: 3px;
+}
+
+.MarkerColorBtn[selected="true"] {
+    border: 2px solid white;
+}
+
+/* ============================================================
+   MARKER GALLERY
+   ============================================================ */
+
+MarkerItem {
+    background-color: rgba(42, 42, 42, 180);
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 30);
+}
+
+MarkerItem:hover {
+    background-color: rgba(60, 60, 60, 220);
+    border: 1px solid rgba(255, 255, 255, 80);
+}
+
+#markerThumb {
+    background-color: #000000;
+    border: 1px solid rgba(255, 255, 255, 30);
+    border-radius: 4px;
+}
+
+#markerTimeLabel {
+    background-color: rgba(0, 0, 0, 180);
+    color: #ffffff;
+    border-radius: 3px;
+    padding: 1px 4px;
+    font-size: 10px;
+    font-weight: bold;
+}
+
+#markerTitleLabel {
+    background-color: rgba(30, 30, 30, 200);
+    color: #eaeaea;
+    border-radius: 4px;
+    padding: 2px 6px;
+    font-size: 11px;
+}
+
+MarkerGalleryWidget {
+    background-color: rgba(10, 10, 10, 150);
+    border: 1px solid rgba(255, 255, 255, 20);
+    border-radius: 10px;
+}
+
+#markerGalleryScroll, #markerGalleryContent {
+    background: transparent;
+    border: none;
+}
+
+#noMarkersLabel {
+    background-color: rgba(0, 0, 0, 100);
+    color: #aaaaaa;
+    border-radius: 6px;
+    padding: 10px 20px;
+    font-size: 13px;
+    border: 1px solid rgba(255, 255, 255, 20);
+}
+
+/* ============================================================
+   PREVIEW POPUP
+   ============================================================ */
+
+PreviewPopup {
+    background-color: #1e1e1e;
+    border: 1px solid #333333;
+    border-radius: 6px;
+    color: #ffffff;
+}
+
+PreviewPopup QLabel {
+    border: none;
+    background-color: transparent;
+}
+
+#subtitleLabel {
+    color: #aaa;
+    font-size: 10px;
+}
+
+#volumePercentLabel {
+    color: #eaeaea;
+    font-size: 12px;
+}
+
+#previewThumb {
+    background-color: #000000;
+    border-radius: 4px;
+}
+
+#previewTimeLabel {
+    background-color: #444444; 
+    color: #eaeaea;
+    border-radius: 3px; 
+    padding: 2px 6px; 
+    font-weight: bold; 
+    font-size: 12px;
+}
+
+/* ============================================================
+   SETTINGS DIALOG
+   ============================================================ */
+
+#clearDataBtn {
+    background-color: #8B0000;
+    color: white;
+    font-weight: bold;
+}
+
+#clearDataBtn:hover {
+    background-color: #a00000;
+}
+
+/* ============================================================
+   SUBTITLE & VOLUME POPUPS
+   ============================================================ */
+
+#subtitlePopup, #volumePopup {
+    background-color: #444444;
+    border: 1px solid #555;
+    border-radius: 3px;
+}
+
+#subtitleList, #audioList {
+    background-color: #3a3a3a;
+    border: none;
+    outline: none;
+}
+
+#subtitleList::item, #audioList::item {
+    padding: 6px 10px;
+    color: #eaeaea;
+    border-bottom: 1px solid #484848;
+}
+
+#subtitleList::item:hover, #audioList::item:hover {
+    background-color: #505050;
+}
+
+#subtitleList::item:selected, #audioList::item:selected {
+    background-color: @accent;
+}
+
+#textColorBtn, #outlineColorBtn {
+    border: 1px solid #808080;
+    border-radius: 3px;
+    padding: 0px;
+    margin: 0px;
+    min-width: 64px;
+    min-height: 30px;
+}
+
+#popupSubtitleToggle {
+    background-color: #373737;
+    border: 1px solid #808080;
+    border-radius: 3px;
+}
+
+#popupSubtitleToggle:hover {
+    background-color: @accent;
+    border-color: @accent;
+}
+
+#volumeSlider::groove:vertical {
+    background: #808080;
+    width: 11px;
+}
+
+#volumeSlider::handle:vertical {
+    background: @accent;
+    width: 16px;
+    height: 16px;
+    margin: 0 -4px;
+    border: 2px solid #373737;
+}
+
+#volumeSlider::handle:vertical:hover {
+    background: @accent-hover;
+}
+
+#volumeSlider::handle:vertical:pressed {
+    background: @accent-pressed;
+}
+
+#volumeSlider::sub-page:vertical {
+    background: #808080;
+}
+
+#volumeSlider::add-page:vertical {
+    background: @accent;
+}
+
+/* Dynamic volume levels */
+#volumeSlider[level="warning"]::add-page:vertical {
+    background: @status-warning;
+}
+
+#volumeSlider[level="danger"]::add-page:vertical {
+    background: @status-error;
+}
+
+/* ============================================================
+   TAGS DIALOG
+   ============================================================ */
+
+#TagColorBtn {
+    border-radius: 3px;
+    border: 1px solid #808080;
+}
+
+#TagBadge {
+    border-radius: 3px;
+    padding: 2px 5px;
+    font-size: 12px;
+    color: white;
+}
+
+#colorPalette {
+    background-color: #444;
+    border: 1px solid #555;
+    padding: 5px;
+    border-radius: 3px;
+}
+
 /* Cards/Containers */
 #FolderStatsDialog QFrame {
     background-color: @bg-dark;

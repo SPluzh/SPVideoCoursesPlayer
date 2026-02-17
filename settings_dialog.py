@@ -99,8 +99,8 @@ class SettingsDialog(QDialog):
         storage_layout = QVBoxLayout()
         
         self.clear_data_btn = QPushButton(tr('settings.clear_data'))
+        self.clear_data_btn.setObjectName("clearDataBtn")
         self.clear_data_btn.setIcon(self.icons.get('delete', QIcon()))
-        self.clear_data_btn.setStyleSheet("background-color: #8B0000; color: white; font-weight: bold;")
         self.clear_data_btn.clicked.connect(self.clear_metadata)
         storage_layout.addWidget(self.clear_data_btn)
         

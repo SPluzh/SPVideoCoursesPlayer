@@ -29,8 +29,8 @@ class MarkerItem(QFrame):
         
         # Thumbnail Label
         self.thumb_label = QLabel()
+        self.thumb_label.setObjectName("markerThumb")
         self.thumb_label.setFixedSize(170, 96) # 16:9 approx
-        self.thumb_label.setStyleSheet("background-color: #000000; border: 1px solid rgba(255, 255, 255, 30); border-radius: 4px;")
         self.thumb_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.thumb_label.setText("...")
         layout.addWidget(self.thumb_label)
@@ -41,15 +41,8 @@ class MarkerItem(QFrame):
         time_str = f"{h:02d}:{m:02d}:{s:02d}" if h > 0 else f"{m:02d}:{s:02d}"
         
         self.time_label = QLabel(time_str, self.thumb_label)
+        self.time_label.setObjectName("markerTimeLabel")
         self.time_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.time_label.setStyleSheet("""
-            background-color: rgba(0, 0, 0, 180);
-            color: #ffffff;
-            border-radius: 3px;
-            padding: 1px 4px;
-            font-size: 10px;
-            font-weight: bold;
-        """)
         
         # Position time_label at the bottom right of thumb_label
         thumb_layout = QVBoxLayout(self.thumb_label)
@@ -62,30 +55,12 @@ class MarkerItem(QFrame):
         
         # Title Label with plate
         self.title_label = QLabel(self.label_text)
+        self.title_label.setObjectName("markerTitleLabel")
         self.title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.title_label.setStyleSheet(f"""
-            background-color: rgba(30, 30, 30, 200);
-            color: #eaeaea;
-            border: 1px solid {self.color};
-            border-radius: 4px;
-            padding: 2px 6px;
-            font-size: 11px;
-        """)
+        # Structural styles in QSS, only border color (marker specific) remains here
+        self.title_label.setStyleSheet(f"border: 1px solid {self.color};")
         self.title_label.setWordWrap(False)
         layout.addWidget(self.title_label, 0, Qt.AlignmentFlag.AlignCenter)
-
-        
-        self.setStyleSheet(f"""
-            MarkerItem {{
-                background-color: rgba(42, 42, 42, 180);
-                border-radius: 8px;
-                border: 1px solid rgba(255, 255, 255, 30);
-            }}
-            MarkerItem:hover {{
-                background-color: rgba(60, 60, 60, 220);
-                border: 1px solid rgba(255, 255, 255, 80);
-            }}
-        """)
 
     def set_pixmap(self, pixmap):
         logging.debug(f"MarkerItem.set_pixmap called for {self.marker_id}")
@@ -122,13 +97,6 @@ class MarkerGalleryWidget(QFrame):
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         self.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.setFixedHeight(200)
-        self.setStyleSheet("""
-            MarkerGalleryWidget {
-                background-color: rgba(10, 10, 10, 150);
-                border: 1px solid rgba(255, 255, 255, 20);
-                border-radius: 10px;
-            }
-        """)
         
         layout = QVBoxLayout(self)
         layout.setContentsMargins(10, 5, 10, 25)
@@ -139,10 +107,10 @@ class MarkerGalleryWidget(QFrame):
         self.scroll.setWidgetResizable(True)
         self.scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         self.scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self.scroll.setStyleSheet("background: transparent; border: none;")
+        self.scroll.setObjectName("markerGalleryScroll")
         
         self.content_widget = QWidget()
-        self.content_widget.setStyleSheet("background: transparent;")
+        self.content_widget.setObjectName("markerGalleryContent")
         self.content_layout = QHBoxLayout(self.content_widget)
         self.content_layout.setContentsMargins(0, 0, 0, 0)
         self.content_layout.setSpacing(10)
@@ -176,14 +144,7 @@ class MarkerGalleryWidget(QFrame):
             
         if not sorted_markers:
             lbl = QLabel(tr('player.no_markers') or "No markers found")
-            lbl.setStyleSheet("""
-                background-color: rgba(0, 0, 0, 100);
-                color: #aaaaaa;
-                border-radius: 6px;
-                padding: 10px 20px;
-                font-size: 13px;
-                border: 1px solid rgba(255, 255, 255, 20);
-            """)
+            lbl.setObjectName("noMarkersLabel")
             lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
             # Center the label in the layout
             container = QWidget()

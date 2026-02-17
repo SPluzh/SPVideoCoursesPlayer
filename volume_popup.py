@@ -30,7 +30,7 @@ class VolumePopup(QWidget):
         self.list_layout.setSpacing(4)
         
         list_lbl = QLabel(tr('player.tooltip_audio_track'))
-        list_lbl.setStyleSheet("color: #aaa; font-size: 10px;")
+        list_lbl.setObjectName("subtitleLabel") # Use same style as subtitle labels
         list_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.audio_title_label = list_lbl
         self.list_layout.addWidget(list_lbl)
@@ -49,8 +49,8 @@ class VolumePopup(QWidget):
         
         # Separator
         sep = QFrame()
+        sep.setObjectName("aboutSeparator") # Re-use about separator style
         sep.setFrameShape(QFrame.Shape.VLine)
-        sep.setStyleSheet("background-color: #555;")
         main_layout.addWidget(sep)
         
         # Right side: volume slider
@@ -59,8 +59,8 @@ class VolumePopup(QWidget):
         slider_layout.setContentsMargins(5, 0, 5, 0)
         
         self.label = QLabel("100%")
+        self.label.setObjectName("volumePercentLabel") # NEW ID
         self.label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.label.setStyleSheet("color: #eaeaea; font-size: 12px;")
         slider_layout.addWidget(self.label)
         
         self.slider = QSlider(Qt.Orientation.Vertical)
@@ -123,69 +123,17 @@ class VolumePopup(QWidget):
     def _update_label(self, value):
         self.label.setText(f"{value}%")
         
-        # Dynamic color only for active part (add-page)
-        if value <= 100:
-            groove_color = "#018574" # Teal
-        elif value <= 150:
-            groove_color = "#cd950c" # Yellow / Gold
-        else:
-            groove_color = "#d32f2f" # Red
+        # Dynamic property for volume levels
+        level = "normal"
+        if value > 150:
+            level = "danger"
+        elif value > 100:
+            level = "warning"
             
-        # Handle always remains teal
-        handle_color = "#018574"
-        handle_hover = "#02a58a"
-        handle_pressed = "#00634d"
-            
-        self.setStyleSheet(f"""
-            QWidget#volumePopup {{
-                background-color: #444444;
-                border: 1px solid #555;
-                border-radius: 3px;
-            }}
-            QSlider::groove:vertical {{
-                background: #808080;
-                width: 11px;
-            }}
-            QSlider::handle:vertical {{
-                background: {handle_color};
-                width: 16px;
-                height: 16px;
-                margin: 0 -4px;
-                border: 2px solid #373737;
-            }}
-            QSlider::handle:vertical:hover {{
-                background: {handle_hover};
-            }}
-            QSlider::handle:vertical:pressed {{
-                background: {handle_pressed};
-            }}
-            QSlider::sub-page:vertical {{
-                background: #808080;
-            }}
-            QSlider::add-page:vertical {{
-                background: {groove_color};
-            }}
-            QListWidget#audioList {{
-                background-color: #3a3a3a;
-                border: none;
-                outline: none;
-            }}
-            QListWidget#audioList::item {{
-                padding: 6px 10px;
-                color: #eaeaea;
-                border-bottom: 1px solid #484848;
-            }}
-            QListWidget#audioList::item:hover {{
-                background-color: #505050;
-            }}
-            QListWidget#audioList::item:selected {{
-                background-color: #018574;
-            }}
-            QLabel {{
-                border: none;
-                color: #aaa;
-            }}
-        """)
+        if self.slider.property("level") != level:
+            self.slider.setProperty("level", level)
+            self.slider.style().unpolish(self.slider)
+            self.slider.style().polish(self.slider)
 
     def hideEvent(self, event):
         # Notify parent button when closed

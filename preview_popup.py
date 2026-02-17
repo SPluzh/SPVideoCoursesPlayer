@@ -25,39 +25,20 @@ class PreviewPopup(QWidget):
         self.layout.setContentsMargins(5, 5, 5, 5)
         self.layout.setSpacing(5)
         
-        # Container style
-        self.setStyleSheet("""
-            QWidget {
-                background-color: #1e1e1e;
-                border: 1px solid #333333;
-                border-radius: 6px;
-                color: #ffffff;
-            }
-            QLabel {
-                border: none;
-                background-color: transparent;
-            }
-        """)
+        # Container style done via PreviewPopup selector in QSS
 
         # Thumbnail Label
         self.thumb_label = QLabel()
+        self.thumb_label.setObjectName("previewThumb")
         self.thumb_label.setFixedSize(200, 112) # 16:9 ratio approx
         self.thumb_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.thumb_label.setStyleSheet("background-color: #000000; border-radius: 4px;")
         self.thumb_label.setText("...") 
         self.layout.addWidget(self.thumb_label)
         
         # Time Label
         self.time_label = QLabel("00:00")
+        self.time_label.setObjectName("previewTimeLabel")
         self.time_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.time_label.setStyleSheet("""
-            background-color: #444444; 
-            color: #eaeaea;
-            border-radius: 3px; 
-            padding: 2px 6px; 
-            font-weight: bold; 
-            font-size: 12px;
-        """)
         self.layout.addWidget(self.time_label)
 
         # State

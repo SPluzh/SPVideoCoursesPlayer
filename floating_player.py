@@ -51,20 +51,9 @@ class FloatingVideoWindow(QWidget):
         
         # Close button (overlay)
         self.close_btn = QPushButton("✕", self)
+        self.close_btn.setObjectName("pipCloseBtn")
         self.close_btn.setFixedSize(24, 24)
         self.close_btn.setCursor(Qt.CursorShape.ArrowCursor)
-        self.close_btn.setStyleSheet("""
-            QPushButton {
-                background-color: rgba(0, 0, 0, 150);
-                color: white;
-                border: none;
-                font-weight: bold;
-                border-radius: 0px;
-            }
-            QPushButton:hover {
-                background-color: rgba(255, 0, 0, 200);
-            }
-        """)
         self.close_btn.clicked.connect(self.request_close)
         self.close_btn.hide()
         

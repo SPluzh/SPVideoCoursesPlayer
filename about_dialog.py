@@ -35,14 +35,6 @@ class AboutDialog(QDialog):
         # Container frame
         self.container = QFrame()
         self.container.setObjectName("aboutContainer")
-        self.container.setStyleSheet("""
-            QFrame#aboutContainer {
-                background-color: #2b2b2b;
-                border: 1px solid #444;
-                border-radius: 3px;
-            }
-            QLabel { color: #ccc; }
-        """)
         
         container_layout = QVBoxLayout(self.container)
         container_layout.setContentsMargins(30, 40, 30, 30)
@@ -50,48 +42,37 @@ class AboutDialog(QDialog):
         
         # Title
         title = QLabel(tr('app.title'))
+        title.setObjectName("aboutTitle")
         title.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        title.setStyleSheet("font-size: 24px; font-weight: bold; color: white;")
         container_layout.addWidget(title)
         
         # Version
         version_text = self.get_app_version()
         version = QLabel(tr('about.version', version=version_text))
+        version.setObjectName("aboutVersion")
         version.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        version.setStyleSheet("font-size: 14px; color: #888; margin-bottom: 10px;")
         container_layout.addWidget(version)
         
         # Separator
         line = QFrame()
+        line.setObjectName("aboutSeparator")
         line.setFrameShape(QFrame.Shape.HLine)
-        line.setStyleSheet("background-color: #444;")
         container_layout.addWidget(line)
         
         # Description
         desc = QLabel(tr('about.description'))
+        desc.setObjectName("aboutDescription")
         desc.setAlignment(Qt.AlignmentFlag.AlignCenter)
         desc.setWordWrap(True)
-        desc.setStyleSheet("font-size: 13px; line-height: 140%; margin: 10px 0;")
         container_layout.addWidget(desc)
         
         container_layout.addSpacing(10)
         
         # Close Button
         close_btn = QPushButton(tr('about.close'))
+        close_btn.setObjectName("aboutCloseBtn")
         close_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         close_btn.setFixedWidth(120)
-        close_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #444;
-                color: white;
-                border: none;
-                padding: 8px;
-                border-radius: 3px;
-                font-weight: bold;
-            }
-            QPushButton:hover { background-color: #555; }
-            QPushButton:pressed { background-color: #333; }
-        """)
         close_btn.clicked.connect(self.accept)
         container_layout.addWidget(close_btn, 0, Qt.AlignmentFlag.AlignCenter)
         
