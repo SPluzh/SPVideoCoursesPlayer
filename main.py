@@ -1954,7 +1954,9 @@ class VideoCourseBrowser(QMainWindow):
         is_favorite = False
         if item_type == 'video':
             data = item.data(0, Qt.ItemDataRole.UserRole + 2)
-            if data and len(data) >= 10:
+            if isinstance(data, VideoItemData):
+                is_favorite = data.is_favorite
+            elif data and len(data) >= 10:
                 is_favorite = bool(data[9])
 
         # Tag check
@@ -1962,7 +1964,10 @@ class VideoCourseBrowser(QMainWindow):
         if tag_ids is not None and item_type == 'video':
             # Tags are stored in UserRole + 2, at index 10
             data = item.data(0, Qt.ItemDataRole.UserRole + 2)
-            if data and len(data) >= 11:
+            if isinstance(data, VideoItemData):
+                item_tags = data.tags
+                tag_match = any(t['id'] in tag_ids for t in item_tags)
+            elif data and len(data) >= 11:
                 item_tags = data[10]
                 tag_match = any(t['id'] in tag_ids for t in item_tags)
             else:
@@ -1972,7 +1977,10 @@ class VideoCourseBrowser(QMainWindow):
         text_matches_item = query in item_text
         if query and not text_matches_item and item_type == 'video':
             data = item.data(0, Qt.ItemDataRole.UserRole + 2)
-            if data and len(data) >= 11:
+            if isinstance(data, VideoItemData):
+                item_tags = data.tags
+                text_matches_item = any(query in t['name'].lower() for t in item_tags)
+            elif data and len(data) >= 11:
                 item_tags = data[10]
                 text_matches_item = any(query in t['name'].lower() for t in item_tags)
 
