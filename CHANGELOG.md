@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.3.1]
+- **UI**: Added a **hotkey hint list** to the "About" dialog.
+
 ## [1.3.0]
 - **Auto-Update**: Implemented a comprehensive auto-update system using GitHub Releases
 
