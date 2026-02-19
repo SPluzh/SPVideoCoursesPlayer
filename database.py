@@ -381,6 +381,14 @@ class DatabaseManager:
                 """)
                 tags_rows = c.fetchall()
                 
+                # Get all markers for all videos
+                c.execute("""
+                    SELECT video_id, position_seconds, label, color 
+                    FROM video_markers
+                    ORDER BY position_seconds
+                """)
+                markers_rows = c.fetchall()
+                
                 # Map tags by video_id
                 tags_map = {}
                 for row in tags_rows:
@@ -390,9 +398,23 @@ class DatabaseManager:
                         tags_map[vid] = []
                     tags_map[vid].append(tag)
                 
-                # Attach tags to videos
+                # Map markers by video_id
+                markers_map = {}
+                for row in markers_rows:
+                    vid = row['video_id']
+                    marker = {
+                        'position_seconds': row['position_seconds'],
+                        'label': row['label'],
+                        'color': row['color']
+                    }
+                    if vid not in markers_map:
+                        markers_map[vid] = []
+                    markers_map[vid].append(marker)
+                
+                # Attach tags and markers to videos
                 for video in videos:
                     video['tags'] = tags_map.get(video['id'], [])
+                    video['markers'] = markers_map.get(video['id'], [])
                 
                 return folders, videos
         except Exception as e:

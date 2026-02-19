@@ -981,10 +981,11 @@ class VideoCourseBrowser(QMainWindow):
         self.course_tree.viewport().update()
 
     def on_markers_changed(self, file_path):
-        """Update marker count in library when markers are added/removed."""
+        """Update marker count and list in library when markers are added/removed."""
         new_count = self.db.get_marker_count(file_path)
+        new_markers = self.db.get_markers(file_path)
         
-        iterator = QTreeWidgetItemIterator(self.course_tree)
+        iterator = QTreeWidgetItemIterator(self.course_tree, QTreeWidgetItemIterator.IteratorFlag.All)
         while iterator.value():
             item = iterator.value()
             if item.data(0, Qt.ItemDataRole.UserRole) == file_path:
@@ -992,23 +993,25 @@ class VideoCourseBrowser(QMainWindow):
                 if data:
                     if isinstance(data, VideoItemData):
                         data.marker_count = new_count
+                        data.markers = new_markers
                         item.setData(0, Qt.ItemDataRole.UserRole + 2, data)
-                    else:
-                        # Handle new data fields safely (tuple)
+                    elif isinstance(data, (tuple, list)):
+                        # Legacy tuple handling
                         if len(data) >= 11:
-                            filename, duration, resolution, file_size, percent, thumb, thumbs, pos, _, is_favorite, tags = data[:11]
+                            lst = list(data)
+                            lst[8] = new_count
+                            item.setData(0, Qt.ItemDataRole.UserRole + 2, tuple(lst))
                         else:
-                            filename, duration, resolution, file_size, percent, thumb, thumbs, pos, _ = data
-                            is_favorite = 0
-                            tags = []
-                            
-                        # Update count
-                        item.setData(0, Qt.ItemDataRole.UserRole + 2,
-                                    (filename, duration, resolution, file_size,
-                                     percent, thumb, thumbs, pos, new_count, is_favorite, tags))
+                             # Try to upgrade to VideoItemData if possible, or just ignore
+                             pass
+
+                # If filter is active, re-apply it
+                if self.search_edit.text() or self.fav_filter_btn.isChecked() or self.tag_filter_btn.isChecked():
+                    self.filter_library(self.search_edit.text())
+                
+                self.course_tree.viewport().update()
                 break
             iterator += 1
-        self.course_tree.viewport().update()
 
     def on_video_finished(self):
         """Handle video completion with a delay to ensure stability."""
@@ -1952,7 +1955,8 @@ class VideoCourseBrowser(QMainWindow):
                         last_position=v['last_position'] or 0,
                         marker_count=v['marker_count'] or 0,
                         is_favorite=bool(v.get('is_favorite', 0)),
-                        tags=v.get('tags', [])
+                        tags=v.get('tags', []),
+                        markers=v.get('markers', [])
                     )
                     video_item.setData(0, Qt.ItemDataRole.UserRole + 2, video_data)
                 except Exception as e:
@@ -2071,6 +2075,9 @@ class VideoCourseBrowser(QMainWindow):
             if isinstance(data, VideoItemData):
                 item_tags = data.tags
                 text_matches_item = any(query in t['name'].lower() for t in item_tags)
+                if not text_matches_item and data.markers:
+                     text_matches_item = any(query in m['label'].lower() for m in data.markers)
+
             elif data and len(data) >= 11:
                 item_tags = data[10]
                 text_matches_item = any(query in t['name'].lower() for t in item_tags)

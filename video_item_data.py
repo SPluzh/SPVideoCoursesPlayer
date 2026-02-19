@@ -14,3 +14,4 @@ class VideoItemData:
     marker_count: int
     is_favorite: bool
     tags: List[dict] = field(default_factory=list)
+    markers: List[dict] = field(default_factory=list)
