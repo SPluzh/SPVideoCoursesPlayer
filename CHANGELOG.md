@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.3.2]
+- **Library**:
+    - Markers are now displayed as a list under each video.
+    - Added a button to toggle marker visibility.
+    - Added search by markers.
+
 ## [1.3.1]
 - **UI**: Added a **hotkey hint list** to the "About" dialog.
 

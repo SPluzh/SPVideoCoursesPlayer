@@ -1,7 +1,8 @@
 {
     "app": {
         "title": "SP Video Courses Player",
-        "version": "1.0"
+        "version": "1.0",
+        "error": "Error"
     },
     "menu": {
         "library": "Library",
@@ -28,7 +29,8 @@
         "filter_tags": "Filter by tags",
         "select_all": "Select All",
         "deselect_all": "Deselect All",
-        "no_tags_available": "No tags available"
+        "no_tags_available": "No tags available",
+        "show_markers": "Show Markers"
     },
     "settings": {
         "title": "Settings",
@@ -133,7 +135,8 @@
             "mono": "Mono",
             "mono_tooltip": "Mono Mode"
         },
-        "filter_tags": "Filter by tags"
+        "filter_tags": "Filter by tags",
+        "file_not_found": "File not found"
     },
     "status": {
         "ready": "Ready",

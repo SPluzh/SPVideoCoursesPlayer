@@ -1,7 +1,8 @@
 {
     "app": {
         "title": "SP Video Courses Player",
-        "version": "1.0"
+        "version": "1.0",
+        "error": "Ошибка"
     },
     "menu": {
         "library": "Библиотека",
@@ -28,7 +29,8 @@
         "filter_tags": "Фильтр по тегам",
         "select_all": "Выбрать все",
         "deselect_all": "Снять все",
-        "no_tags_available": "Теги отсутствуют"
+        "no_tags_available": "Теги отсутствуют",
+        "show_markers": "Показать маркеры"
     },
     "settings": {
         "title": "Настройки",
@@ -133,7 +135,8 @@
             "mono": "Моно",
             "mono_tooltip": "Моно режим"
         },
-        "filter_tags": "Фильтр по тегам"
+        "filter_tags": "Фильтр по тегам",
+        "file_not_found": "Файл не найден"
     },
     "status": {
         "error": "Ошибка",
