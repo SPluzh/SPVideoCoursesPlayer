@@ -356,34 +356,16 @@ class SettingsDialog(QDialog):
         self.config.set_excluded_library_paths(excluded_paths)
 
     def check_libmpv_version(self):
-        """Check if libmpv-2.dll is up to date"""
+        """Check if libmpv-2.dll is present in bin folder"""
         try:
-            from update_libmpv import get_latest_release, get_dll_version
-            # config usage removed
-            
             dll_path = self.config.get_libmpv_path()
-            bin_dir = dll_path.parent
-            version_file = bin_dir / "libmpv.version"
             
-            # Get local version
-            local_version = None
-            if version_file.exists():
-                local_version = version_file.read_text().strip()
-            elif dll_path.exists():
-                local_version = get_dll_version(dll_path)
-            
-            latest_version, _ = get_latest_release()
-            
-            if local_version == latest_version and dll_path.exists():
-                self.libmpv_btn.setText(f" libmpv-2.dll ({latest_version})")
+            if dll_path.exists():
+                self.libmpv_btn.setText(f" libmpv-2.dll")
                 self.libmpv_btn.setIcon(self.icons.get('check', QIcon()))
                 self.libmpv_btn.setToolTip(tr('settings.libmpv_up_to_date'))
-            elif dll_path.exists():
-                self.libmpv_btn.setText(f" libmpv-2.dll ({local_version or '?'} → {latest_version})")
-                self.libmpv_btn.setIcon(self.icons.get('upload', QIcon()))
-                self.libmpv_btn.setToolTip(tr('settings.libmpv_update_available'))
             else:
-                self.libmpv_btn.setText(f" libmpv-2.dll ({latest_version})")
+                self.libmpv_btn.setText(f" libmpv-2.dll")
                 self.libmpv_btn.setIcon(self.icons.get('download', QIcon()))
                 self.libmpv_btn.setToolTip(tr('settings.libmpv_not_installed'))
         except Exception as e:
