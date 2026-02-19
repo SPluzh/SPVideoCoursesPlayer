@@ -144,6 +144,23 @@ class VideoCourseBrowser(QMainWindow):
         
         search_container_layout.addWidget(self.tag_filter_btn)
 
+        self.marker_toggle_btn = QPushButton()
+        self.marker_toggle_btn.setCheckable(True)
+        # Use a fallback icon if show_markers doesn't exist, e.g. context_tags or just text if needed
+        # But we added "show_markers" to load_icons, relying on IconManager returning empty if missing.
+        # Let's set a standard icon or reuse one if empty.
+        icon = self.icons.get('show_markers', QIcon())
+        if icon.isNull():
+             icon = self.style().standardIcon(QStyle.StandardPixmap.SP_FileDialogDetailedView)
+        self.marker_toggle_btn.setIcon(icon)
+        self.marker_toggle_btn.setToolTip(tr('library.show_markers') or "Show Markers")
+        self.marker_toggle_btn.setFixedSize(30, 30)
+        self.marker_toggle_btn.setObjectName("markerToggleBtn")
+        self.marker_toggle_btn.setChecked(True) # Default On
+        self.marker_toggle_btn.toggled.connect(self.toggle_markers)
+        
+        search_container_layout.addWidget(self.marker_toggle_btn)
+
         browser_layout.addWidget(search_container)
 
         self.course_tree = HoverTreeWidget()
@@ -470,6 +487,21 @@ class VideoCourseBrowser(QMainWindow):
                     self.pip_manager.pip_geometry = QByteArray.fromHex(bytes(state['pip_geometry'], 'utf-8'))
                 except Exception as e:
                     logging.error(f"Error restoring PiP geometry: {e}")
+
+            if 'show_markers' in state:
+                try:
+                    show = state['show_markers'] 
+                    # If it came from config_manager.get_window_state, it might be a bool already 
+                    # or a string if I messed up config_manager (but I used getboolean there).
+                    # Let's assume it's correct type or convertible.
+                    if isinstance(show, str):
+                        show = show.lower() == 'true'
+                    
+                    self.marker_toggle_btn.setChecked(bool(show))
+                    # Force update delegate
+                    self.toggle_markers(bool(show))
+                except Exception as e:
+                    logging.error(f"Error restoring marker state: {e}")
         else:
             self.resize(self.window_width, self.window_height)
         
@@ -505,6 +537,7 @@ class VideoCourseBrowser(QMainWindow):
             state['last_video'] = self.video_player.current_file
 
         state['playback_speed'] = str(self.video_player.speed_slider.value())
+        state['show_markers'] = str(self.marker_toggle_btn.isChecked())
 
         self.config.save_window_state(state)
         self.config.save_filter_state(
@@ -1015,6 +1048,15 @@ class VideoCourseBrowser(QMainWindow):
                 self.course_tree.doItemsLayout()
                 break
             iterator += 1
+
+    def toggle_markers(self, checked):
+        """Toggle marker visibility in library."""
+        delegate = self.course_tree.itemDelegate()
+        if isinstance(delegate, VideoItemDelegate):
+            delegate.config['show_markers'] = checked
+            # Refresh layout to update row heights
+            self.course_tree.doItemsLayout()
+            self.course_tree.viewport().update()
 
     def on_video_finished(self):
         """Handle video completion with a delay to ensure stability."""

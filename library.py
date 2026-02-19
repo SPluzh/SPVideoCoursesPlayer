@@ -124,7 +124,8 @@ class VideoItemDelegate(QStyledItemDelegate):
                 # Check for markers to increase height
                 data = index.data(Qt.ItemDataRole.UserRole + 2)
                 marker_height = 0
-                if data and isinstance(data, VideoItemData) and getattr(data, 'markers', None):
+                show_markers = self.config.get('show_markers', True)
+                if show_markers and data and isinstance(data, VideoItemData) and getattr(data, 'markers', None):
                     # 20px per marker line
                     marker_height = len(data.markers) * 20 + 4 # 4px padding
                     
@@ -402,7 +403,8 @@ class VideoItemDelegate(QStyledItemDelegate):
                     painter.drawPolygon(triangle)
                 
             # Markers under thumbnail
-            if markers:
+            show_markers = self.config.get('show_markers', True)
+            if show_markers and markers:
                 # Align with thumbnail left
                 marker_x = thumb_rect.left()
                 # Start below the base height (thumb + text block)
@@ -451,7 +453,8 @@ class VideoItemDelegate(QStyledItemDelegate):
                 if isinstance(data, VideoItemData):
                     markers = getattr(data, 'markers', []) or []
                 
-                if markers:
+                show_markers = self.config.get('show_markers', True)
+                if show_markers and markers:
                     base_height = self.config['video_row_height']
                     # Recalculate layout for hit testing
                     display_width = self.config['display_width']

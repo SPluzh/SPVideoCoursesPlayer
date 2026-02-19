@@ -324,6 +324,11 @@ class ConfigManager:
             state['pip_geometry'] = config.get('Window', 'pip_geometry')
         if config.has_option('Window', 'last_video'):
             state['last_video'] = config.get('Window', 'last_video')
+        if config.has_option('Window', 'show_markers'):
+             try:
+                 state['show_markers'] = config.getboolean('Window', 'show_markers')
+             except (ValueError, TypeError):
+                 pass
 
         return state
 

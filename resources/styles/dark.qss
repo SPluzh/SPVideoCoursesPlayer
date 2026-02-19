@@ -140,6 +140,26 @@ QPushButton#tagFilterBtn:checked:hover {
     background-color: @accent-hover;
 }
 
+QPushButton#markerToggleBtn {
+    background-color: @bg-dark;
+    border: 1px solid @border;
+    border-radius: 3px;
+    padding: 2px;
+}
+
+QPushButton#markerToggleBtn:checked {
+    background-color: @accent;
+    border-color: @accent-hover;
+}
+
+QPushButton#markerToggleBtn:hover {
+    background-color: @bg-hover;
+}
+
+QPushButton#markerToggleBtn:checked:hover {
+    background-color: @accent-hover;
+}
+
 /* Аудио-фильтры на панели */
 QPushButton#audioFilterBtn {
     background-color: @bg-dark;
