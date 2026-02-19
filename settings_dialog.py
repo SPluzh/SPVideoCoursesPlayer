@@ -91,10 +91,6 @@ class SettingsDialog(QDialog):
         self.ffmpeg_btn = QPushButton(tr('settings.ffmpeg_checking'))
         self.ffmpeg_btn.clicked.connect(self.update_ffmpeg)
         deps_layout.addWidget(self.ffmpeg_btn)
-
-        self.app_update_btn = QPushButton(tr('updater.checking'))
-        self.app_update_btn.clicked.connect(self.update_app)
-        deps_layout.addWidget(self.app_update_btn)
         
         deps_layout.addStretch()
 
@@ -126,7 +122,6 @@ class SettingsDialog(QDialog):
         
         QTimer.singleShot(100, self.check_libmpv_version)
         QTimer.singleShot(200, self.check_ffmpeg_version)
-        QTimer.singleShot(300, self.check_app_version)
 
         save_btn = QPushButton(tr('settings.save'))
         save_btn.setIcon(self.icons.get('save', QIcon()))
@@ -439,33 +434,3 @@ class SettingsDialog(QDialog):
         
         self.check_ffmpeg_version()
 
-    def check_app_version(self):
-        """Check if a newer app version is available on GitHub."""
-        try:
-            from update_app import get_current_version, get_latest_release, compare_versions
-            current = get_current_version()
-            release = get_latest_release()
-
-            if release:
-                latest = release['tag'].lstrip('v')
-                if compare_versions(current, latest):
-                    self.app_update_btn.setText(f" SP Video Courses Player ({current} → {latest})")
-                    self.app_update_btn.setIcon(self.icons.get('upload', QIcon()))
-                    self.app_update_btn.setToolTip(tr('updater.available', version=latest))
-                else:
-                    self.app_update_btn.setText(f" SP Video Courses Player ({current})")
-                    self.app_update_btn.setIcon(self.icons.get('check', QIcon()))
-                    self.app_update_btn.setToolTip(tr('updater.no_updates', version=current))
-            else:
-                self.app_update_btn.setText(f" SP Video Courses Player ({current})")
-                self.app_update_btn.setIcon(self.icons.get('check', QIcon()))
-                self.app_update_btn.setToolTip(tr('updater.no_updates', version=current))
-        except Exception as e:
-            self.app_update_btn.setText(" SP Video Courses Player")
-            self.app_update_btn.setIcon(self.icons.get('fail', QIcon()))
-            self.app_update_btn.setToolTip(str(e))
-
-    def update_app(self):
-        """Trigger app update via parent window."""
-        if self.parent() and hasattr(self.parent(), '_check_for_update'):
-            self.parent()._check_for_update(force=True)
