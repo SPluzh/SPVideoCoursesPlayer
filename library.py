@@ -424,7 +424,7 @@ class VideoItemDelegate(QStyledItemDelegate):
                     try: time_str = self.config['format_duration'](marker['position_seconds'])
                     except: time_str = "00:00"
                     label = str(marker.get('label', ''))
-                    display_text = f"\u23f1 {time_str} | {label}"
+                    display_text = f"[{time_str}] {label}"
                     stripe_color = QColor(marker.get('color', '#3498db') or '#3498db')
                     
                     painter.fillRect(QRect(marker_x, marker_y + 2, 4, marker_height - 4), stripe_color)
