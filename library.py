@@ -90,30 +90,50 @@ class VideoItemDelegate(QStyledItemDelegate):
 
     def get_play_button_rect(self, rect):
         """Return Play button area on thumbnail."""
-        display_width = self.config['display_width']
-        display_height = self.config['display_height']
-        
-        # Sync with paint() logic: centered vertically and -15px from left
-        thumb_y = rect.top() + (rect.height() - display_height) // 2
-        thumb_rect = QRect(rect.left() - 15, thumb_y,
-                          display_width, display_height)
-        
-        btn_size = 28 # Slightly smaller for corner
-        margin = 2
-        return QRect(
-            thumb_rect.right() - btn_size - margin,
-            thumb_rect.top() + margin,
-            btn_size, btn_size
-        )
+        try:
+            display_width = self.config['display_width']
+            display_height = self.config['display_height']
+            
+            # Sync with paint() logic: centered vertically in base row height
+            base_height = self.config['video_row_height']
+            thumb_y = rect.top() + (base_height - display_height) // 2
+            thumb_rect = QRect(rect.left() - 15, thumb_y,
+                              display_width, display_height)
+            
+            btn_size = 28 # Slightly smaller for corner
+            margin = 2
+            return QRect(
+                thumb_rect.right() - btn_size - margin,
+                thumb_rect.top() + margin,
+                btn_size, btn_size
+            )
+        except Exception as e:
+            logging.error(f"Error in get_play_button_rect: {e}")
+            return QRect()
 
     def sizeHint(self, option, index):
-        size = super().sizeHint(option, index)
-        item_type = index.data(Qt.ItemDataRole.UserRole + 1)
-        if item_type == 'folder':
-            size.setHeight(self.config['folder_row_height'])
-        elif item_type == 'video':
-            size.setHeight(self.config['video_row_height'])
-        return size
+        try:
+            # import sys; sys.stderr.write(f"[SIZEHINT] row={index.row()}\n"); sys.stderr.flush()
+            size = super().sizeHint(option, index)
+            item_type = index.data(Qt.ItemDataRole.UserRole + 1)
+            if item_type == 'folder':
+                size.setHeight(self.config['folder_row_height'])
+            elif item_type == 'video':
+                base_height = self.config['video_row_height']
+                
+                # Check for markers to increase height
+                data = index.data(Qt.ItemDataRole.UserRole + 2)
+                marker_height = 0
+                if data and isinstance(data, VideoItemData) and getattr(data, 'markers', None):
+                    # 20px per marker line
+                    marker_height = len(data.markers) * 20 + 4 # 4px padding
+                    
+                size.setHeight(base_height + marker_height)
+                
+            return size
+        except Exception as e:
+            logging.error(f"Error in sizeHint: {e}")
+            return super().sizeHint(option, index)
 
     def _get_pixmap(self, path):
         if path not in self.thumbnail_cache:
@@ -128,12 +148,14 @@ class VideoItemDelegate(QStyledItemDelegate):
         return self.thumbnail_cache.get(path)
 
     def paint(self, painter, option, index): # Overridden
+        # Recursion guard - prevent re-entrant paint calls
+        if getattr(self, '_paint_in_progress', False):
+            return
+        self._paint_in_progress = True
         try:
             if not index.isValid():
-                logging.debug(f"paint - invalid index at row {index.row()}")
                 return
 
-            # logging.debug(f"paint index {index.row()}") 
             item_type = index.data(Qt.ItemDataRole.UserRole + 1)
             
             # Handle Folder Rendering
@@ -145,65 +167,51 @@ class VideoItemDelegate(QStyledItemDelegate):
                 super().paint(painter, option, index)
                 return
 
-            # Re-implement paint_video logic here or call a method
-            # Using existing logic structure
             painter.save()
             data = index.data(Qt.ItemDataRole.UserRole + 2)
             if not data:
-                # logging.debug(f"paint - no data for index {index.row()}")
                 painter.restore()
                 return
 
-            # Unpack with flexibility for new fields
-            # Expects: VideoItemData object or tuple
-            try:
-                if isinstance(data, VideoItemData):
-                    filename = data.filename
-                    duration = data.duration
-                    resolution = data.resolution
-                    file_size = data.file_size
-                    watched_percent = data.watched_percent
-                    thumbnail_path = data.thumbnail_path
-                    thumbnails_list = data.thumbnails_list
-                    last_position = data.last_position
-                    marker_count = data.marker_count
-                    is_favorite = data.is_favorite
-                    tags = data.tags
-                elif isinstance(data, (tuple, list)):
-                     # Backwards compatibility
-                     if len(data) >= 11:
-                         filename, duration, resolution, file_size, watched_percent, thumbnail_path, thumbnails_list, last_position, marker_count, is_favorite, tags = data[:11]
-                     elif len(data) == 9: 
-                          filename, duration, resolution, file_size, watched_percent, thumbnail_path, thumbnails_list, last_position, marker_count = data
-                          is_favorite = 0
-                          tags = []
-                     else:
-                          # Fallback
-                          filename = "Error"
-                          duration = 0
-                          resolution = ""
-                          file_size = 0
-                          watched_percent = 0
-                          thumbnail_path = None
-                          thumbnails_list = []
-                          last_position = 0
-                          marker_count = 0
-                          is_favorite = 0
-                          tags = []
+            # Unpack data
+            if isinstance(data, VideoItemData):
+                filename = data.filename
+                duration = data.duration
+                resolution = data.resolution
+                file_size = data.file_size
+                watched_percent = data.watched_percent
+                thumbnail_path = data.thumbnail_path
+                thumbnails_list = getattr(data, 'thumbnails_list', []) or []
+                last_position = data.last_position
+                marker_count = data.marker_count
+                is_favorite = data.is_favorite
+                tags = getattr(data, 'tags', []) or []
+                markers = getattr(data, 'markers', []) or []
+            else:
+                # Fallback for old data or tuple/list
+                markers = []
+                tags = []
+                thumbnails_list = []
+                if isinstance(data, (tuple, list)) and len(data) >= 9:
+                    filename, duration, resolution, file_size, watched_percent, thumbnail_path, thumbnails_list, last_position, marker_count = data[:9]
+                    is_favorite = 0
                 else:
-                    # Invalid data type
-                    logging.warning(f"Invalid data type in paint: {type(data)}")
                     painter.restore()
                     return
-            except Exception as e:
-                logging.error(f"Error unpacking data in paint: {e}, data={data}")
-                painter.restore()
-                return
 
             display_width = self.config['display_width']
             display_height = self.config['display_height']
 
-            thumb_y = option.rect.top() + (option.rect.height() - display_height) // 2
+            # If we are effectively "under" the main row content, we should standardise top alignment for main content
+            # But sizeHint logic: size.setHeight(base_height + marker_height)
+            # So the "main" part (thumb + text) is in the first `base_height` pixels.
+            # We should recalculate thumb_y to be centered in that base_height, or fixed top offset.
+            # Current logic centers it in the FULL rect height which includes markers. This is WRONG if markers are huge.
+            # We want thumb to stay at top.
+            
+            base_height = self.config['video_row_height']
+            thumb_y = option.rect.top() + (base_height - display_height) // 2
+            
             thumb_rect = QRect(option.rect.left() - 15, thumb_y,
                               display_width, display_height)
 
@@ -222,20 +230,15 @@ class VideoItemDelegate(QStyledItemDelegate):
                 x_offset = (display_width - scaled_pixmap.width()) // 2
                 y_offset = (display_height - scaled_pixmap.height()) // 2
                 
-                # Create clipping path for rounded corners
                 path = QPainterPath()
                 path.addRoundedRect(QRectF(thumb_rect), 3.0, 3.0)
-                painter.save() # Save state before clipping
+                painter.save()
                 painter.setClipPath(path)
-                
                 painter.drawPixmap(thumb_rect.left() + x_offset, thumb_rect.top() + y_offset, scaled_pixmap)
-                
-                painter.restore() # Restore state to remove clipping
+                painter.restore()
 
-                # Draw thumbnail border
                 playing_file = index.data(Qt.ItemDataRole.UserRole)
                 if self.playing_path and playing_file == self.playing_path:
-                    # Green 8px border for playing video, drawn outside to avoid overlapping image
                     pen = QPen(QColor(1, 133, 116), 8)
                     painter.setPen(pen)
                     painter.drawRoundedRect(thumb_rect.adjusted(-4, -4, 4, 4), 7, 7)
@@ -247,11 +250,9 @@ class VideoItemDelegate(QStyledItemDelegate):
                     progress_percent = (last_position / duration) * 100
                     progress_bar_height = self.progress_bar_bg.minimumHeight() or 5
                     progress_bar_y = thumb_rect.bottom() - progress_bar_height - 1
-
                     progress_bar_rect = QRect(thumb_rect.left() + 1, progress_bar_y,
                                              display_width - 2, progress_bar_height)
                     painter.fillRect(progress_bar_rect, self.progress_bar_bg.palette().color(QPalette.ColorRole.Window))
-
                     filled_width = int((display_width - 2) * progress_percent / 100)
                     if filled_width > 0:
                         filled_rect = QRect(progress_bar_rect.left(), progress_bar_rect.top(),
@@ -260,13 +261,10 @@ class VideoItemDelegate(QStyledItemDelegate):
 
                 if self.hovered_index is not None and self.hovered_index == index and thumbnails_list:
                     dot_y = thumb_rect.top() + 8
-                    dot_width = self.dot_active.minimumWidth() or 6
+                    dot_width = 6
                     dot_spacing = 2
-
-                    dot_width = min(dot_width, (display_width - 10) // len(thumbnails_list))
                     total_dots_width = dot_width * len(thumbnails_list) + (len(thumbnails_list) - 1) * dot_spacing
                     start_x = thumb_rect.left() + (display_width - total_dots_width) // 2
-
                     for i in range(len(thumbnails_list)):
                         dot_x = start_x + i * (dot_width + dot_spacing)
                         if i == self.current_thumbnail_index % len(thumbnails_list):
@@ -281,155 +279,96 @@ class VideoItemDelegate(QStyledItemDelegate):
                 painter.drawRoundedRect(thumb_rect, 3, 3)
                 painter.setPen(self.empty_thumbnail_icon.palette().color(QPalette.ColorRole.WindowText))
                 painter.setFont(self.empty_thumbnail_icon.font())
-                painter.drawText(thumb_rect, Qt.AlignmentFlag.AlignCenter, "🎬")
+                painter.drawText(thumb_rect, Qt.AlignmentFlag.AlignCenter, "\U0001f3ac")
 
-            # Draw Favorite Indicator
             if is_favorite:
                 painter.save()
                 heart_size = 24
-                # Top-left corner: thumb_rect.left() - 6
                 heart_rect = QRect(thumb_rect.left() - 6, thumb_rect.top() - 6, heart_size, heart_size)
-                
-                font = painter.font()
-                font.setPointSize(20)
-                painter.setFont(font)
-                
-                # Shadow/Stroke for visibility
-                painter.setPen(QColor(0, 0, 0, 200)) # Darker shadow
-                painter.drawText(heart_rect.adjusted(1, 1, 1, 1), Qt.AlignmentFlag.AlignCenter, "♥")
-                
-                # Red Heart
+                font = painter.font(); font.setPointSize(20); painter.setFont(font)
+                painter.setPen(QColor(0, 0, 0, 200))
+                painter.drawText(heart_rect.adjusted(1, 1, 1, 1), Qt.AlignmentFlag.AlignCenter, "\u2665")
                 painter.setPen(QColor('#e74c3c'))
-                painter.drawText(heart_rect, Qt.AlignmentFlag.AlignCenter, "♥")
+                painter.drawText(heart_rect, Qt.AlignmentFlag.AlignCenter, "\u2665")
                 painter.restore()
 
             if duration:
                 duration_str = self.config['format_duration'](duration)
                 painter.setFont(self.duration_label_text.font())
                 text_rect = painter.fontMetrics().boundingRect(duration_str)
-
                 bg_rect = QRect(thumb_rect.right() - text_rect.width() - 8,
                               thumb_rect.bottom() - text_rect.height() - 10,
                               text_rect.width() + 6, text_rect.height() + 4)
-
-                border_radius = 2
                 painter.setBrush(self.duration_label_bg.palette().color(QPalette.ColorRole.Window))
                 painter.setPen(Qt.PenStyle.NoPen)
-                painter.drawRoundedRect(bg_rect, border_radius, border_radius)
-
+                painter.drawRoundedRect(bg_rect, 2, 2)
                 painter.setPen(self.duration_label_text.palette().color(QPalette.ColorRole.WindowText))
                 painter.drawText(bg_rect, Qt.AlignmentFlag.AlignCenter, duration_str)
 
             text_x = thumb_rect.right() + 12
             text_y = option.rect.top() + 8
+            
+            # NOTE: available_width must be calculated carefully to avoid negative values
+            available_width = max(1, option.rect.right() - text_x - 10)
 
             painter.setFont(self.video_title.font())
             painter.setPen(self.video_title.palette().color(QPalette.ColorRole.WindowText))
-            # Use rect.right() to get the absolute right coordinate, ensuring correct width ID: fix_clipping
-            available_width = option.rect.right() - text_x - 10
-            if available_width < 0: available_width = 0 # Safety check
-
-            elided_name = painter.fontMetrics().elidedText(filename, Qt.TextElideMode.ElideRight, available_width)
-            painter.drawText(QRect(text_x, text_y, available_width, 25),
-                            Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter, elided_name)
+            elided_name = painter.fontMetrics().elidedText(str(filename), Qt.TextElideMode.ElideRight, available_width)
+            painter.drawText(QRect(text_x, text_y, available_width, 25), Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter, elided_name)
             text_y += 25
 
             info_parts = []
-            if resolution:
-                info_parts.append(resolution)
-            if file_size:
-                info_parts.append(self.config['format_size'](file_size))
-            if marker_count:
-                info_parts.append(tr('video_info.markers', count=marker_count))
+            if resolution: info_parts.append(str(resolution))
+            if file_size: info_parts.append(self.config['format_size'](file_size))
+            if marker_count: info_parts.append(tr('video_info.markers', count=marker_count))
 
             if info_parts:
                 painter.setFont(self.video_info.font())
                 painter.setPen(self.video_info.palette().color(QPalette.ColorRole.WindowText))
-                info_str = " • ".join(info_parts)
-                painter.drawText(QRect(text_x, text_y, available_width, 20),
-                               Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter, info_str)
+                info_str = " \u2022 ".join(info_parts)
+                painter.drawText(QRect(text_x, text_y, available_width, 20), Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter, info_str)
                 text_y += 20
 
             if watched_percent > 0 or last_position > 0:
                 painter.setFont(self.video_progress_text.font())
                 painter.setPen(self.video_progress_text.palette().color(QPalette.ColorRole.WindowText))
-
                 if watched_percent == 100:
-                    painter.drawText(QRect(text_x, text_y, available_width, 20),
-                                   Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
-                                   tr('video_info.watched_label'))
+                    prog_text = tr('video_info.watched_label')
                 elif last_position > 0 and duration > 0:
-                    position_str = self.config['format_duration'](last_position)
-                    total_str = self.config['format_duration'](duration)
-                    painter.drawText(QRect(text_x, text_y, available_width, 20),
-                                   Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
-                                   tr('video_info.progress', position=position_str, total=total_str))
-                elif watched_percent > 0:
-                    painter.drawText(QRect(text_x, text_y, available_width, 20),
-                                   Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
-                                   tr('video_info.progress_percent', percent=watched_percent))
-                text_y += 20 # Advance y for tags
+                    prog_text = tr('video_info.progress', position=self.config['format_duration'](last_position), total=self.config['format_duration'](duration))
+                else:
+                    prog_text = tr('video_info.progress_percent', percent=watched_percent)
+                painter.drawText(QRect(text_x, text_y, available_width, 20), Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter, prog_text)
+                text_y += 20
 
-            # Draw Tags
             if tags:
-                tag_x = text_x
-                tag_y = text_y + 2 # Spacer
-                tag_height = 18
-                
+                tag_x = text_x; tag_y = text_y + 2; tag_height = 18
                 painter.save()
-                # Use small bold font
-                tag_font = painter.font()
-                tag_font.setPointSize(8)
-                tag_font.setBold(True)
-                painter.setFont(tag_font)
-                
+                font = painter.font(); font.setPointSize(8); font.setBold(True); painter.setFont(font)
                 for tag in tags:
-                    name = tag['name']
-                    # Safety check for color
-                    col_hex = tag['color'] if tag['color'] else '#3498db'
-                    color = QColor(col_hex)
-                    
-                    # Measure text
-                    fm = painter.fontMetrics()
-                    text_width = fm.horizontalAdvance(name)
-                    tag_width = text_width + 12
-                    
-                    # Check bounds
-                    if tag_x + tag_width > option.rect.right():
-                        break # Don't draw if out of bounds
-                    
+                    name = str(tag.get('name', ''))
+                    color = QColor(tag.get('color') or '#3498db')
+                    tag_width = painter.fontMetrics().horizontalAdvance(name) + 12
+                    if tag_x + tag_width > option.rect.right(): break
                     tag_rect = QRect(tag_x, tag_y, tag_width, tag_height)
-                    
-                    # Draw Pill
-                    painter.setBrush(color)
-                    painter.setPen(Qt.PenStyle.NoPen)
-                    painter.drawRoundedRect(tag_rect, 6, 6)
-                    
-                    # Draw Text
-                    # Choose text color based on brightness? simplistic for now: white
-                    painter.setPen(QColor('#ffffff'))
-                    painter.drawText(tag_rect, Qt.AlignmentFlag.AlignCenter, name)
-                    
+                    painter.setBrush(color); painter.setPen(Qt.PenStyle.NoPen); painter.drawRoundedRect(tag_rect, 6, 6)
+                    painter.setPen(QColor('#ffffff')); painter.drawText(tag_rect, Qt.AlignmentFlag.AlignCenter, name)
                     tag_x += tag_width + 6
                 painter.restore()
+                # text_y += 20 # removed increment since markers are now separate
 
-            # Draw Play/Pause button
             is_playing_item = (self.playing_path and index.data(Qt.ItemDataRole.UserRole) == self.playing_path)
-            
             if self.hovered_index == index or is_playing_item:
                 play_btn_rect = self.get_play_button_rect(option.rect)
                 
-                # Check if mouse is hovering specifically over the button
                 is_over_btn = False
                 if self.mouse_pos and play_btn_rect.contains(self.mouse_pos):
                     is_over_btn = True
 
                 painter.setRenderHint(QPainter.RenderHint.Antialiasing)
                 
-                # Rounded square
                 painter.setBrush(self.row_play_button_bg.palette().color(QPalette.ColorRole.Window))
                 
-                # Make slightly transparent if just an indicator (not hovered)
                 if not is_over_btn and self.hovered_index != index:
                      color = self.row_play_button_bg.palette().color(QPalette.ColorRole.Window)
                      color.setAlpha(150)
@@ -441,42 +380,115 @@ class VideoItemDelegate(QStyledItemDelegate):
                 painter.setPen(Qt.PenStyle.NoPen)
                 painter.drawRoundedRect(play_btn_rect, 3, 3)
 
-                # Icon
                 icon_color = self.row_play_button_icon.palette().color(QPalette.ColorRole.WindowText)
                 painter.setBrush(icon_color)
                 painter.setPen(Qt.PenStyle.NoPen)
 
                 if is_playing_item and not self.is_paused:
-                    # Draw Pause (two bars)
-                    bar_w = 4
-                    bar_h = 14
-                    gap = 4
-                    # Add (1, 1) offset to fix mathematical centering rounding bias
+                    bar_w = 4; bar_h = 14; gap = 4
                     center = play_btn_rect.center() + QPoint(1, 1)
-                    
                     rect1 = QRect(center.x() - bar_w - gap // 2, center.y() - bar_h // 2, bar_w, bar_h)
                     rect2 = QRect(center.x() + gap // 2, center.y() - bar_h // 2, bar_w, bar_h)
-                    
                     painter.drawRect(rect1)
                     painter.drawRect(rect2)
                 else:
-                    # Draw Play (triangle)
-                    tri_w = 12
-                    tri_h = 14
-                    # Add (1, 1) offset to fix mathematical centering rounding bias
+                    tri_w = 12; tri_h = 14
                     center = play_btn_rect.center() + QPoint(1, 1)
-                    
                     triangle = QPolygon([
                         QPoint(center.x() - tri_w // 2, center.y() - tri_h // 2),
                         QPoint(center.x() + tri_w // 2, center.y()),
                         QPoint(center.x() - tri_w // 2, center.y() + tri_h // 2)
                     ])
                     painter.drawPolygon(triangle)
+                
+            # Markers under thumbnail
+            if markers:
+                # Align with thumbnail left
+                marker_x = thumb_rect.left()
+                # Start below the base height (thumb + text block)
+                marker_y = option.rect.top() + self.config['video_row_height'] 
+                marker_height = 18
+                
+                painter.save()
+                font = painter.font(); font.setPointSize(9); painter.setFont(font)
+                
+                # Full width for markers? or limited?
+                # "под картинкой" -> under picture. Let's start at thumb left, 
+                # but allow width to extend to right edge (minus margin)
+                marker_area_width = max(1, option.rect.right() - marker_x - 10)
+                
+                for marker in markers:
+                    if marker_y > option.rect.bottom(): break
+                    try: time_str = self.config['format_duration'](marker['position_seconds'])
+                    except: time_str = "00:00"
+                    label = str(marker.get('label', ''))
+                    display_text = f"\u23f1 {time_str} | {label}"
+                    stripe_color = QColor(marker.get('color', '#3498db') or '#3498db')
+                    
+                    painter.fillRect(QRect(marker_x, marker_y + 2, 4, marker_height - 4), stripe_color)
+                    painter.setPen(QColor('#dddddd'))
+                    
+                    text_w = max(1, marker_area_width - 16)
+                    elided = painter.fontMetrics().elidedText(display_text, Qt.TextElideMode.ElideRight, text_w)
+                    painter.drawText(QRect(marker_x + 16, marker_y, text_w, marker_height), Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter, elided)
+                    marker_y += 20
+                painter.restore()
 
             painter.restore()
         except Exception as e:
-            logging.error(f"Error in VideoItemDelegate.paint: {e}", exc_info=True)
-            painter.restore()
+            logging.error(f"Error in paint: {e}", exc_info=True)
+            try: painter.restore()
+            except: pass
+        finally:
+            self._paint_in_progress = False
+
+    def editorEvent(self, event, model, option, index):
+        try:
+            if event.type() == Qt.Event.Type.MouseButtonRelease:
+                 # Check for marker click
+                data = index.data(Qt.ItemDataRole.UserRole + 2)
+                markers = []
+                if isinstance(data, VideoItemData):
+                    markers = getattr(data, 'markers', []) or []
+                
+                if markers:
+                    base_height = self.config['video_row_height']
+                    # Recalculate layout for hit testing
+                    display_width = self.config['display_width']
+                    display_height = self.config['display_height']
+                    
+                    # NOTE: Updating thumb_y logic to match paint
+                    thumb_y = option.rect.top() + (base_height - display_height) // 2
+                    thumb_rect = QRect(option.rect.left() - 15, thumb_y, display_width, display_height)
+                    
+                    marker_x = thumb_rect.left()
+                    marker_y = option.rect.top() + base_height
+                    marker_height = 18
+                    
+                    click_pos = event.pos()
+                    
+                    for marker in markers:
+                        # Full width hit area
+                        available_width = option.rect.right() - marker_x - 10
+                        marker_rect = QRect(marker_x, marker_y, available_width, marker_height)
+                        
+                        if marker_rect.contains(click_pos):
+                            # Handle Click
+                            file_path = index.data(Qt.ItemDataRole.UserRole)
+                            pos = marker['position_seconds']
+                            tree = self.parent()
+                            if tree:
+                                 window = tree.window()
+                                 if hasattr(window, 'play_video_at_marker'):
+                                      window.play_video_at_marker(file_path, pos)
+                            return True
+                        
+                        marker_y += 20
+                        
+            return super().editorEvent(event, model, option, index)
+        except Exception as e:
+            logging.error(f"Error in editorEvent: {e}", exc_info=True)
+            return False
 
     def paint_folder(self, painter, option, index):
         """Paint folder item with custom 16:9 icon."""
@@ -708,20 +720,23 @@ class HoverTreeWidget(QTreeWidget):
 
     def mouseMoveEvent(self, event):
         try:
-            # logging.debug(f"mouseMoveEvent {event.pos()}")
             self.mouse_pos = event.pos()
-            super().mouseMoveEvent(event)
+            
             index = self.indexAt(event.pos())
 
             if index.isValid():
                 item_type = index.data(Qt.ItemDataRole.UserRole + 1)
-                # logging.debug(f"mouseMove valid index, type={item_type}")
+                
                 if item_type == 'video':
                     delegate = self.itemDelegate()
+                    
                     if isinstance(delegate, VideoItemDelegate):
-                        # logging.debug("Check hover play rect")
-                        # Check hover over play button to change cursor
-                        play_rect = delegate.get_play_button_rect(self.visualRect(index))
+                        visual_rect = self.visualRect(index)
+                        
+                        if visual_rect.isNull():
+                             return
+
+                        play_rect = delegate.get_play_button_rect(visual_rect)
                         
                         if play_rect.contains(event.pos()):
                             self.viewport().setCursor(Qt.CursorShape.PointingHandCursor)
@@ -730,7 +745,6 @@ class HoverTreeWidget(QTreeWidget):
 
                         # Update hover state in delegate
                         if index != self.current_hover_index:
-                            # logging.debug(f"New hover index: {index.row()}")
                             self.current_hover_index = index
                             self.thumbnail_frame = 0
                             delegate.set_hovered_index(index, 0, mouse_pos=event.pos())
@@ -740,13 +754,14 @@ class HoverTreeWidget(QTreeWidget):
                         
                         self.viewport().update()
                         return
-                    else:
-                        logging.debug(f"Delegate is not VideoItemDelegate: {type(delegate)}")
                 else:
                     self.viewport().setCursor(Qt.CursorShape.ArrowCursor)
             else:
                 self.viewport().setCursor(Qt.CursorShape.ArrowCursor)
                 self.stop_hover()
+            
+            super().mouseMoveEvent(event)
+
         except Exception as e:
             logging.error(f"ERROR in mouseMoveEvent: {e}", exc_info=True)
 

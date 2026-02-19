@@ -16,6 +16,8 @@ locale.setlocale(locale.LC_NUMERIC, 'C')
 from database import DatabaseManager
 import json
 import logging
+# Configure logging
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 import io
 from icon_manager import load_icons_dict
 from PyQt6.QtWidgets import (
@@ -1009,7 +1011,8 @@ class VideoCourseBrowser(QMainWindow):
                 if self.search_edit.text() or self.fav_filter_btn.isChecked() or self.tag_filter_btn.isChecked():
                     self.filter_library(self.search_edit.text())
                 
-                self.course_tree.viewport().update()
+                # Force layout update to recalculate row height (triggers sizeHint)
+                self.course_tree.doItemsLayout()
                 break
             iterator += 1
 
@@ -1552,12 +1555,31 @@ class VideoCourseBrowser(QMainWindow):
                 return
             
             item_type = item.data(0, Qt.ItemDataRole.UserRole + 1)
-            if item_type == 'video':
-                last_video_item = item
-            
             iterator += 1
 
-    def play_video_in_player(self, item, resume=True, auto_play=True):
+    def play_video_at_marker(self, file_path, position):
+        """Play video starting at specific position (from marker click)."""
+        if not file_path or not Path(file_path).exists():
+            return
+            
+        # Find item to select it in the tree
+        item = self.find_video_item(file_path)
+        if item:
+            self.course_tree.setCurrentItem(item)
+            self.course_tree.scrollToItem(item)
+            self.update_window_title_for_item(item)
+            
+        # Load video
+        self.video_player.load_video(file_path, position, auto_play=True)
+        
+        # Update delegate state
+        delegate = self.course_tree.itemDelegate()
+        if isinstance(delegate, VideoItemDelegate):
+            delegate.playing_path = file_path
+            delegate.is_paused = False
+            self.course_tree.viewport().update()
+
+    def play_video_in_player(self, item, resume=False, auto_play=True):
         logging.debug("play_video_in_player called")
         
         # Save progress and update folder stats for the PREVIOUS video before switching
@@ -1646,6 +1668,38 @@ class VideoCourseBrowser(QMainWindow):
         file_path = item.data(0, Qt.ItemDataRole.UserRole)
         self.db.reset_video_progress(file_path)
         self.load_courses()
+
+    def play_video_at_marker(self, file_path, position):
+        """Play video starting at specific position."""
+        try:
+            import sys; sys.stderr.write(f"[MAIN] play_video_at_marker: {file_path} at {position}\n"); sys.stderr.flush()
+            
+            # Find item in tree
+            iterator = QTreeWidgetItemIterator(self.library_tree)
+            target_item = None
+            while iterator.value():
+                item = iterator.value()
+                if item.data(0, Qt.ItemDataRole.UserRole) == file_path:
+                    target_item = item
+                    break
+                iterator += 1
+            
+            if target_item:
+                import sys; sys.stderr.write(f"[MAIN] Found item for play_video_at_marker\n"); sys.stderr.flush()
+                # Play video
+                if self.video_player and self.video_player.isVisible():
+                     self.play_video_in_player(target_item, resume=False) 
+                     # seek after load
+                     QTimer.singleShot(500, lambda: self.video_player.player.seek(position))
+                else:
+                     self.play_video_in_player(target_item, resume=False)
+                     # Wait for player to init
+                     QTimer.singleShot(1000, lambda: self.video_player.player.seek(position))
+            else:
+                import sys; sys.stderr.write(f"[MAIN] Item not found for {file_path}\n"); sys.stderr.flush()
+        except Exception as e:
+            import sys; sys.stderr.write(f"[MAIN ERROR] play_video_at_marker: {e}\n"); sys.stderr.flush()
+            logging.error(f"Error in play_video_at_marker: {e}", exc_info=True)
 
     def browse_directory(self):
         directory = QFileDialog.getExistingDirectory(self, tr('dialog.select_directory'), self.path_edit.text())
