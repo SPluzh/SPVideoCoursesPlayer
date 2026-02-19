@@ -901,7 +901,7 @@ class VideoScanner:
                 all_subtitle_tracks = embedded_subs + external_subs
                 
                 return {
-                    'folder_path': str(rel_path),
+                    'folder_path': str(folder),
                     'file_path': file_path_str,
                     'file_name': video_file.name,
                     'track_number': track_number,
@@ -949,7 +949,7 @@ class VideoScanner:
             last_position = existing_data.get('last_position', 0) if existing_data else 0
             
             return {
-                'folder_path': str(rel_path),
+                'folder_path': str(folder),
                 'file_path': file_path_str,
                 'file_name': video_file.name,
                 'track_number': track_number,
@@ -1107,6 +1107,17 @@ class VideoScanner:
                     c = conn.cursor()
                     
                     # Insert/update folder record
+                    # USE ABSOLUTE PATHS to avoid collisions between multiple library roots
+                    folder_abs_path = str(folder)
+                    
+                    # Logic for parent path:
+                    # If folder is the root, parent is empty string (to mark it as top-level in our tree logic)
+                    # Otherwise, parent is the absolute path of the parent folder
+                    if folder == root:
+                        parent_abs_path = ""
+                    else:
+                        parent_abs_path = str(folder.parent)
+
                     c.execute("""
                         INSERT INTO folders (path, parent_path, name, video_count, root_path, total_duration, total_size, is_available)
                         VALUES (?, ?, ?, ?, ?, 0, 0, 1)
@@ -1117,9 +1128,9 @@ class VideoScanner:
                             root_path = excluded.root_path,
                             last_updated = CURRENT_TIMESTAMP,
                             is_available = 1
-                    """, (str(rel_path), str(parent), folder.name, video_count, root_str))
+                    """, (folder_abs_path, parent_abs_path, folder.name, video_count, root_str))
 
-                    processed_folder_paths.add(str(rel_path))
+                    processed_folder_paths.add(folder_abs_path)
 
                     # Save video results to DB
                     for result in results:
@@ -1169,7 +1180,11 @@ class VideoScanner:
                         
                         # Video ID
                         c.execute("SELECT id FROM video_files WHERE file_path = ?", (result['file_path'],))
-                        video_id = c.fetchone()[0]
+                        video_row = c.fetchone()
+                        if not video_row:
+                             logging.error(f"Could not find video id for {result['file_path']} after insert")
+                             continue
+                        video_id = video_row[0]
                         
                         # Update audio tracks
                         c.execute("DELETE FROM audio_tracks WHERE video_id = ?", (video_id,))
@@ -1239,7 +1254,7 @@ class VideoScanner:
                     # Update folder statistics
                     c.execute("""
                         UPDATE folders SET total_duration = ?, total_size = ? WHERE path = ?
-                    """, (folder_duration, folder_size, str(rel_path)))
+                    """, (folder_duration, folder_size, folder_abs_path))
                     
                     conn.commit()
 
@@ -1282,24 +1297,131 @@ class VideoScanner:
         print(f"\n{tr('scanner.hierarchy_building')}")
         with self.db.get_connection() as conn:
             c = conn.cursor()
+            # Select absolute paths from DB
             c.execute("SELECT DISTINCT parent_path FROM folders WHERE parent_path != '' AND root_path = ?", (root_str,))
             parent_paths = [row[0] for row in c.fetchall()]
             
             added = set()
             for parent_path in parent_paths:
-                current = ''
-                for part in Path(parent_path).parts:
-                    current = str(Path(current) / part) if current else part
-                    if current not in added:
-                        parent = str(Path(current).parent) if str(Path(current).parent) != '.' else ''
+                # Log the parent path being processed for debugging
+                logging.debug(f"Processing parent path for hierarchy: '{parent_path}'")
+                try:
+                    # New hierarchy logic: Walk UP from parent_path to root_path using .parent
+                    # parent_path is absolute. root_str is absolute.
+                    try:
+                        p = Path(parent_path)
+                        # Ensure we are inside root
+                        if not p.is_relative_to(root):
+                             # Should generally not happen if DB integrity matches logic, but safe check
+                             # Check if it IS the root (unlikely if parent_path != '')
+                             continue
+                    except ValueError:
+                        # is_relative_to raises ValueError if not relative on strict versions or different drives
+                        continue
+
+                    current_p = p
+                    
+                    # Hierarchy walk up
+                    while True:
+                        # Stop if we reached root or gone above it (should happen at root check)
+                        if current_p == root:
+                            break
+                        # Stop if this path is already processed in this batch
+                        current_str = str(current_p)
+                        if current_str in added:
+                            break
+                        
+                        # Process current_p
+                        parent_of_current = current_p.parent
+                        
+                        # If parent is root, set empty string to mark top-level
+                        if parent_of_current == root:
+                             parent_db_str = str(root) 
+                             # Wait, if we said "folder == root -> parent=''", 
+                             # then if current_p is IN root, its parent is root.
+                             # But in database we store parent_path.
+                             # If we have C:\Root\A. Parent is C:\Root.
+                             # If C:\Root is the root, we want C:\Root to be stored?
+                             # Or do we want C:\Root\A to store parent C:\Root?
+                             # In scan_directory loop:
+                             # C:\Root\A -> parent C:\Root.
+                             # NOW we need to ensure C:\Root exists in DB?
+                             # main.py treats item as root if parent not in DB.
+                             # If we insert C:\Root (path) -> parent '' (empty),
+                             # then C:\Root\A -> parent C:\Root.
+                             # Then main.py sees C:\Root as root item.
+                             # C:\Root\A as child.
+                             # This means the TOP LEVEL item is the root folder itself.
+                             
+                             parent_db_str = "" # To be consistent with scanning logic for root folder
+                             
+                             # Wait, loop logic above:
+                             # if folder == root: parent_abs_path = ""
+                             # So current_p (C:\Root) parent should be "".
+                        else:
+                             # Check if parent_of_current is still inside root
+                             try:
+                                 if not parent_of_current.is_relative_to(root):
+                                     # We went above root? e.g. C:\ vs C:\Root
+                                     # Should not happen because we break at root
+                                     break
+                             except:
+                                 break
+                             parent_db_str = str(parent_of_current)
+
+                        # We are effectively inserting intermediate folders between scanned folders and root
+                        # But wait, we are walking UP. 
+                        # If we are at C:\Root\A\B.
+                        # We insert C:\Root\A\B. Parent C:\Root\A.
+                        # Then p becomes C:\Root\A.
+                        
+                        # If current_p is C:\Root\A. Parent C:\Root. 
+                        # We insert C:\Root\A. Parent C:\Root.
+                        
+                        # Wait, what if current_p is the Root itself?
+                        # If loop starts with p != root. 
+                        # If p becomes root?
+                        
+                        # Let's adjust loop:
+                        # We want to ensure everything from p UP TO (but not including?) root exists.
+                        # The root folder ITSELF is inserted by the main scan loop if it contained videos.
+                        # BUT if root folder had NO videos directly (only in subfolders), it might not be in folders table yet!
+                        # So we MUST insert root folder too if missing.
+                        
+                        pass 
+                        
+                        # Actually easier: Just check if we need to insert current_p.
+                        
+                        # Determine parent for DB
+                        if current_p == root:
+                             parent_for_db = ""
+                        else:
+                             parent_for_db = str(current_p.parent)
+                        
                         c.execute("""
                             INSERT INTO folders (path, parent_path, name, is_folder, video_count, root_path, is_available)
                             VALUES (?, ?, ?, 1, 0, ?, 1)
                             ON CONFLICT(path) DO UPDATE SET is_available = 1
-                        """, (current, parent, Path(current).name, root_str))
+                        """, (current_str, parent_for_db, current_p.name, root_str))
                         
-                        processed_folder_paths.add(current)
-                        added.add(current)
+                        processed_folder_paths.add(current_str)
+                        added.add(current_str)
+                        
+                        if current_p == root:
+                            break
+                            
+                        current_p = current_p.parent
+
+                except OSError as e:
+                     # Specific error handling for path construction/manipulation issues
+                    logging.error(f"OSError building hierarchy for path '{parent_path}': {e}")
+                    continue
+
+                except Exception as e:
+                    # Catch-all for other errors to prevent scanner crash
+                    logging.error(f"Unexpected error building hierarchy for path '{parent_path}': {e}", exc_info=True)
+                    continue
+
             conn.commit()
 
         print(f"\n{tr('scanner.availability_check')}")
