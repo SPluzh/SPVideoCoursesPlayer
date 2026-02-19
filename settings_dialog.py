@@ -207,6 +207,13 @@ class SettingsDialog(QDialog):
         msg.exec()
 
         if msg.clickedButton() == yes_button:
+            path_to_remove = current.text(0)
+            norm = os.path.normpath(path_to_remove)
+            if not hasattr(self, '_deleted_paths'):
+                self._deleted_paths = []
+            if norm not in self._deleted_paths:
+                self._deleted_paths.append(norm)
+
             index = self.pathslist.indexOfTopLevelItem(current)
             self.pathslist.takeTopLevelItem(index)
 
@@ -230,6 +237,7 @@ class SettingsDialog(QDialog):
         return paths
 
     def load_current_settings(self):
+        self._deleted_paths = []  # сброс при каждой загрузке
         self.pathslist.clear()
         
         paths_str = self.config.get_library_paths()
@@ -275,7 +283,13 @@ class SettingsDialog(QDialog):
             paths.append(path)
             if item.checkState(0) == Qt.CheckState.Unchecked:
                 excluded_paths.append(path)
-        
+
+        # также включаем пути, которые были удалены в этой сессии настроек
+        deleted = getattr(self, '_deleted_paths', [])
+        for p in deleted:
+            if p not in excluded_paths:
+                excluded_paths.append(p)
+
         self.config.set_library_paths(paths)
         self.config.set_excluded_library_paths(excluded_paths)
         self.config.set_check_updates_on_start(self.auto_update_chk.isChecked())
@@ -337,7 +351,12 @@ class SettingsDialog(QDialog):
             paths.append(path)
             if item.checkState(0) == Qt.CheckState.Unchecked:
                 excluded_paths.append(path)
-                
+
+        deleted = getattr(self, '_deleted_paths', [])
+        for p in deleted:
+            if p not in excluded_paths:
+                excluded_paths.append(p)
+
         self.config.set_library_paths(paths)
         self.config.set_excluded_library_paths(excluded_paths)
 
