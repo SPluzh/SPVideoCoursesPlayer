@@ -147,6 +147,11 @@ class VideoPlayerWidget(QWidget):
     position_changed = pyqtSignal(int, str)
     request_hide_main_window = pyqtSignal()
     request_show_main_window = pyqtSignal()
+
+    @property
+    def is_playing(self):
+        return self.player is not None and not self.player.pause
+
     pause_changed = pyqtSignal(bool)
     subtitle_style_changed = pyqtSignal(str, object)
     next_video_requested = pyqtSignal()
@@ -1438,7 +1443,7 @@ class VideoPlayerWidget(QWidget):
     def _on_marker_gallery_seek(self, seconds):
         """Seek to marker position and hide gallery."""
         if self.player:
-            self.player.time_pos = seconds
+            self.player.seek(seconds, 'absolute', 'exact')
             # self.marker_gallery.hide() # Optional: hide on seek? User didn't specify.
             
     def delete_marker(self, marker_id):
@@ -1656,7 +1661,7 @@ class VideoPlayerWidget(QWidget):
     def set_position(self, position_ms):
         if not self.slider_updating:
             try:
-                self.player.seek(position_ms / 1000.0, 'absolute')
+                self.player.seek(position_ms / 1000.0, 'absolute', 'exact')
             except Exception as e:
                 logging.error(f"Error seeking: {e}", exc_info=True)
 

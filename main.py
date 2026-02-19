@@ -1649,6 +1649,46 @@ class VideoCourseBrowser(QMainWindow):
             #self.video_player.restore_audio_track(file_path)
             self.update_window_title_for_item(item)
 
+            self.update_window_title_for_item(item)
+
+    def play_video_at_marker(self, file_path, position):
+        """Play video starting at specific marker position."""
+        # Check if file exists
+        if not Path(file_path).exists():
+             QMessageBox.warning(self, tr("app.error"), tr("player.file_not_found"))
+             return
+
+        item = self.find_video_item(file_path)
+        if item:
+             # If it's the same file currently playing, just seek
+             if self.video_player.current_file == str(Path(file_path)):
+                 self.video_player.player.seek(position, 'absolute')
+                 if not self.video_player.is_playing:
+                     self.video_player.play_pause()
+             else:
+                 # Otherwise load and play
+                 # We play, but we need to ensure position is set.
+                 # play_video_in_player logic usually resumes or starts from 0.
+                 # Let's use load_video directly for explicit control?
+                 # But play_video_in_player handles UI updates (selection, etc).
+                 
+                 # Let's call load_video directly on video_player as it seems safest for custom pos.
+                 # And then update UI.
+                 
+                 self.video_player.load_video(file_path, position, auto_play=True)
+                 
+                 # Update UI state similar to play_video_in_player
+                 self.course_tree.setCurrentItem(item)
+                 self.course_tree.scrollToItem(item)
+                 self.update_window_title_for_item(item)
+                 
+                 # Update delegate state
+                 delegate = self.course_tree.itemDelegate()
+                 if isinstance(delegate, VideoItemDelegate):
+                     delegate.playing_path = file_path
+                     delegate.is_paused = False
+                     self.course_tree.viewport().update()
+
     def play_video(self, item):
         file_path = item.data(0, Qt.ItemDataRole.UserRole)
 
@@ -1714,33 +1754,32 @@ class VideoCourseBrowser(QMainWindow):
     def play_video_at_marker(self, file_path, position):
         """Play video starting at specific position."""
         try:
-            import sys; sys.stderr.write(f"[MAIN] play_video_at_marker: {file_path} at {position}\n"); sys.stderr.flush()
-            
             # Find item in tree
-            iterator = QTreeWidgetItemIterator(self.library_tree)
-            target_item = None
-            while iterator.value():
-                item = iterator.value()
-                if item.data(0, Qt.ItemDataRole.UserRole) == file_path:
-                    target_item = item
-                    break
-                iterator += 1
+            target_item = self.find_video_item(file_path)
             
             if target_item:
-                import sys; sys.stderr.write(f"[MAIN] Found item for play_video_at_marker\n"); sys.stderr.flush()
-                # Play video
-                if self.video_player and self.video_player.isVisible():
-                     self.play_video_in_player(target_item, resume=False) 
-                     # seek after load
-                     QTimer.singleShot(500, lambda: self.video_player.player.seek(position))
+                # If same file, just seek
+                if self.video_player.current_file == str(Path(file_path)):
+                    self.video_player.player.seek(position, 'absolute', 'exact')
+                    if not self.video_player.is_playing:
+                        self.video_player.play_pause()
                 else:
-                     self.play_video_in_player(target_item, resume=False)
-                     # Wait for player to init
-                     QTimer.singleShot(1000, lambda: self.video_player.player.seek(position))
+                    # Load video at specific position
+                    self.video_player.load_video(file_path, position, auto_play=True)
+                    
+                    # Update UI
+                    self.course_tree.setCurrentItem(target_item)
+                    self.course_tree.scrollToItem(target_item)
+                    self.update_window_title_for_item(target_item)
+                    
+                    delegate = self.course_tree.itemDelegate()
+                    if isinstance(delegate, VideoItemDelegate):
+                        delegate.playing_path = str(Path(file_path))
+                        delegate.is_paused = False
+                        self.course_tree.viewport().update()
             else:
-                import sys; sys.stderr.write(f"[MAIN] Item not found for {file_path}\n"); sys.stderr.flush()
+                logging.warning(f"Item not found for marker play: {file_path}")
         except Exception as e:
-            import sys; sys.stderr.write(f"[MAIN ERROR] play_video_at_marker: {e}\n"); sys.stderr.flush()
             logging.error(f"Error in play_video_at_marker: {e}", exc_info=True)
 
     def browse_directory(self):

@@ -2,7 +2,7 @@ from pathlib import Path
 import logging
 
 from PyQt6.QtWidgets import QTreeWidget, QStyledItemDelegate, QWidget, QLabel
-from PyQt6.QtCore import Qt, QTimer, QRect, QPoint, QRectF, QPointF
+from PyQt6.QtCore import Qt, QTimer, QRect, QPoint, QRectF, QPointF, QEvent
 from PyQt6.QtGui import (
     QAction, QColor, QIcon, QPainter, QPixmap, QPalette, QBrush, 
     QStandardItem, QFont, QPen, QFontMetrics, QPainterPath, QTextLayout, QTextOption,
@@ -437,56 +437,51 @@ class VideoItemDelegate(QStyledItemDelegate):
                 painter.restore()
 
             painter.restore()
-        except Exception as e:
-            logging.error(f"Error in paint: {e}", exc_info=True)
             try: painter.restore()
             except: pass
         finally:
             self._paint_in_progress = False
 
+    def get_marker_at_pos(self, rect, pos, index):
+        """Check if position is over a marker."""
+        data = index.data(Qt.ItemDataRole.UserRole + 2)
+        markers = []
+        if isinstance(data, VideoItemData):
+            markers = getattr(data, 'markers', []) or []
+        
+        show_markers = self.config.get('show_markers', True)
+        if show_markers and markers:
+            base_height = self.config['video_row_height']
+            
+            # Match paint logic
+            marker_x = rect.left()
+            marker_y = rect.top() + base_height
+            marker_height = 18
+            
+            for marker in markers:
+                # Full width hit area
+                available_width = rect.right() - marker_x - 10
+                marker_rect = QRect(marker_x, marker_y, available_width, marker_height)
+                
+                if marker_rect.contains(pos):
+                    return marker
+                
+                marker_y += 20
+        return None
+
     def editorEvent(self, event, model, option, index):
         try:
-            if event.type() == Qt.Event.Type.MouseButtonRelease:
-                 # Check for marker click
-                data = index.data(Qt.ItemDataRole.UserRole + 2)
-                markers = []
-                if isinstance(data, VideoItemData):
-                    markers = getattr(data, 'markers', []) or []
-                
-                show_markers = self.config.get('show_markers', True)
-                if show_markers and markers:
-                    base_height = self.config['video_row_height']
-                    # Recalculate layout for hit testing
-                    display_width = self.config['display_width']
-                    display_height = self.config['display_height']
-                    
-                    # NOTE: Updating thumb_y logic to match paint
-                    thumb_y = option.rect.top() + (base_height - display_height) // 2
-                    thumb_rect = QRect(option.rect.left() - 15, thumb_y, display_width, display_height)
-                    
-                    marker_x = thumb_rect.left()
-                    marker_y = option.rect.top() + base_height
-                    marker_height = 18
-                    
-                    click_pos = event.pos()
-                    
-                    for marker in markers:
-                        # Full width hit area
-                        available_width = option.rect.right() - marker_x - 10
-                        marker_rect = QRect(marker_x, marker_y, available_width, marker_height)
-                        
-                        if marker_rect.contains(click_pos):
-                            # Handle Click
-                            file_path = index.data(Qt.ItemDataRole.UserRole)
-                            pos = marker['position_seconds']
-                            tree = self.parent()
-                            if tree:
-                                 window = tree.window()
-                                 if hasattr(window, 'play_video_at_marker'):
-                                      window.play_video_at_marker(file_path, pos)
-                            return True
-                        
-                        marker_y += 20
+            if event.type() == QEvent.Type.MouseButtonRelease:
+                marker = self.get_marker_at_pos(option.rect, event.pos(), index)
+                if marker:
+                    file_path = index.data(Qt.ItemDataRole.UserRole)
+                    pos = marker['position_seconds']
+                    tree = self.parent()
+                    if tree:
+                            window = tree.window()
+                            if hasattr(window, 'play_video_at_marker'):
+                                window.play_video_at_marker(file_path, pos)
+                    return True
                         
             return super().editorEvent(event, model, option, index)
         except Exception as e:
@@ -742,6 +737,8 @@ class HoverTreeWidget(QTreeWidget):
                         play_rect = delegate.get_play_button_rect(visual_rect)
                         
                         if play_rect.contains(event.pos()):
+                            self.viewport().setCursor(Qt.CursorShape.PointingHandCursor)
+                        elif delegate.get_marker_at_pos(visual_rect, event.pos(), index):
                             self.viewport().setCursor(Qt.CursorShape.PointingHandCursor)
                         else:
                             self.viewport().setCursor(Qt.CursorShape.ArrowCursor)
