@@ -790,7 +790,7 @@ class VideoCourseBrowser(QMainWindow):
         except Exception as e:
             logging.error(f"Error saving progress: {e}")
 
-    def periodic_progress_save(self):
+    def periodic_progress_save(self, force_stats_update=False):
         # logging.debug("periodic_progress_save START")
         if not self.video_player.current_file:
             # logging.debug("periodic_progress_save aborted (no file)")
@@ -820,19 +820,15 @@ class VideoCourseBrowser(QMainWindow):
                 return
 
             try:
-                logging.debug("calling update_video_item_display")
+                # Update folder stats FIRST so they can calculate delta based on OLD item data
+                if force_stats_update or current_time - self._last_stats_update >= 60:
+                    self.update_folder_stats_display(file_path, position, duration, percent)
+                    self._last_stats_update = current_time
+
+                # Then update the video item itself (which overwrites the stored data in the item)
                 self.update_video_item_display(file_path, percent, position)
             except Exception as e:
-                logging.debug(f"error in update_video_item_display: {e}")
-            # Update folder stats every 60 seconds (approx)
-            # Use specific attribute to track last update for playing file
-            current_time = time.time()
-            if not hasattr(self, '_last_stats_update'):
-                self._last_stats_update = 0
-            
-            if current_time - self._last_stats_update >= 60:
-                self.update_folder_stats_display(file_path, position, duration, percent)
-                self._last_stats_update = current_time
+                logging.debug(f"error in display updates: {e}")
         # logging.debug("periodic_progress_save END")
 
     def update_folder_stats_display(self, file_path, position, duration, percent):
@@ -1560,6 +1556,10 @@ class VideoCourseBrowser(QMainWindow):
 
     def play_video_in_player(self, item, resume=True, auto_play=True):
         logging.debug("play_video_in_player called")
+        
+        # Save progress and update folder stats for the PREVIOUS video before switching
+        if self.video_player.current_file:
+            self.periodic_progress_save(force_stats_update=True)
         file_path = item.data(0, Qt.ItemDataRole.UserRole)
         logging.debug(f"file_path: {file_path}")
         

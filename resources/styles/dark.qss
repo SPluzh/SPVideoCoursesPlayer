@@ -829,6 +829,15 @@ QToolTip {
     /*font-style: italic;*/
 }
 
+/* Кнопка Play/Pause на обложке видео в библиотеке */
+#row_play_button_bg {
+    background-color: @accent;
+}
+
+#row_play_button_icon {
+    color: @text-main;
+}
+
 /* ============================================================
    QComboBox в стиле кнопок
    ============================================================ */
