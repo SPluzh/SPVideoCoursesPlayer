@@ -296,14 +296,7 @@ class VideoPlayerWidget(QWidget):
         self.progress_slider.marker_edit_requested.connect(self.edit_marker)
         self.progress_slider.marker_delete_requested.connect(self.delete_marker)
         self.progress_slider.add_marker_requested.connect(self.add_marker)
-        panel_layout.addWidget(self.progress_slider, 1)
-
-        self.time_label = QLabel("00:00 / 00:00")
-        panel_layout.addWidget(self.time_label)
-
-
-
-
+        
         panel_layout.addWidget(self.progress_slider, 1)
 
         self.time_label = QLabel("00:00 / 00:00")
