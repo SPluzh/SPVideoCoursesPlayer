@@ -412,7 +412,12 @@ class VideoItemDelegate(QStyledItemDelegate):
                 marker_height = 18
                 
                 painter.save()
-                font = painter.font(); font.setPointSize(9); painter.setFont(font)
+                base_font = painter.font()
+                base_font.setPointSize(9)
+                painter.setFont(base_font)
+                
+                # Check for hovered marker
+                hovered_marker = self.get_marker_at_pos(option.rect, self.mouse_pos, index) if self.hovered_index == index and self.mouse_pos else None
                 
                 # Full width for markers? or limited?
                 # "под картинкой" -> under picture. Let's start at thumb left, 
@@ -428,6 +433,14 @@ class VideoItemDelegate(QStyledItemDelegate):
                     stripe_color = QColor(marker.get('color', '#3498db') or '#3498db')
                     
                     painter.fillRect(QRect(marker_x, marker_y + 2, 4, marker_height - 4), stripe_color)
+                    
+                    # Apply bold if hovered
+                    if marker == hovered_marker:
+                        base_font.setBold(True)
+                    else:
+                        base_font.setBold(False)
+                    painter.setFont(base_font)
+                    
                     painter.setPen(QColor('#dddddd'))
                     
                     text_w = max(1, marker_area_width - 16)
