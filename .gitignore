@@ -24,6 +24,7 @@ data/
 settings.ini
 
 # Binaries
+7zr.exe
 ffmpeg.exe
 ffprobe.exe
 libmpv-2.dll

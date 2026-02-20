@@ -1,6 +1,8 @@
 import os
 import sys
 import urllib.request
+import urllib.error
+import urllib.parse
 import json
 import zipfile
 import shutil
@@ -8,10 +10,29 @@ import time
 import threading
 import ctypes
 import io
+import subprocess
+import re
 from ctypes import wintypes
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from translator import tr
+from abc import ABC, abstractmethod
+
+# Fix console encoding for Windows to prevent UnicodeEncodeError
+if sys.platform == "win32":
+    try:
+        sys.stdout.reconfigure(encoding='utf-8')
+        sys.stderr.reconfigure(encoding='utf-8')
+    except AttributeError:
+        # Fallback for older python versions if needed, though 3.7+ has reconfigure
+        pass
+
+# Try importing py7zr
+try:
+    import py7zr
+    HAS_PY7ZR = True
+except ImportError:
+    HAS_PY7ZR = False
 
 def format_size(size_bytes):
     """Formats bytes into human readable MB."""
@@ -19,19 +40,23 @@ def format_size(size_bytes):
 
 def safe_unlink(path, retries=5, delay=0.5):
     """Attempts to delete a file with retries for Windows permission issues."""
+    path = Path(path)
     for i in range(retries):
         try:
             if path.exists():
-                path.unlink()
+                if path.is_dir():
+                    shutil.rmtree(path)
+                else:
+                    path.unlink()
             return True
         except PermissionError:
             if i < retries - 1:
                 time.sleep(delay)
             else:
-                print(tr('libmpv_updater.warning_delete', path=path))
+                print(f"Warning: Could not delete {path}") # Fallback for tr failures
                 return False
         except Exception as e:
-            print(tr('libmpv_updater.error_delete', path=path, error=e))
+            print(f"Error deleting {path}: {e}")
             return False
     return False
 
@@ -84,17 +109,35 @@ class Downloader:
         self.last_update_time = 0
         self.update_interval = 0.1 # Max updates every 100ms
         self.headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8'
         }
+
+    def _resolve_redirects(self, url):
+        """Resolves redirects to get the final download URL before using HEAD/Range."""
+        try:
+            req = urllib.request.Request(url, headers=self.headers, method='HEAD')
+            with urllib.request.urlopen(req) as response:
+                return response.geturl()
+        except:
+            # Fallback to GET just in case HEAD is blocked
+            try:
+                req = urllib.request.Request(url, headers=self.headers)
+                with urllib.request.urlopen(req) as response:
+                     return response.geturl()
+            except:
+                return url
 
     def _download_chunk(self, start, end):
         req = urllib.request.Request(self.url, headers=self.headers)
-        req.add_header('Range', f'bytes={start}-{end}')
+        if start is not None and end is not None:
+             req.add_header('Range', f'bytes={start}-{end}')
         
         try:
             with urllib.request.urlopen(req) as response:
                 with open(self.target_path, 'r+b') as f:
-                    f.seek(start)
+                    if start is not None:
+                        f.seek(start)
                     chunk_size = 1024 * 256
                     while True:
                         chunk = response.read(chunk_size)
@@ -142,17 +185,31 @@ class Downloader:
                     sys.stdout.flush()
 
     def download(self):
+        # Resolve any redirects first to get the final direct link if possible
+        print(f"Resolving URL: {self.url}")
+        self.url = self._resolve_redirects(self.url)
+        print(f"Resolved URL: {self.url}")
+
         req = urllib.request.Request(self.url, headers=self.headers, method='HEAD')
-        with urllib.request.urlopen(req) as response:
-            self.total_size = int(response.info().get('Content-Length', 0))
-            accept_ranges = response.info().get('Accept-Ranges') == 'bytes'
+        try:
+            with urllib.request.urlopen(req) as response:
+                self.total_size = int(response.info().get('Content-Length', 0))
+                self.accept_ranges = response.info().get('Accept-Ranges') == 'bytes'
+        except Exception as e:
+             print(f"HEAD request failed: {e}. Falling back to single-thread download.")
+             self.total_size = 0
+             self.accept_ranges = False
 
         with open(self.target_path, 'wb') as f:
-            f.truncate(self.total_size)
+            if self.total_size > 0:
+                f.truncate(self.total_size)
+            else:
+                # If size unknown, just create/truncate
+                pass
 
         self.start_time = time.time()
         
-        if accept_ranges and self.total_size > 0:
+        if self.accept_ranges and self.total_size > 0:
             chunk_size = self.total_size // self.num_threads
             futures = []
             with ThreadPoolExecutor(max_workers=self.num_threads) as executor:
@@ -163,123 +220,279 @@ class Downloader:
                 for future in futures:
                     future.result()
         else:
-            self._download_chunk(0, self.total_size - 1 if self.total_size > 0 else '')
+            # Single threaded fallback (no Range support or unknown size)
+            self._download_chunk(None, None)
 
         self._report_progress(force=True) # Final update
         return time.time() - self.start_time
 
-def get_latest_release():
-    api_url = "https://api.github.com/repos/mpvnet-player/mpv.net/releases/latest"
-    req = urllib.request.Request(api_url, headers={'User-Agent': 'Mozilla/5.0'})
-    with urllib.request.urlopen(req) as response:
-        data = json.load(response)
-        tag = data['tag_name']
-        assets = data['assets']
-        
-        # Look for portable-x64.zip
-        download_url = None
-        for asset in assets:
-            if "portable-x64.zip" in asset['name'].lower():
-                download_url = asset['browser_download_url']
-                break
-        
-        return tag, download_url
-
-def find_and_extract_dll(zip_obj, target_path):
-    """Recursively searches for the DLL in zip and nested zips."""
-    all_files = zip_obj.namelist()
+class ReleaseSource(ABC):
+    @abstractmethod
+    def get_latest_release(self):
+        pass
     
-    # Check current zip level
-    dll_names = ["libmpv-2.dll", "mpv.dll", "mpv-2.dll", "libmpv.dll"]
-    for name in all_files:
-        basename = os.path.basename(name).lower()
-        if basename in dll_names:
-            print(tr('libmpv_updater.extracting_file', name=name))
-            with zip_obj.open(name) as source, open(target_path, 'wb') as target:
-                shutil.copyfileobj(source, target)
+    @abstractmethod
+    def get_name(self):
+        pass
+
+
+class GitHubSource(ReleaseSource):
+    def __init__(self, repo, author_name):
+        self.repo = repo
+        self.author_name = author_name
+        self.api_url = f"https://api.github.com/repos/{repo}/releases/latest"
+
+    def get_name(self):
+        return f"GitHub ({self.author_name})"
+
+    def get_latest_release(self):
+        req = urllib.request.Request(self.api_url, headers={'User-Agent': 'Mozilla/5.0'})
+        try:
+            with urllib.request.urlopen(req) as response:
+                data = json.load(response)
+                
+                assets = data.get('assets', [])
+                download_url = None
+                
+                for asset in assets:
+                    name = asset['name'].lower()
+                    if 'mpv-dev-x86_64' in name and name.endswith('.7z') and 'v3' not in name:
+                         download_url = asset['browser_download_url']
+                         break
+                
+                if not download_url:
+                     for asset in assets:
+                        name = asset['name'].lower()
+                        if 'mpv-x86_64' in name and name.endswith('.7z') and 'v3' not in name:
+                            download_url = asset['browser_download_url']
+                            break
+    
+                tag = data['tag_name']
+                
+                return tag, download_url
+        except Exception as e:
+            print(f"GitHub error for {self.repo}: {e}")
+            return None, None
+
+def get_7z_path(bin_dir=None):
+    """Tries to find 7z/7zr executable."""
+    common_paths = [
+        r"C:\Program Files\7-Zip\7z.exe",
+        r"C:\Program Files (x86)\7-Zip\7z.exe",
+    ]
+    # Check PATH
+    path = shutil.which("7z") or shutil.which("7zr")
+    if path:
+        return path
+    
+    # Check bin directory for 7zr.exe
+    if bin_dir:
+        local_7zr = Path(bin_dir) / "7zr.exe"
+        if local_7zr.exists():
+            return str(local_7zr)
+        
+    for p in common_paths:
+        if os.path.exists(p):
+            return p
+    return None
+
+def download_7zr(target_dir):
+    """Downloads standalone 7-Zip console (7zr.exe) from 7-zip.org."""
+    url = "https://www.7-zip.org/a/7zr.exe"
+    target_path = Path(target_dir) / "7zr.exe"
+    print(f"Downloading standalone 7zr.exe from {url}...")
+    try:
+        # Use headers to be safe
+        headers = {'User-Agent': 'Mozilla/5.0'}
+        req = urllib.request.Request(url, headers=headers)
+        with urllib.request.urlopen(req) as response, open(target_path, 'wb') as out_file:
+            shutil.copyfileobj(response, out_file)
+        print(f"7zr.exe downloaded successfully to {target_path}")
+        return str(target_path)
+    except Exception as e:
+        print(f"Failed to download 7zr.exe: {e}")
+        return None
+
+def extract_7z(archive_path, extract_to, bin_dir=None):
+    """Extracts .7z archive with robust fallbacks."""
+    
+    # 1. Try 7-Zip executable (system or local)
+    seven_zip_exe = get_7z_path(bin_dir)
+    
+    # If not found, try to download 7zr.exe to bin_dir
+    if not seven_zip_exe and bin_dir:
+        print("7-Zip not found. Attempting to download 7zr.exe...")
+        seven_zip_exe = download_7zr(bin_dir)
+        
+    if seven_zip_exe:
+        try:
+            print(f"Extracting with 7-Zip: {seven_zip_exe}")
+            cmd = [seven_zip_exe, 'x', '-y', f'-o{extract_to}', str(archive_path)]
+            subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, check=True)
             return True
-            
-    # If not found, look for nested zips
-    for name in all_files:
-        if name.lower().endswith('.zip'):
-            print(tr('libmpv_updater.searching_nested', name=name))
-            with zip_obj.open(name) as nested_zip_data:
-                nested_zip_bytes = io.BytesIO(nested_zip_data.read())
-                with zipfile.ZipFile(nested_zip_bytes) as nested_zip_obj:
-                    if find_and_extract_dll(nested_zip_obj, target_path):
-                        return True
-    return False
+        except subprocess.CalledProcessError as e:
+            print(f"7-Zip extraction failed: {e.stderr.decode('utf-8', 'ignore') if e.stderr else e}")
+            print("Trying next method...")
+
+    # 2. Try py7zr (pure python fallback)
+    if HAS_PY7ZR:
+        try:
+            print("Extracting with py7zr...")
+            with py7zr.SevenZipFile(archive_path, mode='r') as z:
+                z.extractall(path=extract_to)
+            return True
+        except Exception as e:
+            print(f"py7zr extraction failed: {e}. Trying next method...")
+    
+    # 3. Try system tar (last resort)
+    try:
+        print("Extracting with system tar...")
+        subprocess.run(['tar', '--version'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True)
+        cmd = ['tar', '-x', '-f', str(archive_path), '-C', str(extract_to)]
+        result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        if result.returncode != 0:
+            raise Exception(f"Tar failed: {result.stderr.strip()}")
+        return True
+    except Exception as e:
+        msg = f"All extraction methods failed. Please install 7-Zip manually. Error: {e}"
+        raise Exception(msg)
+
+def find_dll_in_dir(search_dir):
+    """Recursively searches for libmpv-2.dll."""
+    for root, dirs, files in os.walk(search_dir):
+        for name in files:
+            if name.lower() in ["libmpv-2.dll", "mpv-2.dll"]:
+                return Path(root) / name
+    return None
 
 def update_libmpv():
     script_dir = Path(__file__).parent
     bin_dir = script_dir / "resources" / "bin"
+    temp_dir = script_dir / "temp_mpv_extract"
+    
     if not bin_dir.exists():
         bin_dir.mkdir(parents=True, exist_ok=True)
         
     dll_path = bin_dir / "libmpv-2.dll"
     version_file = bin_dir / "libmpv.version"
-    zip_path = script_dir / "libmpv.zip"
+    archive_path = script_dir / "libmpv_archive.7z"
     
     print("=" * 60)
     print(f"      {tr('libmpv_updater.title')}      ")
     print("=" * 60)
     
-    try:
-        local_version = None
-        if version_file.exists():
-            local_version = version_file.read_text().strip()
+    local_version = None
+    if version_file.exists():
+        local_version = version_file.read_text().strip()
+    
+    if not local_version and dll_path.exists():
+        local_version = get_dll_version(dll_path)
+        if local_version:
+            version_file.write_text(local_version)
+    
+    if not dll_path.exists():
+        print(tr('libmpv_updater.not_found'))
+        local_version = "missing"
+    else:
+        print(tr('libmpv_updater.local_version', version=local_version or "unknown"))
+
+    sources = [
+        GitHubSource("shinchiro/mpv-winbuild-cmake", "shinchiro"),
+        GitHubSource("zhongfly/mpv-winbuild", "zhongfly")
+    ]
+ 
+    print(tr('libmpv_updater.checking'))
+
+    updated = False
+    
+    for source in sources:
+        try:
+            print(f"Checking {source.get_name()}...")
+            ver, url = source.get_latest_release()
+            
+            if not ver or not url:
+                print(f"No release found or error with {source.get_name()}")
+                continue
+                
+            print(f"Found version {ver} at {source.get_name()}")
+            
+            if local_version == ver and dll_path.exists():
+                print(tr('libmpv_updater.up_to_date'))
+                return True
+                
+            print(f"\n{tr('libmpv_updater.updating')}")
+            print(f"{tr('libmpv_updater.downloading')}")
         
-        if not local_version and dll_path.exists():
-            local_version = get_dll_version(dll_path)
-            if local_version:
-                version_file.write_text(local_version)
+            try:
+                downloader = Downloader(url, archive_path)
+                duration = downloader.download()
+                print(f"\n{tr('ffmpeg_updater.download_success', time=duration)}")
+                
+                print(tr('libmpv_updater.extracting'))
+                safe_unlink(temp_dir)
+                temp_dir.mkdir(exist_ok=True)
+                
+                extract_7z(archive_path, temp_dir, bin_dir)
+                
+                new_dll = find_dll_in_dir(temp_dir)
+                if not new_dll:
+                     raise Exception(tr('libmpv_updater.dll_not_found'))
+                
+                print(f"Found DLL at: {new_dll}")
+                shutil.copy2(new_dll, dll_path)
+                
+                include_src = new_dll.parent.parent / "include"
+                include_dst = bin_dir.parent / "include"
+                if include_src.exists() and include_src.is_dir():
+                     if include_dst.exists():
+                         safe_unlink(include_dst)
+                     shutil.copytree(include_src, include_dst)
+                     print("Updated headers.")
         
+                version_file.write_text(ver)
+                print("-" * 40)
+                print(tr('libmpv_updater.success', version=ver))
+                print("-" * 40)
+                updated = True
+                break
+                
+            except Exception as e:
+                print(f"Error with {source.get_name()}: {e}")
+                print("Trying next source...")
+                if archive_path.exists():
+                    safe_unlink(archive_path)
+                if temp_dir.exists():
+                    safe_unlink(temp_dir)
+                continue
+                
+        except Exception as e:
+            print(f"Failed to check {source.get_name()}: {e}")
+            continue
+
+    if not updated:
         if not dll_path.exists():
-            print(tr('libmpv_updater.not_found'))
-            local_version = "missing"
+             print(f"\nError: All sources failed and local DLL missing.")
+             return False
         else:
-            print(tr('libmpv_updater.local_version', version=local_version or "unknown"))
-
-        print(tr('libmpv_updater.checking'))
-        latest_version, download_url = get_latest_release()
-        print(tr('libmpv_updater.latest_version', version=latest_version))
+             print(f"\nAll sources failed. Keeping local version.")
+             return False
+             
+    if archive_path.exists():
+        print(tr('ffmpeg_updater.cleanup'))
+        safe_unlink(archive_path)
+    if temp_dir.exists():
+        safe_unlink(temp_dir)
         
-        if local_version == latest_version and dll_path.exists():
-            print(tr('libmpv_updater.up_to_date'))
-            return True
-
-        if not download_url:
-            raise Exception(tr('libmpv_updater.no_download_url'))
-
-        print(f"\n{tr('libmpv_updater.updating')}")
-        print(f"{tr('libmpv_updater.downloading')}")
-        
-        downloader = Downloader(download_url, zip_path)
-        duration = downloader.download()
-        print(f"\n{tr('ffmpeg_updater.download_success', time=duration)}")
-        
-        print(tr('libmpv_updater.extracting'))
-        with zipfile.ZipFile(zip_path, 'r') as zip_ref:
-            if not find_and_extract_dll(zip_ref, dll_path):
-                print(tr('libmpv_updater.archive_contents'))
-                for name in zip_ref.namelist()[:10]:
-                    print(f"  - {name}")
-                raise Exception(tr('libmpv_updater.dll_not_found'))
-        
-        version_file.write_text(latest_version)
-        print("-" * 40)
-        print(tr('libmpv_updater.success', version=latest_version))
-        print("-" * 40)
-        
-    except Exception as e:
-        print(f"\n{tr('libmpv_updater.error', error=e)}")
-        return False
-    finally:
-        if zip_path.exists():
-            print(tr('ffmpeg_updater.cleanup'))
-            safe_unlink(zip_path)
+    return True
 
 if __name__ == "__main__":
-    update_libmpv()
-    print("\n" + "=" * 60)
-    input(tr('ffmpeg_updater.press_enter'))
+    try:
+        if update_libmpv():
+            print("\n" + "=" * 60)
+            input(tr('ffmpeg_updater.press_enter'))
+        else:
+            print("\n" + "=" * 60)
+            input("Update failed. Press Enter to exit...")
+    except Exception as e:
+        print(f"\nFatal Error: {e}")
+        input("Press Enter to exit...")
