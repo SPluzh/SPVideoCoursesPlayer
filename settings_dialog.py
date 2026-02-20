@@ -8,10 +8,10 @@ from pathlib import Path
 from PyQt6.QtWidgets import (
     QDialog, QVBoxLayout, QGroupBox, QTreeWidget, QTreeWidgetItem, QPushButton,
     QHBoxLayout, QFileDialog, QStyle, QMessageBox, QLabel, QProgressBar, QTextEdit,
-    QFrame, QCheckBox
+    QFrame, QCheckBox, QSplitter, QWidget
 )
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal, QThread
-from PyQt6.QtGui import QTextCursor, QIcon
+from PyQt6.QtGui import QTextCursor, QIcon, QColor
 
 from translator import tr
 from styles import DARK_STYLE
@@ -44,8 +44,6 @@ class SettingsDialog(QDialog):
     def setup_ui(self):
         main_layout = QVBoxLayout(self)
 
-        content_layout = QHBoxLayout()
-        
         library_group = QGroupBox(tr('settings.library_group'))
         library_layout = QVBoxLayout()
 
@@ -79,7 +77,16 @@ class SettingsDialog(QDialog):
         library_layout.addWidget(self.scan_btn)
 
         library_group.setLayout(library_layout)
-        content_layout.addWidget(library_group, 2)
+        
+        # Create Splitter
+        content_splitter = QSplitter(Qt.Orientation.Horizontal)
+        content_splitter.setHandleWidth(12)
+        content_splitter.setStyleSheet("""
+            QSplitter::handle {
+                margin: 0 3px;
+            }
+        """)
+        content_splitter.addWidget(library_group)
 
         deps_group = QGroupBox(tr('settings.dependencies_group'))
         deps_layout = QVBoxLayout()
@@ -112,13 +119,19 @@ class SettingsDialog(QDialog):
         storage_layout.addStretch()
         storage_group.setLayout(storage_layout)
         
-        right_column = QVBoxLayout()
+        right_widget = QWidget()
+        right_widget.setMinimumWidth(0) # Allow full collapse
+        right_column = QVBoxLayout(right_widget)
+        right_column.setContentsMargins(0, 0, 0, 0)
         right_column.addWidget(deps_group)
         right_column.addWidget(storage_group)
-        content_layout.addLayout(right_column, 1)
-
         
-        main_layout.addLayout(content_layout)
+        content_splitter.addWidget(right_widget)
+        content_splitter.setStretchFactor(0, 1) # Only left section expands
+        content_splitter.setStretchFactor(1, 0) # Right section stays fixed
+        content_splitter.setChildrenCollapsible(True) # Allow collapsing
+        
+        main_layout.addWidget(content_splitter)
         
         QTimer.singleShot(100, self.check_libmpv_version)
         QTimer.singleShot(200, self.check_ffmpeg_version)
