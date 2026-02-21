@@ -1428,8 +1428,11 @@ class VideoPlayerWidget(QWidget):
             if request_id.startswith("marker_"):
                 m_id = int(request_id.replace("marker_", ""))
                 logging.debug(f"Updating gallery thumbnail for marker_id={m_id}")
-                # self.marker_gallery.update_thumbnail(m_id, pixmap)
-                logging.debug(f"SKIPPED updating gallery thumbnail (testing crash isolation)")
+                self.marker_gallery.update_thumbnail(m_id, pixmap)
+            elif request_id.startswith("ts_"):
+                ts = int(request_id.replace("ts_", ""))
+                logging.debug(f"Updating gallery thumbnail for timestamp={ts}")
+                self.marker_gallery.update_thumbnail(ts, pixmap)
             else:
                 logging.error(f"Unknown request_id format: {request_id}")
 
