@@ -50,6 +50,7 @@ from floating_player import FloatingVideoWindow, PiPManager
 from tag_filter_popup import TagFilterPopup
 from utils import natural_sort_key, format_time, format_duration, format_size
 from config_manager import ConfigManager
+from search_utils import smart_search
 
 
 
@@ -2204,18 +2205,18 @@ class VideoCourseBrowser(QMainWindow):
                 tag_match = False
 
         # Text search (also check tags names in text search)
-        text_matches_item = query in item_text
+        text_matches_item = smart_search(query, item_text)
         if query and not text_matches_item and item_type == 'video':
             data = item.data(0, Qt.ItemDataRole.UserRole + 2)
             if isinstance(data, VideoItemData):
                 item_tags = data.tags
-                text_matches_item = any(query in t['name'].lower() for t in item_tags)
+                text_matches_item = any(smart_search(query, t['name']) for t in item_tags)
                 if not text_matches_item and data.markers:
-                     text_matches_item = any(query in m['label'].lower() for m in data.markers)
+                     text_matches_item = any(smart_search(query, m['label']) for m in data.markers)
 
             elif data and len(data) >= 11:
                 item_tags = data[10]
-                text_matches_item = any(query in t['name'].lower() for t in item_tags)
+                text_matches_item = any(smart_search(query, t['name']) for t in item_tags)
 
         # Logic for this item
         text_match = text_matches_item or parent_matches

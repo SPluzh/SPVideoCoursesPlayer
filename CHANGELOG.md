@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.3.3]
+- **Search**: Implemented a robust fuzzy search system:
+    - **Fuzzy Matching**: Matches queries even with typos using SequenceMatcher.
+    - **Transliteration**: Automatically converts queries between English and Russian layouts (e.g. "ghbdtn" -> "привет").
+    - **Word-level Matching**: Matches queries independently of word order.
+    - **Integration**: Works seamlessly across library items, tags, and markers.
+
 ## [1.3.2]
 - **Library**:
     - Markers are now displayed as a list under each video.
