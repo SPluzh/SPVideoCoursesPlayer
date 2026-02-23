@@ -32,7 +32,7 @@ from PyQt6.QtCore import Qt, QSize, QRect, QTimer, QUrl, pyqtSignal, QByteArray,
 from PyQt6.QtGui import QIcon, QPixmap, QFont, QBrush, QColor, QPainter, QAction, QKeyEvent, QMouseEvent, QActionGroup, QPalette, QPolygon, QCursor, QPen, QTextCursor
 from styles import DARK_STYLE
 import styles
-from taskbar_progress import TaskbarProgress
+from taskbar_progress import TaskbarProgress, TaskbarThumbnailButtons
 import re
 from translator import tr, Translator
 from about_dialog import AboutDialog
@@ -1165,8 +1165,9 @@ class VideoCourseBrowser(QMainWindow):
         if isinstance(delegate, VideoItemDelegate):
             delegate.is_paused = is_paused
             self.course_tree.viewport().update()
-
-            self.course_tree.viewport().update()
+        # Sync taskbar thumbnail play/pause button icon
+        if hasattr(self, 'thumbnail_buttons'):
+            self.thumbnail_buttons.update_play_state(not is_paused)
 
     def toggle_pip_mode(self):
         """Toggle Picture-in-Picture mode."""
@@ -2259,6 +2260,16 @@ class VideoCourseBrowser(QMainWindow):
                 hwnd = int(self.winId())
                 self.taskbar_progress.set_hwnd(hwnd)
                 self.taskbar_progress.set_normal()
+                # Initialize thumbnail toolbar buttons (5 playback controls)
+                if self.taskbar_progress.taskbar:
+                    self.thumbnail_buttons = TaskbarThumbnailButtons(
+                        self.taskbar_progress.taskbar,
+                        hwnd,
+                        RESOURCES_DIR / 'icons'
+                    )
+                    # Defer to ensure window is fully registered with taskbar
+                    QTimer.singleShot(1000, self.thumbnail_buttons.add_buttons)
+                    self.thumbnail_buttons.update_play_state(False)
             except Exception as e:
                 logging.error(f"Taskbar error: {e}")
 
@@ -2279,6 +2290,57 @@ class VideoCourseBrowser(QMainWindow):
         event.accept()
 
 
+from PyQt6.QtCore import QAbstractNativeEventFilter
+from ctypes import wintypes as _wintypes
+
+# Button IDs must match THUMBBUTTON_* in taskbar_progress.py
+_THUMBBUTTON_PREV      = 0
+_THUMBBUTTON_REWIND    = 1
+_THUMBBUTTON_PLAYPAUSE = 2
+_THUMBBUTTON_FORWARD   = 3
+_THUMBBUTTON_NEXT      = 4
+
+WM_COMMAND   = 0x0111
+THBN_CLICKED = 0x1800
+
+
+class TaskbarEventFilter(QAbstractNativeEventFilter):
+    """Intercepts WM_COMMAND messages from taskbar thumbnail button clicks."""
+
+    def __init__(self, window):
+        super().__init__()
+        self.window = window
+
+    def nativeEventFilter(self, event_type, message):
+        if event_type == b"windows_generic_MSG" and message:
+            try:
+                msg_ptr = int(message)
+                if msg_ptr:
+                    msg = _wintypes.MSG.from_address(msg_ptr)
+                    if msg.message == WM_COMMAND:
+                        if (msg.wParam >> 16) & 0xFFFF == THBN_CLICKED:
+                            button_id = msg.wParam & 0xFFFF
+                            w = self.window
+                            if button_id == _THUMBBUTTON_PREV:
+                                w.play_prev_video()
+                                return True, 0
+                            elif button_id == _THUMBBUTTON_REWIND:
+                                w.video_player.seek_relative(-10)
+                                return True, 0
+                            elif button_id == _THUMBBUTTON_PLAYPAUSE:
+                                w.video_player.play_pause()
+                                return True, 0
+                            elif button_id == _THUMBBUTTON_FORWARD:
+                                w.video_player.seek_relative(10)
+                                return True, 0
+                            elif button_id == _THUMBBUTTON_NEXT:
+                                w.play_next_video()
+                                return True, 0
+            except Exception:
+                pass
+        return False, 0
+
+
 def main():
     app = QApplication(sys.argv)
     app.setStyle('Fusion')
@@ -2291,6 +2353,9 @@ def main():
         logging.debug("Window created")
         is_maximized = window.restore_window_state()
         logging.debug("Window state restored")
+        # Register native event filter for taskbar thumbnail button clicks
+        taskbar_filter = TaskbarEventFilter(window)
+        app.installNativeEventFilter(taskbar_filter)
         window.show()
         logging.debug("Window shown")
         if is_maximized:

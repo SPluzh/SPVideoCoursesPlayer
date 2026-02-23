@@ -431,5 +431,13 @@
             "p": "P",
             "shift": "Shift"
         }
+    },
+    "taskbar": {
+        "prev":     "Previous video",
+        "seek_back": "Rewind 10 seconds",
+        "play":     "Play",
+        "pause":    "Pause",
+        "seek_fwd": "Forward 10 seconds",
+        "next":     "Next video"
     }
 }

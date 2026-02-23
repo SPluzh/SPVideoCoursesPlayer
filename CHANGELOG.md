@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.3.4]
+- **Taskbar Integration**: Implemented Windows taskbar thumbnail buttons for playback control:
+    - Added 5 interactive buttons: Previous Video, Rewind 10s, Play/Pause, Forward 10s, and Next Video.
+    - Added real-time synchronization of the Play/Pause button icon with the player state.
+    - Implemented a native event filter to handle button clicks directly from the taskbar preview.
+
 ## [1.3.3]
 - **Search**: Implemented a robust fuzzy search system:
     - **Fuzzy Matching**: Matches queries even with typos using SequenceMatcher.
