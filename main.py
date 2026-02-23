@@ -52,6 +52,61 @@ from utils import natural_sort_key, format_time, format_duration, format_size
 from config_manager import ConfigManager
 from search_utils import smart_search
 
+class PiPOverlay(QWidget):
+    def __init__(self, parent=None):
+        flags = (Qt.WindowType.Tool | 
+                 Qt.WindowType.FramelessWindowHint | 
+                 Qt.WindowType.WindowStaysOnTopHint)
+        if hasattr(Qt.WindowType, 'WindowTransparentForInput'):
+            flags |= Qt.WindowType.WindowTransparentForInput
+        super().__init__(parent, flags)
+        self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
+        self.setAttribute(Qt.WidgetAttribute.WA_NoSystemBackground)
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+        self.hover_edge = None
+        self.active = False
+        self.accent_color = QColor("#018574")
+
+    def set_active(self, active):
+        if self.active != active:
+            self.active = active
+            self.update()
+
+    def set_hover_edge(self, edge):
+        if self.hover_edge != edge:
+            self.hover_edge = edge
+            self.update()
+
+    def paintEvent(self, event):
+        if self.active or self.hover_edge:
+            # logging.debug(f"PiPOverlay paintEvent: edge={self.hover_edge}")
+            painter = QPainter(self)
+            painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+            
+            w, h = self.width(), self.height()
+            r_large = 6
+            r_small = 4
+            
+            # Border rect connecting the centers of the large dots
+            painter.setPen(QPen(self.accent_color, 2))
+            painter.drawRect(r_large, r_large, w - 2*r_large, h - 2*r_large)
+            
+            painter.setBrush(self.accent_color)
+            painter.setPen(Qt.PenStyle.NoPen)
+            
+            # Corners (exactly on the rect vertices)
+            painter.drawEllipse(QPoint(r_large, r_large), r_large, r_large)
+            painter.drawEllipse(QPoint(w - r_large, r_large), r_large, r_large)
+            painter.drawEllipse(QPoint(r_large, h - r_large), r_large, r_large)
+            painter.drawEllipse(QPoint(w - r_large, h - r_large), r_large, r_large)
+            
+            # Midpoints (on the rect edges)
+            painter.drawEllipse(QPoint(w // 2, r_large), r_small, r_small)
+            painter.drawEllipse(QPoint(w // 2, h - r_large), r_small, r_small)
+            painter.drawEllipse(QPoint(r_large, h // 2), r_small, r_small)
+            painter.drawEllipse(QPoint(w - r_large, h // 2), r_small, r_small)
+            
+            painter.end()
 
 
 class VideoCourseBrowser(QMainWindow):
@@ -93,6 +148,8 @@ class VideoCourseBrowser(QMainWindow):
         self.window_start_geo = QRect()
         self.window_start_pos = QPoint()
         self.resize_margin = 12
+        self.current_hover_edge = None
+        self.pip_overlay = None
 
         self.create_menu_bar()
 
@@ -494,7 +551,7 @@ class VideoCourseBrowser(QMainWindow):
                     
             if 'pip_geometry' in state:
                 try:
-                    self.pip_manager.pip_geometry = QByteArray.fromHex(bytes(state['pip_geometry'], 'utf-8'))
+                    self.pip_geometry = QByteArray.fromHex(bytes(state['pip_geometry'], 'utf-8'))
                 except Exception as e:
                     logging.error(f"Error restoring PiP geometry: {e}")
 
@@ -535,11 +592,11 @@ class VideoCourseBrowser(QMainWindow):
         state['splitter_state'] = self.splitter.saveState().toHex().data().decode('utf-8')
         
         # Save PiP geometry
-        if self.pip_manager.floating_window and self.pip_manager.floating_window.isVisible():
-            self.pip_manager.pip_geometry = self.pip_manager.floating_window.saveGeometry()
+        if self.is_pip_mode:
+            self.pip_geometry = self.saveGeometry()
             
-        if self.pip_manager.pip_geometry:
-            state['pip_geometry'] = self.pip_manager.pip_geometry.toHex().data().decode('utf-8')
+        if self.pip_geometry:
+            state['pip_geometry'] = self.pip_geometry.toHex().data().decode('utf-8')
 
         state['is_maximized'] = str(self.isMaximized())
 
@@ -704,8 +761,12 @@ class VideoCourseBrowser(QMainWindow):
             self.video_player._update_gallery_geometry()
             # Delayed call for robustness (Windows drag sync)
             QTimer.singleShot(0, self.video_player._update_gallery_geometry)
+        if hasattr(self, 'is_pip_mode') and self.is_pip_mode and getattr(self, 'pip_overlay', None):
+            self.pip_overlay.setGeometry(self.geometry())
 
     def resizeEvent(self, event):
+        if self.is_pip_mode and getattr(self, 'pip_overlay', None):
+            self.pip_overlay.setGeometry(self.geometry())
         super().resizeEvent(event)
 
     def close_db_connection(self):
@@ -1198,6 +1259,14 @@ class VideoCourseBrowser(QMainWindow):
         self.is_pip_mode = True
         self.normal_geometry = self.saveGeometry()
         
+        # Create overlay
+        if not self.pip_overlay:
+            # Create it as a top-level window so it's above the native video player
+            self.pip_overlay = PiPOverlay(self)
+        self.pip_overlay.setGeometry(self.geometry())
+        self.pip_overlay.show()
+        self.pip_overlay.raise_()
+        
         # Hide UI elements
         self.browser_widget.hide()
         self.menuBar().hide()
@@ -1304,6 +1373,12 @@ class VideoCourseBrowser(QMainWindow):
         self.splitter.setMouseTracking(False)
         self.centralWidget().setMouseTracking(False)
         self.setCursor(Qt.CursorShape.ArrowCursor)
+        self.current_hover_edge = None
+        
+        if self.pip_overlay:
+            self.pip_overlay.hide()
+            self.pip_overlay.deleteLater()
+            self.pip_overlay = None
         
         # Restore normal geometry
         if self.normal_geometry:
@@ -2456,6 +2531,18 @@ class VideoCourseBrowser(QMainWindow):
 
     def eventFilter(self, source, event):
         if self.is_pip_mode:
+            # Handle hover visibility
+            if event.type() == QEvent.Type.Enter:
+                if self.pip_overlay:
+                    self.pip_overlay.set_active(True)
+            elif event.type() == QEvent.Type.Leave:
+                # Check if mouse is actually outside the main window area
+                if self.pip_overlay:
+                    from PyQt6.QtGui import QCursor
+                    if not self.geometry().contains(QCursor.pos()):
+                        self.pip_overlay.set_active(False)
+                        self.pip_overlay.set_hover_edge(None)
+
             # Use global position for consistent coordinate mapping across widgets
             if event.type() in [QEvent.Type.MouseMove, QEvent.Type.MouseButtonPress, QEvent.Type.MouseButtonRelease, QEvent.Type.MouseButtonDblClick]:
                 if hasattr(event, 'globalPosition'):
@@ -2506,19 +2593,22 @@ class VideoCourseBrowser(QMainWindow):
 
     def handle_pip_mouse_move(self, event, window_pos=None):
         if window_pos is None:
-            window_pos = self.mapFromGlobal(event.globalPosition().toPoint())
+            try:
+                gpos = event.globalPosition().toPoint()
+            except AttributeError:
+                gpos = event.globalPos()
+            window_pos = self.mapFromGlobal(gpos)
             
         edge = self._get_resize_edge(window_pos)
+        # if edge: logging.debug(f"PiP edge detected: {edge}")
         
         if self.resizing:
             self.handle_resize(event.globalPosition().toPoint())
         elif self.dragging:
             diff = event.globalPosition().toPoint() - self.drag_start_pos
             self.move(self.window_start_pos + diff)
-        elif edge:
-            self.update_cursor(edge)
         else:
-            self.setCursor(Qt.CursorShape.ArrowCursor)
+            self.update_cursor(edge)
 
     def handle_pip_mouse_release(self, event, window_pos=None):
         if self.resizing or self.dragging:
@@ -2567,6 +2657,12 @@ class VideoCourseBrowser(QMainWindow):
         return edge if edge else None
 
     def update_cursor(self, edge):
+        if self.is_pip_mode and self.pip_overlay:
+            self.pip_overlay.set_active(True)
+            self.pip_overlay.set_hover_edge(edge)
+            if edge:
+                self.pip_overlay.raise_()
+
         if edge == "left" or edge == "right":
             self.setCursor(Qt.CursorShape.SizeHorCursor)
         elif edge == "top" or edge == "bottom":
