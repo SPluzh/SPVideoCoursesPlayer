@@ -673,6 +673,8 @@ class VideoScanner:
         if video_ep is not None and audio_ep is not None:
             if video_ep == audio_ep:
                 score += 40
+            else:
+                score -= 100  # Strong penalty for episode mismatch
         
         # Language tags
         lang_patterns = [
@@ -711,7 +713,7 @@ class VideoScanner:
                 match_score = self._calculate_match_score(video_name, audio_name)
                 
                 # Minimum match threshold
-                if match_score >= 30:
+                if match_score >= 60:
                     language = audio_info['language']
                     if not language:
                         lang_patterns = [
@@ -777,7 +779,7 @@ class VideoScanner:
                     match_score = max(match_score, 80)
                 
                 # Minimum match threshold
-                if match_score >= 30:
+                if match_score >= 60:
                     # Determine language from filename
                     language = None
                     lang_patterns = [
