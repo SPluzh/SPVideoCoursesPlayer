@@ -209,7 +209,6 @@ class VideoCourseBrowser(QMainWindow):
         self.video_player.next_video_requested.connect(self.play_next_video)
         self.video_player.prev_video_requested.connect(self.play_prev_video)
         self.video_player.markers_changed.connect(self.on_markers_changed)
-        self.video_player.markers_changed.connect(self.on_markers_changed)
         self.video_player.toggle_fullscreen_requested.connect(self.toggle_fullscreen)
         self.video_player.pip_mode_requested.connect(self.enter_pip_mode)
         self.video_player.pip_exit_requested.connect(self.exit_pip_mode)
@@ -1169,6 +1168,11 @@ class VideoCourseBrowser(QMainWindow):
         # Sync taskbar thumbnail play/pause button icon
         if hasattr(self, 'thumbnail_buttons'):
             self.thumbnail_buttons.update_play_state(not is_paused)
+        
+        # Also sync PiP window buttons if active
+        if hasattr(self, 'pip_manager') and self.pip_manager.is_active:
+            if self.pip_manager.floating_window and self.pip_manager.floating_window.thumbnail_buttons:
+                self.pip_manager.floating_window.thumbnail_buttons.update_play_state(not is_paused)
 
     def toggle_pip_mode(self):
         """Toggle Picture-in-Picture mode."""

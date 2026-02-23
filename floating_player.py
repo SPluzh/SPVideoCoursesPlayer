@@ -3,7 +3,8 @@ from PyQt6.QtWidgets import QWidget, QVBoxLayout, QPushButton, QMenu, QHBoxLayou
 from PyQt6.QtCore import Qt, pyqtSignal, QPoint, QRect, QEvent
 from PyQt6.QtGui import QCursor, QAction, QIcon
 from translator import tr
-from taskbar_progress import TaskbarProgress
+from taskbar_progress import TaskbarProgress, TaskbarThumbnailButtons
+from constants import RESOURCES_DIR
 
 class FloatingVideoWindow(QWidget):
     """
@@ -24,12 +25,12 @@ class FloatingVideoWindow(QWidget):
         self.video_widget = video_widget
         self.video_widget.setMinimumSize(0, 0) # Remove any min size constraints
         self.resize_margin = 10
-        self.resize_margin = 10
         self.min_width = 320
         self.min_height = 180
         self.setMinimumSize(self.min_width, self.min_height)
         
         self.taskbar_progress = TaskbarProgress()
+        self.thumbnail_buttons = None
         
         # State for dragging and resizing
         self.dragging = False
@@ -113,11 +114,30 @@ class FloatingVideoWindow(QWidget):
 
     def showEvent(self, event):
         super().showEvent(event)
-        if self.taskbar_progress._initialized:
-            try:
-                self.taskbar_progress.set_hwnd(int(self.winId()))
-            except Exception as e:
-                logging.error(f"Error setting taskbar HWND: {e}")
+        try:
+            self.taskbar_progress.set_hwnd(int(self.winId()))
+            
+            # Initialize thumbnail toolbar buttons for PiP window
+            if self.taskbar_progress.taskbar:
+                hwnd = int(self.winId())
+                self.thumbnail_buttons = TaskbarThumbnailButtons(
+                    self.taskbar_progress.taskbar,
+                    hwnd,
+                    RESOURCES_DIR / 'icons'
+                )
+                
+                def add_and_sync():
+                    if self.thumbnail_buttons:
+                        self.thumbnail_buttons.add_buttons()
+                        # Set initial play state based on video widget
+                        if hasattr(self.video_widget, 'is_playing'):
+                            self.thumbnail_buttons.update_play_state(self.video_widget.is_playing)
+
+                # Defer to ensure window is fully registered with taskbar
+                from PyQt6.QtCore import QTimer
+                QTimer.singleShot(1000, add_and_sync)
+        except Exception as e:
+            logging.error(f"Error setting taskbar HWND or buttons: {e}")
 
     def center_on_screen(self):
         if self.screen():
