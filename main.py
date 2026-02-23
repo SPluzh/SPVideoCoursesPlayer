@@ -92,7 +92,7 @@ class VideoCourseBrowser(QMainWindow):
         self.drag_start_pos = QPoint()
         self.window_start_geo = QRect()
         self.window_start_pos = QPoint()
-        self.resize_margin = 10
+        self.resize_margin = 12
 
         self.create_menu_bar()
 
@@ -1204,10 +1204,29 @@ class VideoCourseBrowser(QMainWindow):
         self.statusBar().hide()
         self.video_player.set_controls_visible(False)
         
-        # Install event filter to capture events from video player area
+        # Lower minimum sizes for PiP
+        self.video_player.setMinimumWidth(0)
+        self.video_player.video_widget.setMinimumHeight(0)
+        self.setMinimumSize(100, 100)
+        
+        # Remove margins to allow edge detection at the very boundaries
+        if self.centralWidget() and self.centralWidget().layout():
+            self.centralWidget().layout().setContentsMargins(0, 0, 0, 0)
+        
+        # Install event filter to capture events from ALL PiP area containers and children
         self.video_player.installEventFilter(self)
+        self.splitter.installEventFilter(self)
+        self.centralWidget().installEventFilter(self)
+        
+        # Recursive mouse tracking and event filtering for video player children
+        for widget in self.video_player.findChildren(QWidget):
+            widget.setMouseTracking(True)
+            widget.installEventFilter(self)
+        
         self.setMouseTracking(True)
         self.video_player.setMouseTracking(True)
+        self.splitter.setMouseTracking(True)
+        self.centralWidget().setMouseTracking(True)
         
         # Window flags
         self.setWindowFlags(
@@ -1216,13 +1235,21 @@ class VideoCourseBrowser(QMainWindow):
             Qt.WindowType.WindowStaysOnTopHint
         )
         
+        # Determine target PiP size based on video aspect ratio
+        ratio = self.video_player.get_video_aspect_ratio()
+        
         # Apply PiP geometry
         if self.pip_geometry:
             self.restoreGeometry(self.pip_geometry)
+            # Adjust height to match current video ratio if it changed
+            curr_geo = self.geometry()
+            new_h = int(curr_geo.width() / ratio)
+            self.resize(curr_geo.width(), new_h)
         else:
             # Default PiP size and position (bottom right)
             screen = self.screen().availableGeometry()
-            pip_w, pip_h = 480, 270
+            pip_w = 480
+            pip_h = int(pip_w / ratio)
             self.setGeometry(
                 screen.width() - pip_w - 20,
                 screen.height() - pip_h - 20,
@@ -1253,10 +1280,29 @@ class VideoCourseBrowser(QMainWindow):
         self.statusBar().show()
         self.video_player.set_controls_visible(True)
         
-        # Remove event filter
+        # Restore minimum sizes for normal mode
+        self.video_player.setMinimumWidth(400)
+        self.video_player.video_widget.setMinimumHeight(300)
+        self.setMinimumSize(800, 600)
+        
+        # Restore margins
+        if self.centralWidget() and self.centralWidget().layout():
+            self.centralWidget().layout().setContentsMargins(2, 2, 2, 2)
+        
+        # Remove event filters
         self.video_player.removeEventFilter(self)
+        self.splitter.removeEventFilter(self)
+        self.centralWidget().removeEventFilter(self)
+        # Recursive cleanup
+        if self.video_player:
+            for widget in self.video_player.findChildren(QWidget):
+                widget.removeEventFilter(self)
+                widget.setMouseTracking(False)
+            
         self.setMouseTracking(False)
         self.video_player.setMouseTracking(False)
+        self.splitter.setMouseTracking(False)
+        self.centralWidget().setMouseTracking(False)
         self.setCursor(Qt.CursorShape.ArrowCursor)
         
         # Restore normal geometry
@@ -2409,26 +2455,42 @@ class VideoCourseBrowser(QMainWindow):
                 logging.error(f"Taskbar error: {e}")
 
     def eventFilter(self, source, event):
-        if self.is_pip_mode and source == self.video_player:
-            if event.type() == QEvent.Type.MouseMove:
-                self.handle_pip_mouse_move(event)
-                # If we are resizing or dragging, consume the event
-                if self.resizing or self.dragging:
-                    return True
-                # If we are on an edge, consume it to keep our custom cursor
-                if self._get_resize_edge(event.pos()):
-                    return True
-            elif event.type() == QEvent.Type.MouseButtonPress:
-                if self.handle_pip_mouse_press(event):
-                    return True
-            elif event.type() == QEvent.Type.MouseButtonRelease:
-                if self.handle_pip_mouse_release(event):
-                    return True
+        if self.is_pip_mode:
+            # Use global position for consistent coordinate mapping across widgets
+            if event.type() in [QEvent.Type.MouseMove, QEvent.Type.MouseButtonPress, QEvent.Type.MouseButtonRelease, QEvent.Type.MouseButtonDblClick]:
+                if hasattr(event, 'globalPosition'):
+                    window_pos = self.mapFromGlobal(event.globalPosition().toPoint())
+                else:
+                    return super().eventFilter(source, event)
+
+                if event.type() == QEvent.Type.MouseMove:
+                    self.handle_pip_mouse_move(event, window_pos)
+                    # Always swallow moves if in margin to prevent player hover effects
+                    if self.resizing or self.dragging or self._get_resize_edge(window_pos):
+                        return True
+                elif event.type() == QEvent.Type.MouseButtonPress:
+                    if self.handle_pip_mouse_press(event, window_pos):
+                        return True
+                    # Dead zone check: block any click in the margin even if handle_pip_mouse_press didn't catch it
+                    if self._get_resize_edge(window_pos):
+                        return True
+                elif event.type() == QEvent.Type.MouseButtonRelease:
+                    if self.handle_pip_mouse_release(event, window_pos):
+                        return True
+                    if self._get_resize_edge(window_pos):
+                        return True
+                elif event.type() == QEvent.Type.MouseButtonDblClick:
+                    # Block double clicks in the margin too
+                    if self._get_resize_edge(window_pos):
+                        return True
         return super().eventFilter(source, event)
 
-    def handle_pip_mouse_press(self, event):
+    def handle_pip_mouse_press(self, event, window_pos=None):
+        if window_pos is None:
+            window_pos = self.mapFromGlobal(event.globalPosition().toPoint())
+            
         if event.button() == Qt.MouseButton.LeftButton:
-            edge = self._get_resize_edge(event.pos())
+            edge = self._get_resize_edge(window_pos)
             if edge:
                 self.resizing = True
                 self.resize_edge = edge
@@ -2442,9 +2504,11 @@ class VideoCourseBrowser(QMainWindow):
             return True
         return False
 
-    def handle_pip_mouse_move(self, event):
-        pos = event.pos()
-        edge = self._get_resize_edge(pos)
+    def handle_pip_mouse_move(self, event, window_pos=None):
+        if window_pos is None:
+            window_pos = self.mapFromGlobal(event.globalPosition().toPoint())
+            
+        edge = self._get_resize_edge(window_pos)
         
         if self.resizing:
             self.handle_resize(event.globalPosition().toPoint())
@@ -2456,11 +2520,12 @@ class VideoCourseBrowser(QMainWindow):
         else:
             self.setCursor(Qt.CursorShape.ArrowCursor)
 
-    def handle_pip_mouse_release(self, event):
+    def handle_pip_mouse_release(self, event, window_pos=None):
         if self.resizing or self.dragging:
             self.resizing = False
             self.dragging = False
             self.resize_edge = None
+            self.setCursor(Qt.CursorShape.ArrowCursor)
             return True
         return False
 
@@ -2514,64 +2579,63 @@ class VideoCourseBrowser(QMainWindow):
             self.setCursor(Qt.CursorShape.ArrowCursor)
 
     def handle_resize(self, global_pos):
+        """Handle proportional resizing from all 8 directions in PiP mode."""
         diff = global_pos - self.drag_start_pos
         geo = self.window_start_geo
         new_geo = QRect(geo)
         
-        # Determine current aspect ratio (fallback to 16:9 if invalid)
-        if geo.height() > 0:
-            ratio = geo.width() / geo.height()
-        else:
-            ratio = 16/9
+        # Get video aspect ratio
+        ratio = self.video_player.get_video_aspect_ratio()
         
-        # 1. Apply primary mouse changes to the rectangle
-        if "left" in self.resize_edge:
-            new_geo.setLeft(geo.left() + diff.x())
-        if "right" in self.resize_edge:
-            new_geo.setRight(geo.right() + diff.x())
-        if "top" in self.resize_edge:
-            new_geo.setTop(geo.top() + diff.y())
-        if "bottom" in self.resize_edge:
-            new_geo.setBottom(geo.bottom() + diff.y())
-            
-        # 2. Enforce aspect ratio
+        # Determine master resize axes
         is_horizontal = "left" in self.resize_edge or "right" in self.resize_edge
         is_vertical = "top" in self.resize_edge or "bottom" in self.resize_edge
         
-        # Priority: horizontal change dictates vertical if both occur (corners)
+        # Proposed changes based on mouse movement
+        if "left" in self.resize_edge:
+            new_geo.setLeft(geo.left() + diff.x())
+        elif "right" in self.resize_edge:
+            new_geo.setRight(geo.right() + diff.x())
+            
+        if "top" in self.resize_edge:
+            new_geo.setTop(geo.top() + diff.y())
+        elif "bottom" in self.resize_edge:
+            new_geo.setBottom(geo.bottom() + diff.y())
+            
+        # Enforce aspect ratio and min size
+        min_w = 160
+        min_h = int(min_w / ratio)
+        
         if is_horizontal:
-             new_w = max(100, new_geo.width())
-             new_h = int(new_w / ratio)
-             if "top" in self.resize_edge:
-                 new_geo.setTop(new_geo.bottom() - new_h + 1)
-             else:
-                 new_geo.setHeight(new_h)
+            # Width change dictates height (standard for proportional resize)
+            w = max(min_w, new_geo.width())
+            h = int(w / ratio)
+            
+            # Align horizontally
+            if "left" in self.resize_edge:
+                new_geo.setLeft(geo.right() - w + 1)
+            else:
+                new_geo.setWidth(w)
+                
+            # Align vertically
+            if "top" in self.resize_edge:
+                # If dragging top edge or top corners, top boundary moves up/down
+                new_geo.setTop(geo.bottom() - h + 1)
+            else:
+                # If dragging bottom edge or bottom corners, bottom boundary moves
+                new_geo.setHeight(h)
         elif is_vertical:
-             new_h = max(100, new_geo.height())
-             new_w = int(new_h * ratio)
-             if "left" in self.resize_edge:
-                 new_geo.setLeft(new_geo.right() - new_w + 1)
-             else:
-                 new_geo.setWidth(new_w)
-
-        # 3. Min size check
-        min_w, min_h = 320, 180
-        if new_geo.width() < min_w:
-             new_w = min_w
-             new_h = int(new_w / ratio)
-             if "left" in self.resize_edge:
-                  curr_right = new_geo.right()
-                  new_geo.setWidth(new_w)
-                  new_geo.moveRight(curr_right)
-             else:
-                  new_geo.setWidth(new_w)
-             
-             if "top" in self.resize_edge:
-                  curr_bottom = new_geo.bottom()
-                  new_geo.setHeight(new_h)
-                  new_geo.moveBottom(curr_bottom)
-             else:
-                  new_geo.setHeight(new_h)
+            # Pure vertical resize (top/bottom)
+            h = max(min_h, new_geo.height())
+            w = int(h * ratio)
+            
+            if "top" in self.resize_edge:
+                new_geo.setTop(geo.bottom() - h + 1)
+            else:
+                new_geo.setHeight(h)
+                
+            # Keep left edge fixed for pure horizontal growth/shrink
+            new_geo.setWidth(w)
 
         self.setGeometry(new_geo)
 

@@ -358,6 +358,26 @@ class VideoPlayerWidget(QWidget):
         if hasattr(self, 'control_panel'):
             self.control_panel.setVisible(visible)
 
+    def get_video_aspect_ratio(self):
+        """Get the actual aspect ratio of the current video."""
+        if not self.player:
+            return 16/9
+            
+        try:
+            params = self.player.video_params
+            if params and 'aspect' in params and params['aspect'] > 0:
+                return params['aspect']
+            
+            # Fallback to width/height if aspect isn't explicitly set
+            w = params.get('w', 0)
+            h = params.get('h', 0)
+            if w > 0 and h > 0:
+                return w / h
+        except Exception as e:
+            logging.error(f"Error getting aspect ratio: {e}")
+            
+        return 16/9
+
     def _on_slider_hovered(self, value, global_pos):
         """Show preview popup on slider hover."""
         if not getattr(self, 'show_preview', True):
