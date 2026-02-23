@@ -860,8 +860,6 @@ class VideoPlayerWidget(QWidget):
             self._apply_subtitle_styles()
             self.play_btn.setEnabled(True)
             self.progress_slider.setEnabled(True)
-            self.prev_video_btn.setEnabled(True)
-            self.next_video_btn.setEnabled(True)
 
             # Serialize initialization to debug crash
             # 1. Load subtitles info (100ms)

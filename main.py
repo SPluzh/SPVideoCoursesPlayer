@@ -572,6 +572,7 @@ class VideoCourseBrowser(QMainWindow):
             self.course_tree.scrollToItem(item)
             self.setFocus()
             self.update_window_title_for_item(item)
+            self.update_navigation_buttons(item)
 
     def find_video_item(self, file_path):
         iterator = QTreeWidgetItemIterator(self.course_tree)
@@ -1599,7 +1600,40 @@ class VideoCourseBrowser(QMainWindow):
                 return
             
             item_type = item.data(0, Qt.ItemDataRole.UserRole + 1)
+            if item_type == 'video':
+                last_video_item = item
             iterator += 1
+
+    def update_navigation_buttons(self, current_item):
+        """Enable or disable Prev/Next buttons based on position in tree."""
+        if not current_item:
+            self.video_player.prev_video_btn.setEnabled(False)
+            self.video_player.next_video_btn.setEnabled(False)
+            return
+
+        # Check for previous video
+        has_prev = False
+        iterator = QTreeWidgetItemIterator(self.course_tree, QTreeWidgetItemIterator.IteratorFlag.All)
+        while iterator.value():
+            item = iterator.value()
+            if item == current_item:
+                break
+            if item.data(0, Qt.ItemDataRole.UserRole + 1) == 'video':
+                has_prev = True
+            iterator += 1
+        
+        # Check for next video
+        has_next = False
+        if iterator.value() == current_item:
+            iterator += 1
+            while iterator.value():
+                if iterator.value().data(0, Qt.ItemDataRole.UserRole + 1) == 'video':
+                    has_next = True
+                    break
+                iterator += 1
+        
+        self.video_player.prev_video_btn.setEnabled(has_prev)
+        self.video_player.next_video_btn.setEnabled(has_next)
 
     def play_video_at_marker(self, file_path, position):
         """Play video starting at specific position (from marker click)."""
@@ -1650,8 +1684,7 @@ class VideoCourseBrowser(QMainWindow):
                 
             #self.video_player.restore_audio_track(file_path)
             self.update_window_title_for_item(item)
-
-            self.update_window_title_for_item(item)
+            self.update_navigation_buttons(item)
 
     def play_video_at_marker(self, file_path, position):
         """Play video starting at specific marker position."""
