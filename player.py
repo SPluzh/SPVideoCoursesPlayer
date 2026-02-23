@@ -253,10 +253,10 @@ class VideoPlayerWidget(QWidget):
         self.marker_gallery.delete_requested.connect(self.delete_marker)
 
         layout.addWidget(self.video_container, 1)
-
-        control_panel = QWidget()
-        control_panel.setObjectName("controlPanel")
-        panel_layout = QHBoxLayout(control_panel)
+        
+        self.control_panel = QWidget()
+        self.control_panel.setObjectName("controlPanel")
+        panel_layout = QHBoxLayout(self.control_panel)
         panel_layout.setContentsMargins(0, 5, 0, 0)
 
         self.icons = load_icons_dict(["play", "pause", "next", "prev", "pip"])
@@ -339,7 +339,7 @@ class VideoPlayerWidget(QWidget):
         self.progress_slider.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.speed_slider.setFocusPolicy(Qt.FocusPolicy.NoFocus)
 
-        layout.addWidget(control_panel)
+        layout.addWidget(self.control_panel)
 
         self.video_widget.toggle_play_pause.connect(self.play_pause)
 
@@ -352,6 +352,11 @@ class VideoPlayerWidget(QWidget):
         self.preview_popup = PreviewPopup(self.video_widget)
         self.progress_slider.hovered.connect(self._on_slider_hovered)
         self.progress_slider.hover_left.connect(self._on_slider_left)
+
+    def set_controls_visible(self, visible):
+        """Toggle visibility of the playback control panel."""
+        if hasattr(self, 'control_panel'):
+            self.control_panel.setVisible(visible)
 
     def _on_slider_hovered(self, value, global_pos):
         """Show preview popup on slider hover."""

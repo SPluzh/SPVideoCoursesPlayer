@@ -28,7 +28,7 @@ from PyQt6.QtWidgets import (
     QTreeWidgetItemIterator, QDialog, QGroupBox, QSpinBox, QSizePolicy, QFrame, QComboBox,
     QTextEdit, QProgressBar, QListWidget, QListWidgetItem, QGridLayout
 )
-from PyQt6.QtCore import Qt, QSize, QRect, QTimer, QUrl, pyqtSignal, QByteArray, QPoint, QThread, QRectF
+from PyQt6.QtCore import Qt, QSize, QRect, QTimer, QUrl, pyqtSignal, QByteArray, QPoint, QThread, QRectF, QEvent
 from PyQt6.QtGui import QIcon, QPixmap, QFont, QBrush, QColor, QPainter, QAction, QKeyEvent, QMouseEvent, QActionGroup, QPalette, QPolygon, QCursor, QPen, QTextCursor
 from styles import DARK_STYLE
 import styles
@@ -46,7 +46,7 @@ from player import VideoPlayerWidget
 from library import HoverTreeWidget, VideoItemDelegate
 from hotkeys import HotkeyManager
 from tags_dialog import TagsDialog
-from floating_player import FloatingVideoWindow, PiPManager
+# from floating_player import FloatingVideoWindow, PiPManager
 from tag_filter_popup import TagFilterPopup
 from utils import natural_sort_key, format_time, format_duration, format_size
 from config_manager import ConfigManager
@@ -81,6 +81,18 @@ class VideoCourseBrowser(QMainWindow):
 
         self.taskbar_progress = TaskbarProgress()
         self.last_played_path = None
+        
+        # PiP State
+        self.is_pip_mode = False
+        self.normal_geometry = None
+        self.pip_geometry = None
+        self.dragging = False
+        self.resizing = False
+        self.resize_edge = None
+        self.drag_start_pos = QPoint()
+        self.window_start_geo = QRect()
+        self.window_start_pos = QPoint()
+        self.resize_margin = 10
 
         self.create_menu_bar()
 
@@ -102,9 +114,9 @@ class VideoCourseBrowser(QMainWindow):
         self.splitter.setChildrenCollapsible(False) # Default non-collapsible, specific overrides applied later
         main_layout.addWidget(self.splitter, 1)
 
-        browser_widget = QWidget()
-        browser_widget.setMinimumWidth(200) # Ensure library has minimum width
-        browser_layout = QVBoxLayout(browser_widget)
+        self.browser_widget = QWidget()
+        self.browser_widget.setMinimumWidth(200) # Ensure library has minimum width
+        browser_layout = QVBoxLayout(self.browser_widget)
         browser_layout.setContentsMargins(0, 0, 0, 0)
         browser_layout.setSpacing(0)
 
@@ -188,7 +200,6 @@ class VideoCourseBrowser(QMainWindow):
         )
 
         browser_layout.addWidget(self.course_tree)
-        self.splitter.addWidget(browser_widget)
 
         self.video_player = VideoPlayerWidget()
         self.video_player.setMinimumWidth(400) # Ensure player has minimum width
@@ -213,11 +224,10 @@ class VideoCourseBrowser(QMainWindow):
         self.video_player.pip_mode_requested.connect(self.enter_pip_mode)
         self.video_player.pip_exit_requested.connect(self.exit_pip_mode)
 
-        self.pip_manager = PiPManager(self, self.video_player, self.taskbar_progress)
-
         # Apply initial subtitle settings
         self.video_player.set_subtitle_styles(self.sub_color, self.sub_border_color, self.sub_scale)
 
+        self.splitter.addWidget(self.browser_widget)
         self.splitter.addWidget(self.video_player)
 
         # Set default sizes before restoring state
@@ -695,6 +705,9 @@ class VideoCourseBrowser(QMainWindow):
             # Delayed call for robustness (Windows drag sync)
             QTimer.singleShot(0, self.video_player._update_gallery_geometry)
 
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+
     def close_db_connection(self):
         """Prepare for DB deletion: stop timers and release resources"""
         # Stop auto-save timer
@@ -1168,23 +1181,108 @@ class VideoCourseBrowser(QMainWindow):
         # Sync taskbar thumbnail play/pause button icon
         if hasattr(self, 'thumbnail_buttons'):
             self.thumbnail_buttons.update_play_state(not is_paused)
-        
-        # Also sync PiP window buttons if active
-        if hasattr(self, 'pip_manager') and self.pip_manager.is_active:
-            if self.pip_manager.floating_window and self.pip_manager.floating_window.thumbnail_buttons:
-                self.pip_manager.floating_window.thumbnail_buttons.update_play_state(not is_paused)
 
     def toggle_pip_mode(self):
         """Toggle Picture-in-Picture mode."""
-        self.pip_manager.toggle()
+        if self.is_pip_mode:
+            self.exit_pip_mode()
+        else:
+            self.enter_pip_mode()
 
     def enter_pip_mode(self):
         """Enter Picture-in-Picture mode."""
-        self.pip_manager.enter_pip()
+        if self.is_pip_mode:
+            return
+            
+        logging.debug("Entering single-window PiP mode")
+        self.is_pip_mode = True
+        self.normal_geometry = self.saveGeometry()
+        
+        # Hide UI elements
+        self.browser_widget.hide()
+        self.menuBar().hide()
+        self.statusBar().hide()
+        self.video_player.set_controls_visible(False)
+        
+        # Install event filter to capture events from video player area
+        self.video_player.installEventFilter(self)
+        self.setMouseTracking(True)
+        self.video_player.setMouseTracking(True)
+        
+        # Window flags
+        self.setWindowFlags(
+            Qt.WindowType.Window |
+            Qt.WindowType.FramelessWindowHint |
+            Qt.WindowType.WindowStaysOnTopHint
+        )
+        
+        # Apply PiP geometry
+        if self.pip_geometry:
+            self.restoreGeometry(self.pip_geometry)
+        else:
+            # Default PiP size and position (bottom right)
+            screen = self.screen().availableGeometry()
+            pip_w, pip_h = 480, 270
+            self.setGeometry(
+                screen.width() - pip_w - 20,
+                screen.height() - pip_h - 20,
+                pip_w,
+                pip_h
+            )
+            
+        self.show()
+
+        # Flags change might require re-initializing taskbar buttons
+        QTimer.singleShot(500, self._refresh_taskbar_buttons)
 
     def exit_pip_mode(self):
         """Exit Picture-in-Picture mode."""
-        self.pip_manager.exit_pip()
+        if not self.is_pip_mode:
+            return
+            
+        logging.debug("Exiting single-window PiP mode")
+        self.pip_geometry = self.saveGeometry()
+        self.is_pip_mode = False
+        
+        # Restore window flags
+        self.setWindowFlags(Qt.WindowType.Window)
+        
+        # Show UI elements
+        self.browser_widget.show()
+        self.menuBar().show()
+        self.statusBar().show()
+        self.video_player.set_controls_visible(True)
+        
+        # Remove event filter
+        self.video_player.removeEventFilter(self)
+        self.setMouseTracking(False)
+        self.video_player.setMouseTracking(False)
+        self.setCursor(Qt.CursorShape.ArrowCursor)
+        
+        # Restore normal geometry
+        if self.normal_geometry:
+            self.restoreGeometry(self.normal_geometry)
+            
+        self.show()
+        self.raise_()
+        self.activateWindow()
+        
+        # Flags change might require re-initializing taskbar buttons
+        QTimer.singleShot(500, self._refresh_taskbar_buttons)
+
+    def _refresh_taskbar_buttons(self):
+        """Force refresh of taskbar buttons after window flag changes."""
+        if self.taskbar_progress:
+            hwnd = int(self.winId())
+            self.taskbar_progress.set_hwnd(hwnd)
+            if self.taskbar_progress.taskbar:
+                self.thumbnail_buttons = TaskbarThumbnailButtons(
+                    self.taskbar_progress.taskbar,
+                    hwnd,
+                    RESOURCES_DIR / 'icons'
+                )
+                self.thumbnail_buttons.add_buttons()
+                self.thumbnail_buttons.update_play_state(not self.video_player.player.pause if self.video_player.player else False)
 
 
     def load_icons(self):
@@ -2306,9 +2404,176 @@ class VideoCourseBrowser(QMainWindow):
                     )
                     # Defer to ensure window is fully registered with taskbar
                     QTimer.singleShot(1000, self.thumbnail_buttons.add_buttons)
-                    self.thumbnail_buttons.update_play_state(False)
+                    self.thumbnail_buttons.update_play_state(not self.video_player.player.pause if self.video_player.player else False)
             except Exception as e:
                 logging.error(f"Taskbar error: {e}")
+
+    def eventFilter(self, source, event):
+        if self.is_pip_mode and source == self.video_player:
+            if event.type() == QEvent.Type.MouseMove:
+                self.handle_pip_mouse_move(event)
+                # If we are resizing or dragging, consume the event
+                if self.resizing or self.dragging:
+                    return True
+                # If we are on an edge, consume it to keep our custom cursor
+                if self._get_resize_edge(event.pos()):
+                    return True
+            elif event.type() == QEvent.Type.MouseButtonPress:
+                if self.handle_pip_mouse_press(event):
+                    return True
+            elif event.type() == QEvent.Type.MouseButtonRelease:
+                if self.handle_pip_mouse_release(event):
+                    return True
+        return super().eventFilter(source, event)
+
+    def handle_pip_mouse_press(self, event):
+        if event.button() == Qt.MouseButton.LeftButton:
+            edge = self._get_resize_edge(event.pos())
+            if edge:
+                self.resizing = True
+                self.resize_edge = edge
+                self.drag_start_pos = event.globalPosition().toPoint()
+                self.window_start_geo = self.geometry()
+                return True
+        elif event.button() == Qt.MouseButton.RightButton:
+            self.dragging = True
+            self.drag_start_pos = event.globalPosition().toPoint()
+            self.window_start_pos = self.pos()
+            return True
+        return False
+
+    def handle_pip_mouse_move(self, event):
+        pos = event.pos()
+        edge = self._get_resize_edge(pos)
+        
+        if self.resizing:
+            self.handle_resize(event.globalPosition().toPoint())
+        elif self.dragging:
+            diff = event.globalPosition().toPoint() - self.drag_start_pos
+            self.move(self.window_start_pos + diff)
+        elif edge:
+            self.update_cursor(edge)
+        else:
+            self.setCursor(Qt.CursorShape.ArrowCursor)
+
+    def handle_pip_mouse_release(self, event):
+        if self.resizing or self.dragging:
+            self.resizing = False
+            self.dragging = False
+            self.resize_edge = None
+            return True
+        return False
+
+    def mousePressEvent(self, event):
+        if self.is_pip_mode:
+            self.handle_pip_mouse_press(event)
+        else:
+            super().mousePressEvent(event)
+
+    def mouseMoveEvent(self, event):
+        if self.is_pip_mode:
+            self.handle_pip_mouse_move(event)
+        else:
+            super().mouseMoveEvent(event)
+
+    def mouseReleaseEvent(self, event):
+        if self.is_pip_mode:
+            self.handle_pip_mouse_release(event)
+        else:
+            super().mouseReleaseEvent(event)
+
+    def _get_resize_edge(self, pos):
+        m = self.resize_margin
+        w, h = self.width(), self.height()
+        
+        # Determine vertical part
+        v_edge = ""
+        if pos.y() < m: v_edge = "top"
+        elif pos.y() > h - m: v_edge = "bottom"
+        
+        # Determine horizontal part
+        h_edge = ""
+        if pos.x() < m: h_edge = "left"
+        elif pos.x() > w - m: h_edge = "right"
+        
+        # Combine: vertical first (top/bottom) then horizontal (left/right)
+        edge = v_edge + h_edge
+        
+        return edge if edge else None
+
+    def update_cursor(self, edge):
+        if edge == "left" or edge == "right":
+            self.setCursor(Qt.CursorShape.SizeHorCursor)
+        elif edge == "top" or edge == "bottom":
+            self.setCursor(Qt.CursorShape.SizeVerCursor)
+        elif edge in ["topleft", "bottomright"]:
+            self.setCursor(Qt.CursorShape.SizeFDiagCursor)
+        elif edge in ["topright", "bottomleft"]:
+            self.setCursor(Qt.CursorShape.SizeBDiagCursor)
+        else:
+            self.setCursor(Qt.CursorShape.ArrowCursor)
+
+    def handle_resize(self, global_pos):
+        diff = global_pos - self.drag_start_pos
+        geo = self.window_start_geo
+        new_geo = QRect(geo)
+        
+        # Determine current aspect ratio (fallback to 16:9 if invalid)
+        if geo.height() > 0:
+            ratio = geo.width() / geo.height()
+        else:
+            ratio = 16/9
+        
+        # 1. Apply primary mouse changes to the rectangle
+        if "left" in self.resize_edge:
+            new_geo.setLeft(geo.left() + diff.x())
+        if "right" in self.resize_edge:
+            new_geo.setRight(geo.right() + diff.x())
+        if "top" in self.resize_edge:
+            new_geo.setTop(geo.top() + diff.y())
+        if "bottom" in self.resize_edge:
+            new_geo.setBottom(geo.bottom() + diff.y())
+            
+        # 2. Enforce aspect ratio
+        is_horizontal = "left" in self.resize_edge or "right" in self.resize_edge
+        is_vertical = "top" in self.resize_edge or "bottom" in self.resize_edge
+        
+        # Priority: horizontal change dictates vertical if both occur (corners)
+        if is_horizontal:
+             new_w = max(100, new_geo.width())
+             new_h = int(new_w / ratio)
+             if "top" in self.resize_edge:
+                 new_geo.setTop(new_geo.bottom() - new_h + 1)
+             else:
+                 new_geo.setHeight(new_h)
+        elif is_vertical:
+             new_h = max(100, new_geo.height())
+             new_w = int(new_h * ratio)
+             if "left" in self.resize_edge:
+                 new_geo.setLeft(new_geo.right() - new_w + 1)
+             else:
+                 new_geo.setWidth(new_w)
+
+        # 3. Min size check
+        min_w, min_h = 320, 180
+        if new_geo.width() < min_w:
+             new_w = min_w
+             new_h = int(new_w / ratio)
+             if "left" in self.resize_edge:
+                  curr_right = new_geo.right()
+                  new_geo.setWidth(new_w)
+                  new_geo.moveRight(curr_right)
+             else:
+                  new_geo.setWidth(new_w)
+             
+             if "top" in self.resize_edge:
+                  curr_bottom = new_geo.bottom()
+                  new_geo.setHeight(new_h)
+                  new_geo.moveBottom(curr_bottom)
+             else:
+                  new_geo.setHeight(new_h)
+
+        self.setGeometry(new_geo)
 
     def closeEvent(self, event):
         self.save_window_state()
@@ -2339,6 +2604,14 @@ _THUMBBUTTON_NEXT      = 4
 
 WM_COMMAND   = 0x0111
 THBN_CLICKED = 0x1800
+
+import ctypes
+WM_TASKBARBUTTONCREATED = 0
+if sys.platform == 'win32':
+    try:
+        WM_TASKBARBUTTONCREATED = ctypes.windll.user32.RegisterWindowMessageW("TaskbarButtonCreated")
+    except:
+        pass
 
 
 class TaskbarEventFilter(QAbstractNativeEventFilter):
@@ -2373,6 +2646,10 @@ class TaskbarEventFilter(QAbstractNativeEventFilter):
                             elif button_id == _THUMBBUTTON_NEXT:
                                 w.play_next_video()
                                 return True, 0
+                    elif WM_TASKBARBUTTONCREATED and msg.message == WM_TASKBARBUTTONCREATED:
+                        # Taskbar buttons need to be re-added when this message is received
+                        QTimer.singleShot(100, self.window._refresh_taskbar_buttons)
+                        return True, 0
             except Exception:
                 pass
         return False, 0
