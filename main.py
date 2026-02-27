@@ -431,10 +431,6 @@ class VideoCourseBrowser(QMainWindow):
                 self.browser_widget.show()
             if hasattr(self, '_saved_splitter_state'):
                 self.splitter.restoreState(self._saved_splitter_state)
-            
-            if hasattr(self, 'splitter') and self.splitter.count() > 1:
-                self.splitter.handle(1).unsetCursor()
-                self.splitter.handle(1).setEnabled(True)
         else:
             self._saved_splitter_state = self.splitter.saveState()
             self.showFullScreen()
@@ -444,9 +440,6 @@ class VideoCourseBrowser(QMainWindow):
                 self.browser_widget.hide()
             # Collapse library
             self.splitter.setSizes([0, self.width()])
-            
-            if hasattr(self, 'splitter') and self.splitter.count() > 1:
-                self.splitter.handle(1).setEnabled(False)
 
     def change_language(self, lang_code):
         if tr.current_lang == lang_code:
