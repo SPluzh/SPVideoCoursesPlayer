@@ -428,6 +428,10 @@ class VideoCourseBrowser(QMainWindow):
             self.status.show()
             if hasattr(self, '_saved_splitter_state'):
                 self.splitter.restoreState(self._saved_splitter_state)
+            
+            if hasattr(self, 'splitter') and self.splitter.count() > 1:
+                self.splitter.handle(1).unsetCursor()
+                self.splitter.handle(1).setEnabled(True)
         else:
             self._saved_splitter_state = self.splitter.saveState()
             self.showFullScreen()
@@ -435,6 +439,10 @@ class VideoCourseBrowser(QMainWindow):
             self.status.hide()
             # Collapse library
             self.splitter.setSizes([0, self.width()])
+            
+            if hasattr(self, 'splitter') and self.splitter.count() > 1:
+                self.splitter.handle(1).setCursor(Qt.CursorShape.ArrowCursor)
+                self.splitter.handle(1).setEnabled(False)
 
     def change_language(self, lang_code):
         if tr.current_lang == lang_code:
@@ -1367,15 +1375,18 @@ class VideoCourseBrowser(QMainWindow):
         self.centralWidget().removeEventFilter(self)
         # Recursive cleanup
         if self.video_player:
+            from mpv_handler import MPVVideoWidget
+            from player import ClickableSlider
             for widget in self.video_player.findChildren(QWidget):
                 widget.removeEventFilter(self)
-                widget.setMouseTracking(False)
+                if not isinstance(widget, (MPVVideoWidget, ClickableSlider)):
+                    widget.setMouseTracking(False)
             
         self.setMouseTracking(False)
         self.video_player.setMouseTracking(False)
         self.splitter.setMouseTracking(False)
         self.centralWidget().setMouseTracking(False)
-        self.setCursor(Qt.CursorShape.ArrowCursor)
+        self.unsetCursor()
         self.current_hover_edge = None
         
         if self.pip_overlay:
@@ -2618,7 +2629,7 @@ class VideoCourseBrowser(QMainWindow):
             self.resizing = False
             self.dragging = False
             self.resize_edge = None
-            self.setCursor(Qt.CursorShape.ArrowCursor)
+            self.unsetCursor()
             return True
         return False
 
@@ -2675,7 +2686,7 @@ class VideoCourseBrowser(QMainWindow):
         elif edge in ["topright", "bottomleft"]:
             self.setCursor(Qt.CursorShape.SizeBDiagCursor)
         else:
-            self.setCursor(Qt.CursorShape.ArrowCursor)
+            self.unsetCursor()
 
     def handle_resize(self, global_pos):
         """Handle proportional resizing from all 8 directions in PiP mode."""
