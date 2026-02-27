@@ -81,9 +81,9 @@ class TagsDialog(QDialog):
         # Title depends on context
         title = tr("tags.title")
         if self.file_path:
-             title = tr("tags.assign_title") if tr("tags.assign_title") != "tags.assign_title" else "Assign Tags"
+             title = tr("tags.assign_title")
              
-        self.setWindowTitle(title or "Manage Tags")
+        self.setWindowTitle(title)
         self.resize(450, 500)
         self.setModal(True)
         
@@ -96,7 +96,7 @@ class TagsDialog(QDialog):
         
         # Help label if in assignment mode
         if self.file_path:
-            help_text = tr("tags.assign_help") if tr("tags.assign_help") != "tags.assign_help" else "Select tags for the current video."
+            help_text = tr("tags.assign_help")
             lbl = QLabel(help_text)
             lbl.setWordWrap(True)
             layout.addWidget(lbl)
@@ -108,12 +108,12 @@ class TagsDialog(QDialog):
         
         self.color_btn = QPushButton()
         self.color_btn.setFixedSize(30, 30)
-        self.color_btn.setToolTip(tr("tags.select_color") or "Select Color")
+        self.color_btn.setToolTip(tr("tags.select_color"))
         self.color_btn.clicked.connect(self.select_color)
         self.update_color_preview()
         
         self.name_edit = QLineEdit()
-        self.name_edit.setPlaceholderText((tr("tags.new_tag_name") or "Name").replace(":", ""))
+        self.name_edit.setPlaceholderText(tr("tags.new_tag_name").replace(":", ""))
         self.name_edit.setFixedHeight(38)
         
         btn_size = QSize(30, 30)
@@ -121,21 +121,20 @@ class TagsDialog(QDialog):
         self.add_btn = QPushButton()
         self.add_btn.setIcon(get_icon("add"))
         self.add_btn.setFixedSize(btn_size)
-        self.add_btn.setToolTip(tr("tags.add_btn") or "Add Tag")
+        self.add_btn.setToolTip(tr("tags.add_btn"))
         self.add_btn.clicked.connect(self.add_tag)
         
-        edit_tooltip = tr("tags.edit_btn") if tr("tags.edit_btn") != "tags.edit_btn" else "Edit Tag"
         self.edit_btn = QPushButton()
         self.edit_btn.setIcon(get_icon("edit"))
         self.edit_btn.setFixedSize(btn_size)
-        self.edit_btn.setToolTip(edit_tooltip)
+        self.edit_btn.setToolTip(tr("tags.edit_btn"))
         self.edit_btn.clicked.connect(self.edit_tag)
         self.edit_btn.setEnabled(False)
         
         self.del_btn = QPushButton()
         self.del_btn.setIcon(get_icon("delete"))
         self.del_btn.setFixedSize(btn_size)
-        self.del_btn.setToolTip(tr("tags.delete") or "Delete Tag")
+        self.del_btn.setToolTip(tr("tags.delete"))
         self.del_btn.clicked.connect(self.delete_tag)
         self.del_btn.setEnabled(False)
         
@@ -160,20 +159,19 @@ class TagsDialog(QDialog):
         
         if self.file_path:
             # Assign Button
-            assign_text = tr("tags.assign_btn") if tr("tags.assign_btn") != "tags.assign_btn" else "Assign Tags"
-            self.assign_btn = QPushButton(assign_text)
+            self.assign_btn = QPushButton(tr("tags.assign_btn"))
             self.assign_btn.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
             self.assign_btn.clicked.connect(self.save_selection)
             bottom_layout.addWidget(self.assign_btn)
             
             # Close Button
-            self.close_btn = QPushButton(tr("dialog.close") or "Close")
+            self.close_btn = QPushButton(tr("dialog.close"))
             self.close_btn.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
             self.close_btn.clicked.connect(self.reject)
             bottom_layout.addWidget(self.close_btn)
         else:
             # Just Close button for pure management
-            self.close_btn = QPushButton(tr("dialog.close") or "Close")
+            self.close_btn = QPushButton(tr("dialog.close"))
             self.close_btn.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
             self.close_btn.clicked.connect(self.accept)
             bottom_layout.addWidget(self.close_btn)
@@ -256,8 +254,8 @@ class TagsDialog(QDialog):
             if new_id:
                 self.load_tags()
             else:
-                title = tr("error.title") if isinstance(tr("error.title"), str) else "Error"
-                msg = tr("tags.error_create") if tr("tags.error_create") != "tags.error_create" else "Cannot create tag. It might already exist."
+                title = tr("error.title")
+                msg = tr("tags.error_create")
                 QMessageBox.warning(self, title, msg)
                     
     def edit_tag(self):
@@ -277,8 +275,8 @@ class TagsDialog(QDialog):
         if not item:
             return
             
-        title = tr("tags.delete") if isinstance(tr("tags.delete"), str) else "Delete Tag"
-        msg = tr("tags.confirm_delete") if isinstance(tr("tags.confirm_delete"), str) else "Are you sure you want to delete this tag forever?"
+        title = tr("tags.delete")
+        msg = tr("tags.confirm_delete")
         if QMessageBox.question(self, title, msg) == QMessageBox.StandardButton.Yes:
             data = item.data(Qt.ItemDataRole.UserRole)
             self.db.delete_tag(data['id'])

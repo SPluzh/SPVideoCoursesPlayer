@@ -339,11 +339,16 @@
     },
     "tags": {
         "title": "Manage Tags",
+        "assign_title": "Assign Tags",
+        "assign_help": "Select tags for the current video.",
         "new_tag_name": "New Tag Name",
         "add_btn": "Add",
+        "edit_btn": "Edit Tag",
         "select_color": "Select Color",
         "delete": "Delete Tag",
-        "confirm_delete": "Are you sure you want to delete this tag?"
+        "confirm_delete": "Are you sure you want to delete this tag?",
+        "assign_btn": "Assign Tags",
+        "error_create": "Cannot create tag. It might already exist."
     },
     "error": {
         "title": "Error",
@@ -433,11 +438,11 @@
         }
     },
     "taskbar": {
-        "prev":     "Previous video",
+        "prev": "Previous video",
         "seek_back": "Rewind 10 seconds",
-        "play":     "Play",
-        "pause":    "Pause",
+        "play": "Play",
+        "pause": "Pause",
         "seek_fwd": "Forward 10 seconds",
-        "next":     "Next video"
+        "next": "Next video"
     }
 }
