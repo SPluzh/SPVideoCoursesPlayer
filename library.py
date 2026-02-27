@@ -353,7 +353,10 @@ class VideoItemDelegate(QStyledItemDelegate):
                     if tag_x + tag_width > option.rect.right(): break
                     tag_rect = QRect(tag_x, tag_y, tag_width, tag_height)
                     painter.setBrush(color); painter.setPen(Qt.PenStyle.NoPen); painter.drawRoundedRect(tag_rect, 6, 6)
-                    painter.setPen(QColor('#ffffff')); painter.drawText(tag_rect, Qt.AlignmentFlag.AlignCenter, name)
+                    r, g, b, _ = color.getRgb()
+                    luminance = 0.299 * r + 0.587 * g + 0.114 * b
+                    text_color = QColor('#000000') if luminance > 128 else QColor('#ffffff')
+                    painter.setPen(text_color); painter.drawText(tag_rect, Qt.AlignmentFlag.AlignCenter, name)
                     tag_x += tag_width + 6
                 painter.restore()
                 # text_y += 20 # removed increment since markers are now separate
