@@ -160,6 +160,7 @@ class VideoCourseBrowser(QMainWindow):
         main_layout.setSpacing(0)
 
         self.status = self.statusBar()
+        self.status.setSizeGripEnabled(False)
         self.status.setContentsMargins(5, 0, 5, 0)
         self.info_label = QLabel(tr('status.not_loaded'))
         self.status.addWidget(self.info_label, 1)
@@ -426,6 +427,8 @@ class VideoCourseBrowser(QMainWindow):
             self.showNormal()
             self.menuBar().show()
             self.status.show()
+            if hasattr(self, 'browser_widget'):
+                self.browser_widget.show()
             if hasattr(self, '_saved_splitter_state'):
                 self.splitter.restoreState(self._saved_splitter_state)
             
@@ -437,11 +440,12 @@ class VideoCourseBrowser(QMainWindow):
             self.showFullScreen()
             self.menuBar().hide()
             self.status.hide()
+            if hasattr(self, 'browser_widget'):
+                self.browser_widget.hide()
             # Collapse library
             self.splitter.setSizes([0, self.width()])
             
             if hasattr(self, 'splitter') and self.splitter.count() > 1:
-                self.splitter.handle(1).setCursor(Qt.CursorShape.ArrowCursor)
                 self.splitter.handle(1).setEnabled(False)
 
     def change_language(self, lang_code):
