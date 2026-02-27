@@ -419,6 +419,9 @@ class VideoCourseBrowser(QMainWindow):
             self.video_player.adjust_audio_delay(-0.05)
 
     def toggle_fullscreen(self):
+        if getattr(self, 'is_pip_mode', False):
+            self.exit_pip_mode()
+
         if self.isFullScreen():
             self.showNormal()
             self.menuBar().show()

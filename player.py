@@ -243,6 +243,7 @@ class VideoPlayerWidget(QWidget):
         self.video_widget = MPVVideoWidget()
         self.video_widget.setMinimumHeight(300)
         self.video_widget.zoom_changed.connect(self.on_zoom_changed)
+        self.video_widget.toggle_fullscreen_requested.connect(self.toggle_fullscreen_requested.emit)
         container_layout.addWidget(self.video_widget, 1)
 
         # Marker Gallery Overlay (Horizontal) - Independent window to avoid Airspace issue

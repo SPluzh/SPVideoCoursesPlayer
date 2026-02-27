@@ -51,6 +51,7 @@ class MPVVideoWidget(QFrame):
     requestfloatwindow = pyqtSignal()
     toggle_play_pause = pyqtSignal()
     zoom_changed = pyqtSignal(float)
+    toggle_fullscreen_requested = pyqtSignal()
     
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -139,14 +140,8 @@ class MPVVideoWidget(QFrame):
             logging.error(f"Error setting zoom: {e}", exc_info=True)
 
     def keyPressEvent(self, event: QKeyEvent):
-        if event.key() == Qt.Key.Key_Escape and self.is_fullscreen:
-            self.is_fullscreen = False
-            self.setWindowFlags(Qt.WindowType.SubWindow)
-            self.showNormal()
-            event.accept()
-        else:
-            # Let parent handle other shortcuts (Space, F, M, S, C, Z, R etc.)
-            super().keyPressEvent(event)
+        # Let parent handle shortcuts (Space, F, M, S, C, Z, R etc.)
+        super().keyPressEvent(event)
 
     def keyReleaseEvent(self, event: QKeyEvent):
         if event.key() == Qt.Key.Key_Z and not event.isAutoRepeat():
@@ -265,23 +260,7 @@ class MPVVideoWidget(QFrame):
         if event.button() == Qt.MouseButton.LeftButton:
             self.click_timer.stop()
             self.pending_single_click = False
-            self.is_fullscreen = not self.is_fullscreen
-
-            if self.is_fullscreen:
-                screen = self._get_target_screen()
-                screen_geometry = screen.geometry()
-                
-                self.setWindowFlags(Qt.WindowType.Window | Qt.WindowType.FramelessWindowHint)
-                self.show() # Ensure window handle is created/updated for the new window mode
-                
-                if self.windowHandle():
-                    self.windowHandle().setScreen(screen)
-                
-                self.setGeometry(screen_geometry)
-                self.showFullScreen()
-            else:
-                self.setWindowFlags(Qt.WindowType.SubWindow)
-                self.showNormal()
+            self.toggle_fullscreen_requested.emit()
             event.accept()
         elif event.button() == Qt.MouseButton.MiddleButton:
             self.reset_zoom_pan()
