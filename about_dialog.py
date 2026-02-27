@@ -37,6 +37,7 @@ class AboutDialog(QDialog):
         self.container = QFrame()
         self.container.setObjectName("aboutContainer")
         self.container.setFixedWidth(850) # Make window wider
+        self.container.setFixedHeight(600) # Increase height
         
         container_layout = QVBoxLayout(self.container)
         container_layout.setContentsMargins(25, 30, 25, 25)
