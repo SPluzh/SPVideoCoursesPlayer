@@ -1403,3 +1403,85 @@ QLabel#TagBadge {
 #TagPopupFrame QPushButton:hover {
     background-color: @accent;
 }
+
+/* ============================================================
+   ABOUT DIALOG
+   ============================================================ */
+
+#aboutContainer {
+    background-color: @bg-dark;
+    border: 1px solid @border;
+    border-radius: 12px;
+}
+
+#aboutTitle { 
+    font-size: 18px; 
+    font-weight: bold; 
+    color: @text-light; 
+}
+
+#aboutVersion { 
+    color: @text-meta; 
+    font-size: 12px;
+}
+
+#aboutSeparator {
+    background-color: @separator-color;
+}
+
+#aboutDescription { 
+    color: @text-item; 
+    font-size: 13px;
+}
+
+#aboutHotkeyTitle { 
+    color: @text-light; 
+    font-weight: bold; 
+    font-size: 14px;
+}
+
+#hotkeyWidget {
+    background-color: transparent;
+}
+
+#hotkeyKey {
+    background-color: @bg-darker;
+    border: 1px solid @separator-color;
+    border-bottom: 2px solid #1a1a1a;
+    border-radius: 4px;
+    padding: 2px 6px;
+    color: @text-light;
+    font-weight: bold;
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 11px;
+    min-width: 40px;
+}
+
+#hotkeyDesc { 
+    color: @text-meta; 
+    font-size: 11px;
+}
+
+#aboutHotkeyScroll QScrollBar:vertical {
+    width: 8px;
+    background: transparent;
+}
+
+#aboutHotkeyScroll QScrollBar::handle:vertical {
+    background: @separator-color;
+    border-radius: 4px;
+}
+
+#aboutCloseBtn { 
+    background-color: @accent; 
+    color: white; 
+    border: none; 
+    border-radius: 4px; 
+    padding: 8px 20px; 
+    font-weight: bold;
+    font-size: 13px;
+}
+
+#aboutCloseBtn:hover { 
+    background-color: @accent-hover; 
+}

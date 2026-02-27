@@ -11,7 +11,6 @@ class AboutDialog(QDialog):
         super().__init__(parent)
         self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.Dialog)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
-        self.apply_styles()
         self.setup_ui()
 
     def showEvent(self, event):
@@ -161,75 +160,6 @@ class AboutDialog(QDialog):
             
             layout.addWidget(key_container, row, col)
             layout.addWidget(desc_label, row, col + 1)
-
-    def apply_styles(self):
-        self.setStyleSheet("""
-            #aboutContainer {
-                background-color: #373737;
-                border: 1px solid #707070;
-                border-radius: 12px;
-            }
-            #aboutTitle { 
-                font-size: 18px; 
-                font-weight: bold; 
-                color: #ffffff; 
-            }
-            #aboutVersion { 
-                color: #a0a0a0; 
-                font-size: 12px;
-            }
-            #aboutSeparator {
-                background-color: #555555;
-            }
-            #aboutDescription { 
-                color: #dddddd; 
-                font-size: 13px;
-            }
-            #aboutHotkeyTitle { 
-                color: #ffffff; 
-                font-weight: bold; 
-                font-size: 14px;
-            }
-            #hotkeyWidget {
-                background-color: transparent;
-            }
-            #hotkeyKey {
-                background-color: #2c2c2c;
-                border: 1px solid #555555;
-                border-bottom: 2px solid #1a1a1a;
-                border-radius: 4px;
-                padding: 2px 6px;
-                color: #ffffff;
-                font-weight: bold;
-                font-family: 'Consolas', 'Courier New', monospace;
-                font-size: 11px;
-                min-width: 40px;
-            }
-            #hotkeyDesc { 
-                color: #bbbbbb; 
-                font-size: 11px;
-            }
-            #aboutHotkeyScroll QScrollBar:vertical {
-                width: 8px;
-                background: transparent;
-            }
-            #aboutHotkeyScroll QScrollBar::handle:vertical {
-                background: #555555;
-                border-radius: 4px;
-            }
-            #aboutCloseBtn { 
-                background-color: #018574; 
-                color: white; 
-                border: none; 
-                border-radius: 4px; 
-                padding: 8px 20px; 
-                font-weight: bold;
-                font-size: 13px;
-            }
-            #aboutCloseBtn:hover { 
-                background-color: #02a58a; 
-            }
-        """)
 
     def center_window(self):
         if self.parent():
