@@ -1,175 +1,306 @@
 from PyQt6.QtWidgets import (
-    QDialog, QVBoxLayout, QHBoxLayout, QListWidget, QListWidgetItem,
-    QPushButton, QLineEdit, QLabel, QColorDialog, QMenu, QMessageBox,
-    QWidget, QCheckBox
+    QDialog, QVBoxLayout, QHBoxLayout, QListWidget, QListWidgetItem, 
+    QPushButton, QInputDialog, QMessageBox, QColorDialog, QLabel, 
+    QWidget, QFormLayout, QLineEdit, QDialogButtonBox, QGridLayout, QSizePolicy
 )
-from PyQt6.QtCore import Qt, QSize
-from PyQt6.QtGui import QColor, QIcon, QPixmap, QPainter, QBrush, QPen
+from PyQt6.QtCore import Qt, QSize, pyqtSignal, QPoint
+from PyQt6.QtGui import QIcon, QColor, QPixmap, QPainter
 
 from translator import tr
+from icon_manager import load_icon as get_icon
+
+class ColorPickerPopup(QDialog):
+    """Custom popup for selecting from 16 predefined colors"""
+    colorSelected = pyqtSignal(str)
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowFlags(Qt.WindowType.Popup | Qt.WindowType.FramelessWindowHint)
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+        self.setup_ui()
+
+    def setup_ui(self):
+        self.container = QWidget(self)
+        self.container.setObjectName("colorPickerContainer")
+        # Assuming styling is handled via globally loaded QSS, but adding some fallback style
+        self.container.setStyleSheet("""
+            QWidget#colorPickerContainer {
+                background-color: #2D2D2D;
+                border: 1px solid #444444;
+                border-radius: 4px;
+            }
+            QPushButton.colorCell {
+                border: 1px solid rgba(0,0,0,0.1);
+                border-radius: 0px;
+            }
+            QPushButton.colorCell:hover {
+                border: 1px solid white;
+            }
+        """)
+        
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        # Force the dialog to fit the content size exactly
+        layout.setSizeConstraint(QVBoxLayout.SizeConstraint.SetFixedSize)
+        layout.addWidget(self.container)
+        
+        self.grid = QGridLayout(self.container)
+        self.grid.setSpacing(4)
+        self.grid.setContentsMargins(8, 8, 8, 8)
+
+        colors = [
+            "#FF5252", "#FF4081", "#E040FB", "#7C4DFF", # Row 1
+            "#536DFE", "#448AFF", "#40C4FF", "#18FFFF", # Row 2
+            "#64FFDA", "#69F0AE", "#B2FF59", "#EEFF41", # Row 3
+            "#FFFF00", "#FFD740", "#FFAB40", "#FF6E40"  # Row 4
+        ]
+
+        for i, color_hex in enumerate(colors):
+            btn = QPushButton()
+            btn.setFixedSize(24, 24)
+            btn.setProperty("class", "colorCell")
+            btn.setStyleSheet(f"background-color: {color_hex}; border: none;")
+            btn.clicked.connect(lambda checked, c=color_hex: self.on_color_clicked(c))
+            # Align center within the grid cell to prevent any potential stretching
+            self.grid.addWidget(btn, i // 4, i % 4, Qt.AlignmentFlag.AlignCenter)
+
+    def on_color_clicked(self, color_hex):
+        self.colorSelected.emit(color_hex)
+        self.accept()
 
 class TagsDialog(QDialog):
-    def __init__(self, parent, db, file_path):
+    """Dialog to manage all tags (add, edit, delete) AND assign them to an optional video"""
+    def __init__(self, parent, db, file_path=None):
         super().__init__(parent)
-        self.setWindowTitle(tr('tags.title') or "Manage Tags")
-        self.setMinimumSize(400, 500)
-
         self.db = db
         self.file_path = file_path
         
-        self.selected_color = "#3498db" # Default blue
+        # Default color from new palette
+        self.current_color = "#FF5252"
         
-        self.layout = QVBoxLayout(self)
+        # Title depends on context
+        title = tr("tags.title")
+        if self.file_path:
+             title = tr("tags.assign_title") if tr("tags.assign_title") != "tags.assign_title" else "Assign Tags"
+             
+        self.setWindowTitle(title or "Manage Tags")
+        self.resize(450, 500)
+        self.setModal(True)
         
-        # Tag List
-        self.list_widget = QListWidget()
-        self.list_widget.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
-        self.list_widget.customContextMenuRequested.connect(self.show_context_menu)
-        self.layout.addWidget(self.list_widget)
-        
-        # New Tag Creation
-        create_group = QWidget()
-        create_layout = QHBoxLayout(create_group)
-        create_layout.setContentsMargins(0, 0, 0, 0)
-        
-        self.name_input = QLineEdit()
-        self.name_input.setPlaceholderText(tr('tags.new_tag_name') or "New Tag Name")
-        create_layout.addWidget(self.name_input)
-        
-
-        self.color_btn = QPushButton()
-        self.color_btn.setObjectName("TagColorBtn")
-        self.color_btn.setFixedSize(24, 24)
-        self.color_btn.setStyleSheet(f"background-color: {self.selected_color};")
-        self.color_btn.clicked.connect(self.pick_color)
-        create_layout.addWidget(self.color_btn)
-        
-        self.add_btn = QPushButton("Str(Add)")
-        self.add_btn.setText(tr('tags.add_btn') or "Add")
-        self.add_btn.clicked.connect(self.create_tag)
-        create_layout.addWidget(self.add_btn)
-        
-        self.layout.addWidget(create_group)
-        
-        # Dialog Buttons
-        btn_layout = QHBoxLayout()
-        self.save_btn = QPushButton(tr('dialog.save') or "Save")
-        self.save_btn.clicked.connect(self.accept)
-        btn_layout.addWidget(self.save_btn)
-        
-        self.cancel_btn = QPushButton(tr('dialog.cancel') or "Cancel")
-        self.cancel_btn.clicked.connect(self.reject)
-        btn_layout.addWidget(self.cancel_btn)
-        
-        self.layout.addLayout(btn_layout)
-        
+        self.setup_ui()
         self.load_tags()
-
-    def load_tags(self):
-        self.list_widget.clear()
         
-        # Get all tags
-        all_tags = self.db.get_tags()
-        # Get tags for this video
-        current_tags = self.db.get_video_tags(self.file_path)
-        current_tag_ids = {t['id'] for t in current_tags}
+    def setup_ui(self):
+        # Main layout is vertical
+        layout = QVBoxLayout(self)
         
-        for tag in all_tags:
-            item = QListWidgetItem(self.list_widget)
-            item.setData(Qt.ItemDataRole.UserRole, tag['id'])
-            
-            # Custom widget for checkbox + colored label
-            widget = QWidget()
-            layout = QHBoxLayout(widget)
-            layout.setContentsMargins(5, 2, 5, 2)
-            
-            chk = QCheckBox()
-            chk.setChecked(tag['id'] in current_tag_ids)
-            chk.stateChanged.connect(lambda state, tid=tag['id']: self.on_tag_toggled(tid, state))
-            layout.addWidget(chk)
-            
-            # Color Badge
-            lbl = QLabel(tag['name'])
-            lbl.setObjectName("TagBadge")
-            lbl.setStyleSheet(f"background-color: {tag['color']};")
+        # Help label if in assignment mode
+        if self.file_path:
+            help_text = tr("tags.assign_help") if tr("tags.assign_help") != "tags.assign_help" else "Select tags for the current video."
+            lbl = QLabel(help_text)
+            lbl.setWordWrap(True)
             layout.addWidget(lbl)
             
-            layout.addStretch()
+        # New Tag Edit Row (Moved above list)
+        edit_layout = QHBoxLayout()
+        edit_layout.setSpacing(5)
+        edit_layout.setAlignment(Qt.AlignmentFlag.AlignVCenter)
+        
+        self.color_btn = QPushButton()
+        self.color_btn.setFixedSize(30, 30)
+        self.color_btn.setToolTip(tr("tags.select_color") or "Select Color")
+        self.color_btn.clicked.connect(self.select_color)
+        self.update_color_preview()
+        
+        self.name_edit = QLineEdit()
+        self.name_edit.setPlaceholderText((tr("tags.new_tag_name") or "Name").replace(":", ""))
+        self.name_edit.setFixedHeight(38)
+        
+        btn_size = QSize(30, 30)
+        
+        self.add_btn = QPushButton()
+        self.add_btn.setIcon(get_icon("add"))
+        self.add_btn.setFixedSize(btn_size)
+        self.add_btn.setToolTip(tr("tags.add_btn") or "Add Tag")
+        self.add_btn.clicked.connect(self.add_tag)
+        
+        edit_tooltip = tr("tags.edit_btn") if tr("tags.edit_btn") != "tags.edit_btn" else "Edit Tag"
+        self.edit_btn = QPushButton()
+        self.edit_btn.setIcon(get_icon("edit"))
+        self.edit_btn.setFixedSize(btn_size)
+        self.edit_btn.setToolTip(edit_tooltip)
+        self.edit_btn.clicked.connect(self.edit_tag)
+        self.edit_btn.setEnabled(False)
+        
+        self.del_btn = QPushButton()
+        self.del_btn.setIcon(get_icon("delete"))
+        self.del_btn.setFixedSize(btn_size)
+        self.del_btn.setToolTip(tr("tags.delete") or "Delete Tag")
+        self.del_btn.clicked.connect(self.delete_tag)
+        self.del_btn.setEnabled(False)
+        
+        edit_layout.addWidget(self.color_btn, alignment=Qt.AlignmentFlag.AlignVCenter)
+        edit_layout.addWidget(self.name_edit, alignment=Qt.AlignmentFlag.AlignVCenter)
+        edit_layout.addWidget(self.add_btn, alignment=Qt.AlignmentFlag.AlignVCenter)
+        edit_layout.addWidget(self.edit_btn, alignment=Qt.AlignmentFlag.AlignVCenter)
+        edit_layout.addWidget(self.del_btn, alignment=Qt.AlignmentFlag.AlignVCenter)
+        
+        layout.addLayout(edit_layout)
+        layout.addSpacing(5)
+        
+        # Middle area (List)
+        self.list_widget = QListWidget()
+        self.list_widget.setObjectName("tagsList")
+        self.list_widget.currentItemChanged.connect(self.on_selection_changed)
+        layout.addWidget(self.list_widget)
+        
+        # Dialog Buttons
+        bottom_layout = QHBoxLayout()
+        bottom_layout.setSpacing(10)
+        
+        if self.file_path:
+            # Assign Button
+            assign_text = tr("tags.assign_btn") if tr("tags.assign_btn") != "tags.assign_btn" else "Assign Tags"
+            self.assign_btn = QPushButton(assign_text)
+            self.assign_btn.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+            self.assign_btn.clicked.connect(self.save_selection)
+            bottom_layout.addWidget(self.assign_btn)
             
-            item.setSizeHint(widget.sizeHint())
-            self.list_widget.setItemWidget(item, widget)
+            # Close Button
+            self.close_btn = QPushButton(tr("dialog.close") or "Close")
+            self.close_btn.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+            self.close_btn.clicked.connect(self.reject)
+            bottom_layout.addWidget(self.close_btn)
+        else:
+            # Just Close button for pure management
+            self.close_btn = QPushButton(tr("dialog.close") or "Close")
+            self.close_btn.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+            self.close_btn.clicked.connect(self.accept)
+            bottom_layout.addWidget(self.close_btn)
+            
+        layout.addLayout(bottom_layout)
+        
+    def load_tags(self):
+        self.list_widget.clear()
+        self.name_edit.clear()
+        self.current_color = "#FF5252"
+        self.update_color_preview()
+        
+        all_tags = self.db.get_tags()
+        
+        # If in assignment mode, get currently assigned tags
+        assigned_ids = set()
+        if self.file_path:
+            assigned_tags = self.db.get_video_tags(self.file_path)
+            assigned_ids = {t['id'] for t in assigned_tags}
+        
+        for tag in all_tags:
+            item = QListWidgetItem(tag['name'])
+            
+            # Icon
+            pixmap = QPixmap(16, 16)
+            pixmap.fill(QColor(tag['color'] or self.current_color))
+            item.setIcon(QIcon(pixmap))
+            
+            # Store full data
+            item.setData(Qt.ItemDataRole.UserRole, tag)
+            
+            # Checkbox logic
+            if self.file_path:
+                item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable | Qt.ItemFlag.ItemIsSelectable)
+                check_state = Qt.CheckState.Checked if tag['id'] in assigned_ids else Qt.CheckState.Unchecked
+                item.setCheckState(check_state)
+            
+            self.list_widget.addItem(item)
+            
+    def select_color(self):
+        popup = ColorPickerPopup(self)
+        
+        # Position the popup below the color button
+        btn_pos = self.color_btn.mapToGlobal(QPoint(0, self.color_btn.height()))
+        popup.move(btn_pos)
+        
+        popup.colorSelected.connect(self.on_color_selected)
+        popup.exec()
+            
+    def on_color_selected(self, color_hex):
+        self.current_color = color_hex
+        self.update_color_preview()
 
-    def on_tag_toggled(self, tag_id, state):
-        # We can either save immediately or wait for "Save"
-        # Since I'm using `accept`/`reject`, I should probably store changes and apply on accept.
-        # But for simplicity in this iteration, I'll apply immediately, 
-        # OR I can just read the checkboxes on accept. 
-        # The QCheckBox is inside a widget item, accessing it later is slightly annoying but doable.
-        # Actually, let's keep track of selected IDs in a set.
-        pass
-
-    def get_selected_tag_ids(self):
-        selected_ids = []
-        for i in range(self.list_widget.count()):
-            item = self.list_widget.item(i)
-            tag_id = item.data(Qt.ItemDataRole.UserRole)
-            widget = self.list_widget.itemWidget(item)
-            chk = widget.findChild(QCheckBox)
-            if chk and chk.isChecked():
-                selected_ids.append(tag_id)
-        return selected_ids
-
-    def pick_color(self):
-        color = QColorDialog.getColor(QColor(self.selected_color), self, tr('tags.select_color') or "Select Color")
-        if color.isValid():
-            self.selected_color = color.name()
-            self.color_btn.setStyleSheet(f"background-color: {self.selected_color};")
-
-    def create_tag(self):
-        name = self.name_input.text().strip()
-        if not name:
+            
+    def update_color_preview(self):
+        pixmap = QPixmap(16, 16)
+        pixmap.fill(QColor(self.current_color))
+        self.color_btn.setIcon(QIcon(pixmap))
+        
+    def on_selection_changed(self, current, previous):
+        if not current:
+            self.name_edit.clear()
+            self.edit_btn.setEnabled(False)
+            self.del_btn.setEnabled(False)
             return
             
-        self.db.create_tag(name, self.selected_color)
-        self.name_input.clear()
-        self.load_tags()
-
-    def show_context_menu(self, pos):
-        item = self.list_widget.itemAt(pos)
+        data = current.data(Qt.ItemDataRole.UserRole)
+        self.name_edit.setText(data['name'])
+        self.current_color = data['color']
+        self.update_color_preview()
+        
+        self.edit_btn.setEnabled(True)
+        self.del_btn.setEnabled(True)
+        
+    def add_tag(self):
+        name = self.name_edit.text().strip()
+        color = self.current_color
+        if name:
+            new_id = self.db.create_tag(name, color)
+            if new_id:
+                self.load_tags()
+            else:
+                title = tr("error.title") if isinstance(tr("error.title"), str) else "Error"
+                msg = tr("tags.error_create") if tr("tags.error_create") != "tags.error_create" else "Cannot create tag. It might already exist."
+                QMessageBox.warning(self, title, msg)
+                    
+    def edit_tag(self):
+        item = self.list_widget.currentItem()
         if not item:
             return
             
-        tag_id = item.data(Qt.ItemDataRole.UserRole)
-        menu = QMenu()
-        delete_action = menu.addAction(tr('tags.delete') or "Delete Tag")
-        action = menu.exec(self.list_widget.mapToGlobal(pos))
-        
-        if action == delete_action:
-            confirm = QMessageBox.question(
-                self, 
-                tr('dialog.confirm') or "Confirm",
-                tr('tags.confirm_delete') or "Are you sure you want to delete this tag?",
-                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
-            )
-            if confirm == QMessageBox.StandardButton.Yes:
-                self.db.delete_tag(tag_id)
-                self.load_tags()
+        data = item.data(Qt.ItemDataRole.UserRole)
+        name = self.name_edit.text().strip()
+        color = self.current_color
+        if name:
+            self.db.update_tag(data['id'], name, color)
+            self.load_tags()
+                
+    def delete_tag(self):
+        item = self.list_widget.currentItem()
+        if not item:
+            return
+            
+        title = tr("tags.delete") if isinstance(tr("tags.delete"), str) else "Delete Tag"
+        msg = tr("tags.confirm_delete") if isinstance(tr("tags.confirm_delete"), str) else "Are you sure you want to delete this tag forever?"
+        if QMessageBox.question(self, title, msg) == QMessageBox.StandardButton.Yes:
+            data = item.data(Qt.ItemDataRole.UserRole)
+            self.db.delete_tag(data['id'])
+            self.load_tags()
 
-    def accept(self):
-        # Apply changes
-        new_tag_ids = set(self.get_selected_tag_ids())
-        
-        # Get old tags to minimize DB writes
-        current_tags = self.db.get_video_tags(self.file_path)
-        old_tag_ids = {t['id'] for t in current_tags}
-        
-        to_add = new_tag_ids - old_tag_ids
-        to_remove = old_tag_ids - new_tag_ids
-        
-        for tid in to_add:
-            self.db.add_tag_to_video(self.file_path, tid)
+    def save_selection(self):
+        if not self.file_path:
+            self.accept()
+            return
             
-        for tid in to_remove:
-            self.db.remove_tag_from_video(self.file_path, tid)
+        current_assigned = {t['id'] for t in self.db.get_video_tags(self.file_path)}
+        
+        for i in range(self.list_widget.count()):
+            item = self.list_widget.item(i)
+            tag = item.data(Qt.ItemDataRole.UserRole)
+            tag_id = tag['id']
             
-        super().accept()
+            is_checked = item.checkState() == Qt.CheckState.Checked
+            
+            if is_checked and tag_id not in current_assigned:
+                self.db.add_tag_to_video(self.file_path, tag_id)
+            elif not is_checked and tag_id in current_assigned:
+                self.db.remove_tag_from_video(self.file_path, tag_id)
+                
+        self.accept()

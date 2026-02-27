@@ -197,6 +197,12 @@ class DatabaseManager:
             folder_columns = [col[1] for col in c.fetchall()]
             if 'is_available' not in folder_columns:
                 c.execute("ALTER TABLE folders ADD COLUMN is_available INTEGER DEFAULT 1")
+                
+            # Migration for tags table
+            c.execute("PRAGMA table_info(tags)")
+            tags_columns = [col[1] for col in c.fetchall()]
+            if 'color' not in tags_columns:
+                c.execute("ALTER TABLE tags ADD COLUMN color TEXT DEFAULT '#3498db'")
 
             conn.commit()
 
@@ -720,6 +726,18 @@ class DatabaseManager:
         except Exception as e:
             logging.error(f"Error creating tag: {e}", exc_info=True)
             return None
+
+    def update_tag(self, tag_id, name, color):
+        """Updates an existing tag's name and color."""
+        try:
+            with self.get_connection() as conn:
+                c = conn.cursor()
+                c.execute("UPDATE tags SET name = ?, color = ? WHERE id = ?", (name, color, tag_id))
+                conn.commit()
+                return True
+        except Exception as e:
+            logging.error(f"Error updating tag: {e}", exc_info=True)
+            return False
 
     def delete_tag(self, tag_id):
         """Deletes a tag completely."""
