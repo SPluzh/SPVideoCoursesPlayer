@@ -7,7 +7,7 @@
 [![Downloads](https://img.shields.io/github/downloads/SPluzh/SPVideoCoursesPlayer/total)](https://github.com/SPluzh/SPVideoCoursesPlayer/releases)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-https://github.com/user-attachments/assets/a015b42f-e577-4d45-bdcf-4f62e3851e21
+https://github.com/user-attachments/assets/1487aa34-3076-4d93-bc36-f3041a38840d
 
 
 <p align="center">
