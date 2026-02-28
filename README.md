@@ -58,7 +58,9 @@ SP Video Courses Player is a desktop application designed specifically for watch
 2. Extract the archive to your desired location
 3. Run `SP Video Courses Player.exe`
 
-#### Option 2: Run from Source
+<details>
+<summary><strong>Option 2: Run from Source</strong></summary>
+
 1. Clone the repository:
    ```bash
    git clone https://github.com/yourusername/SPVideoCoursesPlayer.git
@@ -74,6 +76,8 @@ SP Video Courses Player is a desktop application designed specifically for watch
    ```bash
    python main.py
    ```
+
+</details>
 
 
 ### 📋 Requirements
@@ -133,7 +137,9 @@ SP Video Courses Player — это настольное приложение, с
 2. Распакуйте архив в нужное место
 3. Запустите `SP Video Courses Player.exe`
 
-#### Вариант 2: Запуск из исходников
+<details>
+<summary><strong>Вариант 2: Запуск из исходников</strong></summary>
+
 1. Клонируйте репозиторий:
    ```bash
    git clone https://github.com/yourusername/SPVideoCoursesPlayer.git
@@ -149,6 +155,8 @@ SP Video Courses Player — это настольное приложение, с
    ```bash
    python main.py
    ```
+
+</details>
 
 ### 📋 Требования
 

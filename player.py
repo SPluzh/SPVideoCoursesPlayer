@@ -902,11 +902,12 @@ class VideoPlayerWidget(QWidget):
 
             # 3. Load audio tracks (500ms) -> triggers restore_audio_track
             QTimer.singleShot(500, lambda: self._timer_wrapper("load_audio_tracks", self.load_audio_tracks, file_path))
-            logging.debug(f"Scheduled load_audio_tracks (500ms)")
+            QTimer.singleShot(600, lambda: self._timer_wrapper("restore_audio_track", self.restore_audio_track, file_path))
+            logging.debug(f"Scheduled load_audio_tracks (500ms) and restore_audio_track (600ms)")
 
-            # 4. Restore subtitle track (700ms)
-            QTimer.singleShot(700, lambda: self._timer_wrapper("restore_subtitle_track", self.restore_subtitle_track, file_path))
-            logging.debug(f"Scheduled restore_subtitle_track (700ms)")
+            # 4. Restore subtitle track (750ms)
+            QTimer.singleShot(750, lambda: self._timer_wrapper("restore_subtitle_track", self.restore_subtitle_track, file_path))
+            logging.debug(f"Scheduled restore_subtitle_track (750ms)")
             
             # Load markers
             logging.debug(f"Calling load_markers")
