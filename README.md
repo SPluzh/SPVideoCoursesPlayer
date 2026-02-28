@@ -7,9 +7,8 @@
 [![Downloads](https://img.shields.io/github/downloads/SPluzh/SPVideoCoursesPlayer/total)](https://github.com/SPluzh/SPVideoCoursesPlayer/releases)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-<p align="center">
-  <img src="resources/icons/app_icon.png" alt="SP Video Courses Player" width="128" height="128">
-</p>
+
+https://github.com/user-attachments/assets/689883f5-804e-4de9-bce2-3928d84c9512
 
 <p align="center">
   <strong>A specialized video player for watching downloaded video courses with progress tracking</strong>
