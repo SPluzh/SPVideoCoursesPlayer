@@ -107,16 +107,16 @@ class TagsDialog(QDialog):
         edit_layout.setAlignment(Qt.AlignmentFlag.AlignVCenter)
         
         self.color_btn = QPushButton()
-        self.color_btn.setFixedSize(30, 30)
+        self.color_btn.setFixedSize(28, 28)
         self.color_btn.setToolTip(tr("tags.select_color"))
         self.color_btn.clicked.connect(self.select_color)
         self.update_color_preview()
         
         self.name_edit = QLineEdit()
         self.name_edit.setPlaceholderText(tr("tags.new_tag_name").replace(":", ""))
-        self.name_edit.setFixedHeight(38)
+        self.name_edit.setFixedHeight(28)
         
-        btn_size = QSize(30, 30)
+        btn_size = QSize(28, 28)
         
         self.add_btn = QPushButton()
         self.add_btn.setIcon(get_icon("add"))
@@ -150,6 +150,19 @@ class TagsDialog(QDialog):
         # Middle area (List)
         self.list_widget = QListWidget()
         self.list_widget.setObjectName("tagsList")
+        
+        # Add padding around the list and make border gray and permanent
+        self.list_widget.setStyleSheet("""
+            QListWidget {
+                padding: 5px;
+                border: 1px solid #555555;
+                outline: none;
+            }
+            QListWidget:focus {
+                border: 1px solid #555555;
+            }
+        """)
+        
         self.list_widget.currentItemChanged.connect(self.on_selection_changed)
         layout.addWidget(self.list_widget)
         
