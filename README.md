@@ -72,6 +72,15 @@ SP Video Courses Player is a desktop application designed specifically for watch
    pip install -r requirements.txt
    ```
 
+   **📦 Dependencies:**
+   ```
+   PyQt6
+   python-mpv
+   comtypes
+   mutagen
+   pyinstaller (for building)
+   ```
+
 3. Run the application:
    ```bash
    python main.py
@@ -85,15 +94,6 @@ SP Video Courses Player is a desktop application designed specifically for watch
 - **Operating System**: Windows 10/11
 - **Python**: 3.10+ (for source installation)
 
-### 📦 Dependencies
-
-```
-PyQt6
-python-mpv
-comtypes
-mutagen
-pyinstaller (for building)
-```
 
 ### 🔧 Additional Components
 
@@ -151,6 +151,15 @@ SP Video Courses Player — это настольное приложение, с
    pip install -r requirements.txt
    ```
 
+   **📦 Зависимости:**
+   ```
+   PyQt6
+   python-mpv
+   comtypes
+   mutagen
+   pyinstaller (for building)
+   ```
+
 3. Запустите приложение:
    ```bash
    python main.py
@@ -163,15 +172,6 @@ SP Video Courses Player — это настольное приложение, с
 - **Операционная система**: Windows 10/11
 - **Python**: 3.10+ (для запуска из исходников)
 
-### 📦 Зависимости
-
-```
-PyQt6
-python-mpv
-comtypes
-mutagen
-pyinstaller (для сборки)
-```
 
 ### 🔧 Дополнительные компоненты
 
