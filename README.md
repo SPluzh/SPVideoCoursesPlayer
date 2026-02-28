@@ -46,10 +46,6 @@ SP Video Courses Player is a desktop application designed specifically for watch
 
 1. **Add Library Paths**: Go to `Library → Settings` and add folders containing your video courses
 2. **Scan Library**: Click `Library → Scan` to index your videos
-3. **Watch Videos**: Double-click any video to start playback
-4. **Audio Tools**: Click the volume icon to access **AI Noise Reduction** and effects
-5. **Tools**: Use `P` for PiP mode, `G` for Markers, and Context Menu for Tags
-
 
 ### 🚀 Installation
 
@@ -127,8 +123,6 @@ SP Video Courses Player — это настольное приложение, с
 
 1. **Добавьте пути**: `Библиотека → Настройки` — укажите папки с курсами
 2. **Сканирование**: `Библиотека → Сканировать` — индексация файлов
-3. **Аудио инструменты**: Клик по значку громкости открывает **AI Шумоподавление** и эффекты
-4. **Инструменты**: `P` — PiP режим, `G` — Маркеры, ПКМ — Теги и Избранное
 
 ### 🚀 Установка
 
