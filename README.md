@@ -93,9 +93,24 @@ SP Video Courses Player is a desktop application designed specifically for watch
 
 ### 🔧 Additional Components
 
-The application will automatically download these components on first run:
-- **libmpv-2.dll** - MPV video playback library
-- **FFmpeg & FFprobe** - For video analysis and thumbnail generation
+The application will automatically download these components on first run. If the automatic download fails, you can download them manually and place them in the `resources/bin/` directory:
+
+- **libmpv-2.dll** ([Download from shinchiro](https://github.com/shinchiro/mpv-winbuild-cmake/releases) or [zhongfly](https://github.com/zhongfly/mpv-winbuild/releases)) - MPV video playback library. Look for `mpv-dev-x86_64-*.7z` and extract the DLL.
+- **FFmpeg & FFprobe** ([Download Essentials](https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip)) - For video analysis and thumbnail generation. Extract `ffmpeg.exe` and `ffprobe.exe` from the `bin` folder of the archive.
+
+**Placement:** Place all components into the `bin` directory. The path depends on how you run the application:
+
+The folder structure should look like this (for EXE version):
+```text
+SP Video Courses Player/
+├── SP Video Courses Player.exe
+└── _internal/
+    └── resources/
+        └── bin/
+            ├── libmpv-2.dll
+            ├── ffmpeg.exe
+            └── ffprobe.exe
+```
 
 ---
 
@@ -169,9 +184,24 @@ SP Video Courses Player — это настольное приложение, с
 
 ### 🔧 Дополнительные компоненты
 
-Приложение автоматически загрузит эти компоненты при первом запуске:
-- **libmpv-2.dll** — библиотека воспроизведения видео MPV
-- **FFmpeg и FFprobe** — для анализа видео и генерации миниатюр
+Приложение автоматически загрузит эти компоненты при первом запуске. Если автоматическая загрузка не удалась, вы можете скачать их вручную и поместить в директорию `resources/bin/`:
+
+- **libmpv-2.dll** ([Скачать от shinchiro](https://github.com/shinchiro/mpv-winbuild-cmake/releases) или [от zhongfly](https://github.com/zhongfly/mpv-winbuild/releases)) — библиотека воспроизведения видео MPV. Ищите `mpv-dev-x86_64-*.7z` и извлеките DLL.
+- **FFmpeg и FFprobe** ([Скачать Essentials](https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip)) — для анализа видео и генерации миниатюр. Извлеките `ffmpeg.exe` и `ffprobe.exe` из папки `bin` архива.
+
+**Путь:** Поместите все компоненты в папку `bin`. Путь зависит от способа запуска приложения:
+
+Структура папок должна выглядеть так (для EXE версии):
+```text
+SP Video Courses Player/
+├── SP Video Courses Player.exe
+└── _internal/
+    └── resources/
+        └── bin/
+            ├── libmpv-2.dll
+            ├── ffmpeg.exe
+            └── ffprobe.exe
+```
 
 
 ---
