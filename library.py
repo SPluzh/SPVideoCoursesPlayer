@@ -314,21 +314,41 @@ class VideoItemDelegate(QStyledItemDelegate):
 
             painter.setFont(self.video_title.font())
             painter.setPen(self.video_title.palette().color(QPalette.ColorRole.WindowText))
-            elided_name = painter.fontMetrics().elidedText(str(filename), Qt.TextElideMode.ElideRight, available_width)
-            painter.drawText(QRect(text_x, text_y, available_width, 25), Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter, elided_name)
-            text_y += 25
+            
+            fm = painter.fontMetrics()
+            layout = QTextLayout(str(filename), painter.font())
+            layout.setCacheEnabled(True)
+            layout.beginLayout()
+            
+            lines = []
+            max_lines = 3
+            while len(lines) < max_lines:
+                line = layout.createLine()
+                if not line.isValid() or line.textLength() == 0:
+                    break
+                line.setLineWidth(available_width)
+                lines.append(line)
+            layout.endLayout()
 
-            info_parts = []
-            if resolution: info_parts.append(str(resolution))
-            if file_size: info_parts.append(self.config['format_size'](file_size))
-            if marker_count: info_parts.append(tr('video_info.markers', count=marker_count))
-
-            if info_parts:
-                painter.setFont(self.video_info.font())
-                painter.setPen(self.video_info.palette().color(QPalette.ColorRole.WindowText))
-                info_str = " \u2022 ".join(info_parts)
-                painter.drawText(QRect(text_x, text_y, available_width, 20), Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter, info_str)
-                text_y += 20
+            title_height = 0
+            if not lines and filename:
+                 elided = fm.elidedText(str(filename), Qt.TextElideMode.ElideRight, available_width)
+                 painter.drawText(int(text_x), int(text_y + fm.ascent()), elided)
+                 title_height = fm.lineSpacing()
+            else:
+                for i, line in enumerate(lines):
+                    line_y = int(text_y + title_height + line.ascent())
+                    
+                    if i == max_lines - 1 and line.textStart() + line.textLength() < len(str(filename)):
+                        remaining = str(filename)[line.textStart():]
+                        elided = fm.elidedText(remaining, Qt.TextElideMode.ElideRight, available_width)
+                        painter.drawText(int(text_x), line_y, elided)
+                    else:
+                        line.draw(painter, QPointF(float(text_x), float(text_y + title_height)))
+                        
+                    title_height += line.height()
+            
+            text_y += max(25, int(title_height) + 4)
 
             if watched_percent > 0 or last_position > 0:
                 painter.setFont(self.video_progress_text.font())
@@ -557,10 +577,16 @@ class VideoItemDelegate(QStyledItemDelegate):
             px_x = icon_rect.x() + (icon_rect.width() - scaled_pixmap.width()) / 2
             px_y = icon_rect.y() + (icon_rect.height() - scaled_pixmap.height()) / 2
             
+            painter.save()
+            clip_path = QPainterPath()
+            clip_path.addRoundedRect(icon_rect, 3.0, 3.0)
+            painter.setClipPath(clip_path)
+            
             painter.drawPixmap(int(px_x), int(px_y), scaled_pixmap)
             
             # Draw border
-            painter.setClipping(False) # Turn off clip for border
+            painter.restore() # Restore so we lose the clip mask
+            painter.setClipping(False) # Turn off clip for border (if any was left from outer context)
             painter.setPen(self.thumbnail_border.palette().color(QPalette.ColorRole.Mid))
             painter.setBrush(Qt.BrushStyle.NoBrush)
             painter.drawRoundedRect(icon_rect, 3, 3)
