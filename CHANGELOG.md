@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.3.5]
+- **Folder Images**: Fixed cropping of folder cover images to correctly preserve aspect ratio (16:9).
+- **Progress Auto-Update**: Progress bars for videos and folders now update automatically every 30 seconds during playback.
+- **Video Titles**: Increased the text wrapping limit for video titles to 3 lines.
+
 ## [1.3.4]
 - **Taskbar Integration**: Implemented Windows taskbar thumbnail buttons for playback control:
     - Added 5 interactive buttons: Previous Video, Rewind 10s, Play/Pause, Forward 10s, and Next Video.
