@@ -311,6 +311,7 @@ class VideoCourseBrowser(QMainWindow):
         self.progress_save_timer = QTimer(self)
         self.progress_save_timer.timeout.connect(self.periodic_progress_save)
         self.progress_save_timer.start(1000)
+        self._last_stats_update = 0
 
         # Restore filter states AFTER all components (like course_tree) are initialized
         if hasattr(self, 'fav_filter_active'):
@@ -938,8 +939,9 @@ class VideoCourseBrowser(QMainWindow):
                 return
 
             try:
+                current_time = time.time()
                 # Update folder stats FIRST so they can calculate delta based on OLD item data
-                if force_stats_update or current_time - self._last_stats_update >= 60:
+                if force_stats_update or current_time - self._last_stats_update >= 30:
                     self.update_folder_stats_display(file_path, position, duration, percent)
                     self._last_stats_update = current_time
 
