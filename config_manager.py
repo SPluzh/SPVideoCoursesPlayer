@@ -20,6 +20,8 @@ class ConfigManager:
             'show_preview_popup': 'True',
             'check_updates_on_start': 'True',
             'skip_version': '',
+            'autoplay_on_next': 'True',
+            'autoplay_on_prev': 'True',
         },
         'Paths': {
             'paths': '',
@@ -115,6 +117,14 @@ class ConfigManager:
     def get_show_preview_popup(self) -> bool:
         config = self._read_config()
         return config.getboolean('General', 'show_preview_popup', fallback=True)
+
+    def get_autoplay_on_next(self) -> bool:
+        config = self._read_config()
+        return config.getboolean('General', 'autoplay_on_next', fallback=True)
+
+    def get_autoplay_on_prev(self) -> bool:
+        config = self._read_config()
+        return config.getboolean('General', 'autoplay_on_prev', fallback=True)
 
     def get_fav_filter_active(self) -> bool:
         config = self._read_config()

@@ -1747,8 +1747,9 @@ class VideoCourseBrowser(QMainWindow):
 
         # Determine if we should auto-play the next video
         # If player is currently playing (not paused), then auto-play next
-        should_play = True
-        if self.video_player.player:
+        # Or if the config setting 'autoplay_on_next' is enabled
+        should_play = self.config.get_autoplay_on_next()
+        if self.video_player.player and not should_play:
             should_play = not self.video_player.player.pause
 
         iterator = QTreeWidgetItemIterator(self.course_tree, QTreeWidgetItemIterator.IteratorFlag.All)
@@ -1780,8 +1781,9 @@ class VideoCourseBrowser(QMainWindow):
             return
 
         # Determine if we should auto-play the prev video
-        should_play = True
-        if self.video_player.player:
+        # Or if the config setting 'autoplay_on_prev' is enabled
+        should_play = self.config.get_autoplay_on_prev()
+        if self.video_player.player and not should_play:
             should_play = not self.video_player.player.pause
 
         iterator = QTreeWidgetItemIterator(self.course_tree, QTreeWidgetItemIterator.IteratorFlag.All)

@@ -41,6 +41,8 @@
         "confirm": "Confirmation",
         "removeconfirm": "Remove selected path from list?",
         "scan": "Start Scan",
+        "autoplay_on_next": "Autoplay on next video",
+        "autoplay_on_prev": "Autoplay on previous video",
         "save": "Save",
         "warning": "Warning",
         "specify_path": "Please add at least one library path",
