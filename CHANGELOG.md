@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.3.6]
+- **Autoplay Settings**: Added options to automatically start playback when switching to the next or previous video.
+
 ## [1.3.5]
 - **Folder Images**: Fixed cropping of folder cover images to correctly preserve aspect ratio (16:9).
 - **Progress Auto-Update**: Progress bars for videos and folders now update automatically every 30 seconds during playback.

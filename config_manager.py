@@ -157,6 +157,20 @@ class ConfigManager:
         config['General']['check_updates_on_start'] = str(value)
         self._write_config(config)
 
+    def set_autoplay_on_next(self, value: bool):
+        config = self._read_config()
+        if 'General' not in config:
+            config['General'] = {}
+        config['General']['autoplay_on_next'] = str(value)
+        self._write_config(config)
+
+    def set_autoplay_on_prev(self, value: bool):
+        config = self._read_config()
+        if 'General' not in config:
+            config['General'] = {}
+        config['General']['autoplay_on_prev'] = str(value)
+        self._write_config(config)
+
     def get_skip_version(self) -> str:
         config = self._read_config()
         return config.get('General', 'skip_version', fallback='')

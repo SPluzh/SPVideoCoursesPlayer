@@ -71,7 +71,8 @@
         "clear_success": "Data successfully cleared",
         "clear_error": "Error clearing data",
         "db_not_available": "Database not available",
-        "data_cleared": "Data successfully cleared"
+        "data_cleared": "Data successfully cleared",
+        "playback_group": "Playback"
     },
     "player": {
         "play": "Play",

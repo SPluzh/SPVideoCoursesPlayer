@@ -118,12 +118,21 @@ class SettingsDialog(QDialog):
         
         storage_layout.addStretch()
         storage_group.setLayout(storage_layout)
+
+        playback_group = QGroupBox(tr('settings.playback_group'))
+        playback_layout = QVBoxLayout()
+        self.autoplay_next_chk = QCheckBox(tr('settings.autoplay_on_next'))
+        self.autoplay_prev_chk = QCheckBox(tr('settings.autoplay_on_prev'))
+        playback_layout.addWidget(self.autoplay_next_chk)
+        playback_layout.addWidget(self.autoplay_prev_chk)
+        playback_group.setLayout(playback_layout)
         
         right_widget = QWidget()
         right_widget.setMinimumWidth(0) # Allow full collapse
         right_column = QVBoxLayout(right_widget)
         right_column.setContentsMargins(0, 0, 0, 0)
         right_column.addWidget(deps_group)
+        right_column.addWidget(playback_group)
         right_column.addWidget(storage_group)
         
         content_splitter.addWidget(right_widget)
@@ -270,6 +279,8 @@ class SettingsDialog(QDialog):
                     self._validate_path(item)
 
         self.auto_update_chk.setChecked(self.config.get_check_updates_on_start())
+        self.autoplay_next_chk.setChecked(self.config.get_autoplay_on_next())
+        self.autoplay_prev_chk.setChecked(self.config.get_autoplay_on_prev())
 
     def _validate_path(self, item):
         path = item.text(0)
@@ -301,6 +312,8 @@ class SettingsDialog(QDialog):
         self.config.set_library_paths(paths)
         self.config.set_excluded_library_paths(excluded_paths)
         self.config.set_check_updates_on_start(self.auto_update_chk.isChecked())
+        self.config.set_autoplay_on_next(self.autoplay_next_chk.isChecked())
+        self.config.set_autoplay_on_prev(self.autoplay_prev_chk.isChecked())
 
         self.accept()
 
