@@ -149,13 +149,14 @@ class VideoItemDelegate(QStyledItemDelegate):
         return self.thumbnail_cache.get(path)
 
     def paint(self, painter, option, index): # Overridden
-        # Recursion guard - prevent re-entrant paint calls
-        if getattr(self, '_paint_in_progress', False):
-            return
-        self._paint_in_progress = True
         try:
             if not index.isValid():
                 return
+
+            # Erase the entire row rect with the window background before drawing anything.
+            # Qt does NOT clear the backing store between partial repaints, so without this
+            # pixels from the previous frame "ghost" through on every thumbnail change.
+            painter.fillRect(option.rect, option.palette.color(QPalette.ColorRole.Base))
 
             item_type = index.data(Qt.ItemDataRole.UserRole + 1)
             
@@ -235,6 +236,8 @@ class VideoItemDelegate(QStyledItemDelegate):
                 path.addRoundedRect(QRectF(thumb_rect), 3.0, 3.0)
                 painter.save()
                 painter.setClipPath(path)
+                # Fill background first to clear any leftover pixels from previous thumbnail
+                painter.fillRect(thumb_rect, self.empty_thumbnail_bg.palette().color(QPalette.ColorRole.Window))
                 painter.drawPixmap(thumb_rect.left() + x_offset, thumb_rect.top() + y_offset, scaled_pixmap)
                 painter.restore()
 
@@ -473,10 +476,8 @@ class VideoItemDelegate(QStyledItemDelegate):
                 painter.restore()
 
             painter.restore()
-            try: painter.restore()
-            except: pass
-        finally:
-            self._paint_in_progress = False
+        except Exception as e:
+            logging.error(f"Error in paint: {e}", exc_info=True)
 
     def get_marker_at_pos(self, rect, pos, index):
         """Check if position is over a marker."""
@@ -758,6 +759,13 @@ class HoverTreeWidget(QTreeWidget):
     def set_animation_interval(self, interval):
         self.animation_interval = interval
 
+    def _update_item_rect(self, index):
+        """Update viewport for an item, expanding rect to cover the thumbnail
+        which is drawn 15px to the left of the visual rect."""
+        rect = self.visualRect(index)
+        rect.adjust(-20, 0, 0, 0)  # expand left to cover thumbnail offset
+        self.viewport().update(rect)
+
     def mouseMoveEvent(self, event):
         try:
             self.mouse_pos = event.pos()
@@ -787,14 +795,18 @@ class HoverTreeWidget(QTreeWidget):
 
                         # Update hover state in delegate
                         if index != self.current_hover_index:
+                            prev_index = self.current_hover_index
                             self.current_hover_index = index
                             self.thumbnail_frame = 0
                             delegate.set_hovered_index(index, 0, mouse_pos=event.pos())
                             self.hover_timer.start(self.animation_interval)
+                            # Invalidate previous row so its old thumbnail is cleared
+                            if prev_index is not None and prev_index.isValid():
+                                self._update_item_rect(prev_index)
                         else:
                             delegate.set_hovered_index(index, self.thumbnail_frame, mouse_pos=event.pos())
                         
-                        self.viewport().update()
+                        self._update_item_rect(index)
                         return
                 else:
                     self.viewport().setCursor(Qt.CursorShape.ArrowCursor)
@@ -875,7 +887,7 @@ class HoverTreeWidget(QTreeWidget):
                 self.thumbnail_frame += 1
                 # logging.debug(f"timer update frame {self.thumbnail_frame}")
                 delegate.set_hovered_index(self.current_hover_index, self.thumbnail_frame, self.mouse_pos)
-                self.viewport().update(self.visualRect(self.current_hover_index))
+                self._update_item_rect(self.current_hover_index)
         except Exception as e:
             logging.error(f"ERROR in _on_hover_timer: {e}", exc_info=True)
             self.stop_hover()

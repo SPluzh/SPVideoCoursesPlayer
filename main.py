@@ -910,9 +910,7 @@ class VideoCourseBrowser(QMainWindow):
             logging.error(f"Error saving progress: {e}")
 
     def periodic_progress_save(self, force_stats_update=False):
-        # logging.debug("periodic_progress_save START")
         if not self.video_player.current_file:
-            # logging.debug("periodic_progress_save aborted (no file)")
             return
 
         file_path = self.video_player.current_file
@@ -923,7 +921,6 @@ class VideoCourseBrowser(QMainWindow):
             current_volume = int(self.video_player.player.volume or 100)
         except Exception as e:
             logging.debug(f"periodic_progress_save error getting properties: {e}")
-            # logging.error(f"Error getting player state for save: {e}")
             return
 
         if duration > 0:
@@ -949,128 +946,92 @@ class VideoCourseBrowser(QMainWindow):
                 self.update_video_item_display(file_path, percent, position)
             except Exception as e:
                 logging.debug(f"error in display updates: {e}")
-        # logging.debug("periodic_progress_save END")
 
     def update_folder_stats_display(self, file_path, position, duration, percent):
-        """Update stats of parent folders for the currently playing video."""
-        item = self.find_video_item(file_path)
-        if not item:
-            return
+        """Update stats of parent folders for the currently playing video.
+        
+        Uses absolute recalculation: walks all child video items of each parent
+        folder and recomputes watched/total from scratch. This avoids delta-based
+        issues where stored values and current values are near-identical.
+        """
+        try:
+            item = self.find_video_item(file_path)
+            if not item:
+                return
 
-        # Calculate current consumed "watched" time for this video
-        # Logic matches load_courses: if >= 90%, count full duration. Else position.
-        current_w = duration if percent >= 90 else position
-        
-        # Get previous stored data to calculate delta
-        data = item.data(0, Qt.ItemDataRole.UserRole + 2)
-        if not data:
-            return
-            
-        stored_percent = 0
-        stored_pos = 0
-
-        if isinstance(data, VideoItemData):
-            stored_percent = data.watched_percent
-            stored_pos = data.last_position
-        elif isinstance(data, (tuple, list)):
-            # Tuple structure compatibility
-            if len(data) >= 8:
-                stored_percent = data[4]
-                stored_pos = data[7]
-        else:
-            return
-        
-        old_w = duration if stored_percent >= 90 else stored_pos
-        
-        delta_w = current_w - old_w
-        
-        # If no meaningful change, skip bubble up (e.g. playing within same second)
-        if abs(delta_w) < 1:
-            return
-            
-        # Walk up the tree
-        parent = item.parent()
-        while parent:
-            item_type = parent.data(0, Qt.ItemDataRole.UserRole + 1)
-            if item_type == 'folder':
-                stats_text = parent.data(0, Qt.ItemDataRole.UserRole + 5)
-                # Parse existing stats or just use stored aggregated map if we had one?
-                # Storing 'raw' aggregated stats in UserRole would be better than parsing text.
-                # However, for now we can't easily add a new role without modifying load_courses heavily everywhere.
-                # Alternative: Use a separate dictionary on the Window class?
-                # Or just rely on the text? No, text is formatted.
+            parent = item.parent()
+            while parent:
+                # Recalculate stats from all child video items
+                watched_sum = 0.0
+                total_sum = 0.0
+                video_count = 0
                 
-                # Let's check if we can query the stats from DB? No, DB update happens in parallel/slowly.
-                # Better: Maintain a runtime cache of folder stats in self that we updated in load_courses?
-                # Let's try to parse the text carefully or introduce a new Role for raw stats.
-                # Adding a new UserRole is safe.
-                # Let's say UserRole + 10 holds raw dictionary {'watched': X, 'total': Y, 'count': Z}
-                pass
-            
-            # Actually, simpler approach for now to avoid parsing fragile text:
-            # We don't have the raw stats stored on the item easily accessible without parsing.
-            # parsing: "5 videos • 00:05:00 / 00:10:00 (50%)"
-            
-            # Let's stick to modifying the item data in memory if possible?
-            # Re-implementing a quick parse seems feasible if format is strict.
-            # Format: "{count} videos • {watched_str} / {duration_str} ({percent}%)"
-            
-            # But wait, we ONLY need to increment the internal 'watched' counter.
-            # If we don't have it, we can't increment it accuratey.
-            
-            # Let's modify load_courses to store raw stats first? 
-            # That would be a bigger change.
-            
-            # Quick fix: Just rely on load_courses triggering on 'stop' or 'finish'.
-            # User wants intermediate updates.
-            
-            # Let's store raw stats in UserRole + 7 in `load_courses` (UserRole+6 is percent).
-            # I will modify load_courses next. For now, let's put a placeholder or basic implementation.
-            
-            # Actually, let's assume we will have raw stats in UserRole + 7.
-            raw_stats = parent.data(0, Qt.ItemDataRole.UserRole + 7)
-            if raw_stats:
-                # raw_stats should be mutable or replaced? Tuple is immutable.
-                # It's likely a python dict if we stored it as such? data() returns python object.
-                 if isinstance(raw_stats, dict):
-                    raw_stats['watched'] += delta_w
+                self._collect_folder_stats(parent, file_path, position, duration, percent,
+                                           watched_sum, total_sum, video_count)
+                stats = self._collect_folder_stats_result
+                
+                if stats['count'] > 0 and stats['total'] > 0:
+                    pct = int((stats['watched'] / stats['total']) * 100)
+                    duration_str = format_duration(stats['total'])
+                    watched_str = format_duration(stats['watched'])
+                    stats_text = f"{stats['count']} videos \u2022 {watched_str} / {duration_str} ({pct}%)"
                     
-                    # Recalculate text
-                    count = raw_stats['count']
-                    total = raw_stats['total']
-                    watched = raw_stats['watched']
-                    
-                    # Clamp watched to total to avoid >100% due to floating point drifts
-                    if watched > total: watched = total
-                    
-                    percent_folder = int((watched / total * 100)) if total > 0 else 0
-                    
-                    duration_str = format_duration(total)
-                    watched_str = format_duration(watched)
-                    
-                    new_stats_text = f"{count} videos • {watched_str} / {duration_str} ({percent_folder}%)"
-                    
-                    parent.setData(0, Qt.ItemDataRole.UserRole + 5, new_stats_text)
-                    parent.setData(0, Qt.ItemDataRole.UserRole + 6, percent_folder)
-                    # We don't need to setData for raw_stats if we modified the dict in place, 
-                    # but PyQt might copy it. Better set it back.
-                    parent.setData(0, Qt.ItemDataRole.UserRole + 7, raw_stats)
+                    parent.setData(0, Qt.ItemDataRole.UserRole + 5, stats_text)
+                    parent.setData(0, Qt.ItemDataRole.UserRole + 6, pct)
+                    parent.setData(0, Qt.ItemDataRole.UserRole + 7, stats)
+                
+                parent = parent.parent()
             
-            parent = parent.parent()
-
-        # Finally, update the own item's stored data so the next delta is correct relative to THIS moment
-        if isinstance(data, VideoItemData):
-            data.watched_percent = percent
-            data.last_position = position
-            item.setData(0, Qt.ItemDataRole.UserRole + 2, data)
-        elif isinstance(data, (tuple, list)):
-            lst = list(data)
-            if len(lst) > 7:
-                lst[4] = percent # watched_percent
-                lst[7] = position # last_position
-                item.setData(0, Qt.ItemDataRole.UserRole + 2, tuple(lst))
+            self.course_tree.viewport().update()
+        except Exception as e:
+            logging.error(f"Error in update_folder_stats_display: {e}", exc_info=True)
+    
+    def _collect_folder_stats(self, folder_item, current_file, current_pos, current_dur, current_pct,
+                               _w=0, _t=0, _c=0):
+        """Recursively collect stats from all video children of a folder item."""
+        result = {'watched': 0.0, 'total': 0.0, 'count': 0}
         
-        self.course_tree.viewport().update()
+        for i in range(folder_item.childCount()):
+            child = folder_item.child(i)
+            item_type = child.data(0, Qt.ItemDataRole.UserRole + 1)
+            
+            if item_type == 'video':
+                child_path = child.data(0, Qt.ItemDataRole.UserRole)
+                data = child.data(0, Qt.ItemDataRole.UserRole + 2)
+                
+                if child_path == current_file:
+                    # Use live values for the currently playing video
+                    w = current_dur if current_pct >= 90 else current_pos
+                    result['watched'] += w
+                    result['total'] += current_dur
+                else:
+                    # Use stored values for other videos
+                    if isinstance(data, VideoItemData):
+                        d = data.duration
+                        p = data.watched_percent
+                        pos = data.last_position
+                    elif isinstance(data, (tuple, list)) and len(data) >= 8:
+                        d = data[1]
+                        p = data[4]
+                        pos = data[7]
+                    else:
+                        continue
+                    
+                    w = d if p >= 90 else pos
+                    result['watched'] += w
+                    result['total'] += d
+                
+                result['count'] += 1
+                
+            elif item_type == 'folder':
+                # Recurse into subfolders
+                self._collect_folder_stats(child, current_file, current_pos, current_dur, current_pct)
+                sub = self._collect_folder_stats_result
+                result['watched'] += sub['watched']
+                result['total'] += sub['total']
+                result['count'] += sub['count']
+        
+        self._collect_folder_stats_result = result
 
     def update_video_item_display(self, file_path, percent, position):
         iterator = QTreeWidgetItemIterator(self.course_tree)
