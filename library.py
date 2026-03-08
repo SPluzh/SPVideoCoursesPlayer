@@ -345,7 +345,7 @@ class VideoItemDelegate(QStyledItemDelegate):
             layout.beginLayout()
             
             lines = []
-            max_lines = 3
+            max_lines = 4
             while len(lines) < max_lines:
                 line = layout.createLine()
                 if not line.isValid() or line.textLength() == 0:
@@ -692,7 +692,7 @@ class VideoItemDelegate(QStyledItemDelegate):
             layout.beginLayout()
             
             lines = []
-            max_lines = 2
+            max_lines = 3
             
             while len(lines) < max_lines:
                 line = layout.createLine()
