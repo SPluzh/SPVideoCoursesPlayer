@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.3.7]
+- **UI Enhancements**:
+    - **Dynamic Progress Labels**: Added color-coding for time labels on video thumbnails (Green for watched, Yellow for in-progress, Black for new).
+    - **Cleaned Layout**: Removed redundant progress text lines under video titles to streamline the library view.
+
 ## [1.3.6]
 - **Autoplay Settings**: Added options to automatically start playback when switching to the next or previous video.
 

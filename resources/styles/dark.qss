@@ -37,6 +37,9 @@
 @chart-unwatched: #ff6b6b;
 
 @progress-fill: rgb(76, 175, 80);
+@progress-watched: #00634d;
+@progress-started: #a77200;
+@progress-new: #000000;
 @color-inactive: rgba(150, 150, 150, 180);
 @separator-color: #555555;
 
@@ -827,6 +830,19 @@ QToolTip {
 #duration_label_text {
     color: white;
     font-size: 9pt;
+}
+
+/* Метки прогресса для VideoItemDelegate */
+#duration_label_watched {
+    background-color: @progress-watched;
+}
+
+#duration_label_started {
+    background-color: @progress-started;
+}
+
+#duration_label_new {
+    background-color: @progress-new;
 }
 
 /* Название видео */

@@ -63,8 +63,15 @@ class VideoItemDelegate(QStyledItemDelegate):
         self.video_info = QLabel()
         self.video_info.setObjectName("video_info")
 
-        self.video_progress_text = QLabel()
-        self.video_progress_text.setObjectName("video_progress_text")
+
+        self.status_watched = QLabel()
+        self.status_watched.setObjectName("duration_label_watched")
+
+        self.status_started = QLabel()
+        self.status_started.setObjectName("duration_label_started")
+
+        self.status_new = QLabel()
+        self.status_new.setObjectName("duration_label_new")
 
         self.row_play_button_bg = QWidget()
         self.row_play_button_bg.setObjectName("row_play_button_bg")
@@ -77,8 +84,9 @@ class VideoItemDelegate(QStyledItemDelegate):
             self.dot_active, self.dot_inactive, self.empty_thumbnail_bg,
             self.empty_thumbnail_border, self.empty_thumbnail_icon,
             self.duration_label_bg, self.duration_label_text,
-            self.video_title, self.video_info, self.video_progress_text,
-            self.row_play_button_bg, self.row_play_button_icon
+            self.video_title, self.video_info,
+            self.row_play_button_bg, self.row_play_button_icon,
+            self.status_watched, self.status_started, self.status_new
         ]
         for widget in all_widgets:
             widget.ensurePolished()
@@ -303,7 +311,20 @@ class VideoItemDelegate(QStyledItemDelegate):
                 bg_rect = QRect(thumb_rect.right() - text_rect.width() - 8,
                               thumb_rect.bottom() - text_rect.height() - 10,
                               text_rect.width() + 6, text_rect.height() + 4)
-                painter.setBrush(self.duration_label_bg.palette().color(QPalette.ColorRole.Window))
+                
+                # Determine background color based on progress
+                if watched_percent == 100:
+                    bg_color = self.status_watched.palette().color(QPalette.ColorRole.Window)
+                elif watched_percent > 0 or last_position > 0:
+                    bg_color = self.status_started.palette().color(QPalette.ColorRole.Window)
+                else:
+                    bg_color = self.status_new.palette().color(QPalette.ColorRole.Window)
+                
+                # Apply opacity if it's a solid color from statusOk/statusWarning
+                if bg_color.alpha() == 255:
+                    bg_color.setAlpha(180)
+
+                painter.setBrush(bg_color)
                 painter.setPen(Qt.PenStyle.NoPen)
                 painter.drawRoundedRect(bg_rect, 2, 2)
                 painter.setPen(self.duration_label_text.palette().color(QPalette.ColorRole.WindowText))
@@ -353,17 +374,6 @@ class VideoItemDelegate(QStyledItemDelegate):
             
             text_y += max(25, int(title_height) + 4)
 
-            if watched_percent > 0 or last_position > 0:
-                painter.setFont(self.video_progress_text.font())
-                painter.setPen(self.video_progress_text.palette().color(QPalette.ColorRole.WindowText))
-                if watched_percent == 100:
-                    prog_text = tr('video_info.watched_label')
-                elif last_position > 0 and duration > 0:
-                    prog_text = tr('video_info.progress', position=self.config['format_duration'](last_position), total=self.config['format_duration'](duration))
-                else:
-                    prog_text = tr('video_info.progress_percent', percent=watched_percent)
-                painter.drawText(QRect(text_x, text_y, available_width, 20), Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter, prog_text)
-                text_y += 20
 
             if tags:
                 tag_x = text_x; tag_y = text_y + 2; tag_height = 18
