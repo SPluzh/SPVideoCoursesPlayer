@@ -3,7 +3,7 @@ import logging
 import zlib
 
 from PyQt6.QtWidgets import QTreeWidget, QStyledItemDelegate, QWidget, QLabel
-from PyQt6.QtCore import Qt, QTimer, QRect, QPoint, QRectF, QPointF, QEvent
+from PyQt6.QtCore import Qt, QTimer, QRect, QPoint, QRectF, QPointF, QEvent, QModelIndex
 from PyQt6.QtGui import (
     QAction, QColor, QIcon, QPainter, QPixmap, QPalette, QBrush, 
     QStandardItem, QFont, QPen, QFontMetrics, QPainterPath, QTextLayout, QTextOption,
@@ -167,16 +167,27 @@ class VideoItemDelegate(QStyledItemDelegate):
             return super().sizeHint(option, index)
 
     def _get_nesting_chain(self, index):
-        """Get the chain of parent paths for consistent color hashing."""
+        """Get the chain of parent paths for consistent color hashing and last-child info."""
         chain = []
         current = index.parent()
         while current.isValid():
             parent_path = current.data(Qt.ItemDataRole.UserRole)
-            if parent_path:
-                chain.insert(0, str(parent_path)) # Top parents first
+            
+            # Check if this parent was the last child in ITS parent
+            is_last = False
+            p_idx = current.parent()
+            if p_idx.isValid():
+                is_last = (current.row() == p_idx.model().rowCount(p_idx) - 1)
             else:
-                chain.insert(0, f"unknown_{len(chain)}")
-            current = current.parent()
+                model = current.model()
+                if model:
+                    is_last = (current.row() == model.rowCount(QModelIndex()) - 1)
+            
+            if parent_path:
+                chain.insert(0, (str(parent_path), is_last)) # Top parents first
+            else:
+                chain.insert(0, (f"unknown_{len(chain)}", is_last))
+            current = p_idx
         return chain
 
     def _draw_nesting_lines(self, painter, rect, chain, index=None):
@@ -201,16 +212,18 @@ class VideoItemDelegate(QStyledItemDelegate):
             p_idx = index.parent()
             is_last_child = (index.row() == p_idx.model().rowCount(p_idx) - 1)
             
-        # Determine if it's an expanded folder (so we don't draw an L-bracket blocking children)
-        is_expanded = False
-        if index is not None and index.isValid() and hasattr(tree, 'isExpanded'):
-            is_expanded = tree.isExpanded(index)
-        
         painter.save()
         painter.setRenderHint(QPainter.RenderHint.Antialiasing, False)
         
         for i in range(depth):
-            parent_path_str = chain[i]
+            parent_path_str, _ = chain[i]
+            
+            # If an ancestor line already ended in a previous folder, skip drawing it for descendants
+            if i < depth - 1:
+                child_is_last = chain[i+1][1]
+                if child_is_last:
+                    continue
+                    
             # Hash the path to get a stable positive integer
             path_hash = zlib.adler32(parent_path_str.encode('utf-8', errors='ignore'))
             color_index = path_hash % len(self.NESTING_COLORS)
@@ -223,7 +236,7 @@ class VideoItemDelegate(QStyledItemDelegate):
             # so they perfectly align with the parent's line.
             line_x = rect.left() - (depth - 1 - i) * indent
             
-            if i == depth - 1 and is_last_child and not is_expanded:
+            if i == depth - 1 and is_last_child:
                 # Vertical segment (top to middle)
                 painter.drawRect(QRectF(line_x, rect.top(), line_width, rect.height() / 2 + line_width / 2))
                 # Horizontal segment (middle to right, pointing at thumbnail)
