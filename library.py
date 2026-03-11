@@ -1,5 +1,6 @@
 from pathlib import Path
 import logging
+import zlib
 
 from PyQt6.QtWidgets import QTreeWidget, QStyledItemDelegate, QWidget, QLabel
 from PyQt6.QtCore import Qt, QTimer, QRect, QPoint, QRectF, QPointF, QEvent
@@ -23,6 +24,17 @@ class VideoItemDelegate(QStyledItemDelegate):
         self.playing_path = None
         self.is_paused = True
         self.mouse_pos = None
+        self.NESTING_COLORS = [
+            QColor("#3498db"),  # Blue
+            QColor("#9b59b6"),  # Purple
+            QColor("#e74c3c"),  # Red
+            QColor("#2ecc71"),  # Light green
+            QColor("#8e44ad"),  # Deep purple
+            QColor("#d35400"),  # Pumpkin
+            QColor("#c0392b"),  # Dark red
+            QColor("#16a085"),  # Sea green
+            QColor("#2980b9"),  # Strong blue
+        ]
         self._init_style_widgets()
 
     def _init_style_widgets(self):
@@ -96,16 +108,26 @@ class VideoItemDelegate(QStyledItemDelegate):
         self.current_thumbnail_index = thumbnail_index
         self.mouse_pos = mouse_pos
 
-    def get_play_button_rect(self, rect):
+    def get_play_button_rect(self, rect, index=None):
         """Return Play button area on thumbnail."""
         try:
             display_width = self.config['display_width']
             display_height = self.config['display_height']
             
-            # Sync with paint() logic: centered vertically in base row height
+            # Sync with paint() logic for nesting_offset
+            nesting_offset = 0
+            if index is not None and index.isValid():
+                chain = self._get_nesting_chain(index)
+                if len(chain) > 0:
+                    tree = self.parent()
+                    indent = 20
+                    if hasattr(tree, 'indentation'):
+                        indent = tree.indentation()
+                    nesting_offset = indent
+            
             base_height = self.config['video_row_height']
             thumb_y = rect.top() + (base_height - display_height) // 2
-            thumb_rect = QRect(rect.left() - 15, thumb_y,
+            thumb_rect = QRect(rect.left() + nesting_offset + 5, thumb_y,
                               display_width, display_height)
             
             btn_size = 28 # Slightly smaller for corner
@@ -143,6 +165,61 @@ class VideoItemDelegate(QStyledItemDelegate):
         except Exception as e:
             logging.error(f"Error in sizeHint: {e}")
             return super().sizeHint(option, index)
+
+    def _get_nesting_chain(self, index):
+        """Get the chain of parent paths for consistent color hashing."""
+        chain = []
+        current = index.parent()
+        while current.isValid():
+            parent_path = current.data(Qt.ItemDataRole.UserRole)
+            if parent_path:
+                chain.insert(0, str(parent_path)) # Top parents first
+            else:
+                chain.insert(0, f"unknown_{len(chain)}")
+            current = current.parent()
+        return chain
+
+    def _draw_nesting_lines(self, painter, rect, chain):
+        """Draw colored vertical lines indicating nesting depth, colored uniquely by parent paths."""
+        depth = len(chain)
+        if depth <= 0:
+            return 0
+            
+        line_width = 2
+        
+        # Get tree indentation to align lines perfectly between parent and child items
+        tree = self.parent()
+        indent = 20
+        if hasattr(tree, 'indentation'):
+            indent = tree.indentation()
+            
+        spacing = max(2, indent - line_width)
+        
+        painter.save()
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing, False)
+        
+        for i in range(depth):
+            parent_path_str = chain[i]
+            # Hash the path to get a stable positive integer
+            path_hash = zlib.adler32(parent_path_str.encode('utf-8', errors='ignore'))
+            color_index = path_hash % len(self.NESTING_COLORS)
+            color = self.NESTING_COLORS[color_index]
+            
+            painter.setPen(Qt.PenStyle.NoPen)
+            painter.setBrush(color)
+            
+            # The core trick: shift lines leftwards by `indent` depending on their level
+            # so they perfectly align with the parent's line.
+            line_x = rect.left() - (depth - 1 - i) * indent
+            
+            # Draw line full height of the row, with a tiny 1px margin top/bottom
+            painter.drawRect(QRectF(line_x, rect.top() + 1, line_width, rect.height() - 2))
+            
+        painter.restore()
+        
+        # We only need to shift the thumbnail by the width of the last line plus spacing,
+        # because the other lines were drawn to the left, inside the branch area.
+        return line_width + spacing
 
     def _get_pixmap(self, path):
         if path not in self.thumbnail_cache:
@@ -183,6 +260,10 @@ class VideoItemDelegate(QStyledItemDelegate):
                 painter.restore()
                 return
 
+            # Draw nesting lines
+            chain = self._get_nesting_chain(index)
+            nesting_offset = self._draw_nesting_lines(painter, option.rect, chain)
+
             # Unpack data
             if isinstance(data, VideoItemData):
                 filename = data.filename
@@ -217,12 +298,11 @@ class VideoItemDelegate(QStyledItemDelegate):
             # So the "main" part (thumb + text) is in the first `base_height` pixels.
             # We should recalculate thumb_y to be centered in that base_height, or fixed top offset.
             # Current logic centers it in the FULL rect height which includes markers. This is WRONG if markers are huge.
-            # We want thumb to stay at top.
             
             base_height = self.config['video_row_height']
             thumb_y = option.rect.top() + (base_height - display_height) // 2
             
-            thumb_rect = QRect(option.rect.left() - 15, thumb_y,
+            thumb_rect = QRect(option.rect.left() + nesting_offset + 5, thumb_y,
                               display_width, display_height)
 
             current_thumb = thumbnail_path
@@ -396,7 +476,7 @@ class VideoItemDelegate(QStyledItemDelegate):
 
             is_playing_item = (self.playing_path and index.data(Qt.ItemDataRole.UserRole) == self.playing_path)
             if self.hovered_index == index or is_playing_item:
-                play_btn_rect = self.get_play_button_rect(option.rect)
+                play_btn_rect = self.get_play_button_rect(option.rect, index)
                 
                 is_over_btn = False
                 if self.mouse_pos and play_btn_rect.contains(self.mouse_pos):
@@ -541,6 +621,10 @@ class VideoItemDelegate(QStyledItemDelegate):
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
 
+        # Draw nesting lines
+        chain = self._get_nesting_chain(index)
+        nesting_offset = self._draw_nesting_lines(painter, option.rect, chain)
+
         # Config dimensions
         video_height = self.config.get('video_row_height', 110)
         
@@ -560,7 +644,7 @@ class VideoItemDelegate(QStyledItemDelegate):
         
         center_y = option.rect.center().y()
         icon_rect = QRectF(
-            option.rect.left() + 5,
+            option.rect.left() + nesting_offset + 5,
             center_y - icon_height / 2 - 2, # Shift up 2px
             icon_width,
             icon_height
@@ -610,7 +694,7 @@ class VideoItemDelegate(QStyledItemDelegate):
                     full_folder_path = Path(root_path) / folder_path
                     is_parent = Path(self.playing_path).is_relative_to(full_folder_path)
                     if is_parent:
-                        stripe_width = 8
+                        stripe_width = 4
                         stripe_rect = QRectF(
                             icon_rect.left() - stripe_width,
                             icon_rect.top(),
@@ -759,6 +843,7 @@ class HoverTreeWidget(QTreeWidget):
         super().__init__(parent)
         self.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.setMouseTracking(True)
+        self.setIndentation(10)  # Halved indentation for compact display
         self.hover_timer = QTimer()
         self.hover_timer.timeout.connect(self._on_hover_timer)
         self.current_hover_index = None
@@ -794,7 +879,7 @@ class HoverTreeWidget(QTreeWidget):
                         if visual_rect.isNull():
                              return
 
-                        play_rect = delegate.get_play_button_rect(visual_rect)
+                        play_rect = delegate.get_play_button_rect(visual_rect, index)
                         
                         if play_rect.contains(event.pos()):
                             self.viewport().setCursor(Qt.CursorShape.PointingHandCursor)
@@ -835,7 +920,7 @@ class HoverTreeWidget(QTreeWidget):
             delegate = self.itemDelegate()
             if isinstance(delegate, VideoItemDelegate):
                 # Check hover over play button
-                play_rect = delegate.get_play_button_rect(self.visualRect(index))
+                play_rect = delegate.get_play_button_rect(self.visualRect(index), index)
                 
                 if play_rect.contains(event.pos()):
                     item = self.itemFromIndex(index)
