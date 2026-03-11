@@ -200,6 +200,11 @@ class VideoItemDelegate(QStyledItemDelegate):
         if index is not None and index.isValid() and index.parent().isValid():
             p_idx = index.parent()
             is_last_child = (index.row() == p_idx.model().rowCount(p_idx) - 1)
+            
+        # Determine if it's an expanded folder (so we don't draw an L-bracket blocking children)
+        is_expanded = False
+        if index is not None and index.isValid() and hasattr(tree, 'isExpanded'):
+            is_expanded = tree.isExpanded(index)
         
         painter.save()
         painter.setRenderHint(QPainter.RenderHint.Antialiasing, False)
@@ -218,7 +223,7 @@ class VideoItemDelegate(QStyledItemDelegate):
             # so they perfectly align with the parent's line.
             line_x = rect.left() - (depth - 1 - i) * indent
             
-            if i == depth - 1 and is_last_child:
+            if i == depth - 1 and is_last_child and not is_expanded:
                 # Vertical segment (top to middle)
                 painter.drawRect(QRectF(line_x, rect.top(), line_width, rect.height() / 2 + line_width / 2))
                 # Horizontal segment (middle to right, pointing at thumbnail)

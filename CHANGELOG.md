@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.3.8]
+- **Library UI**: Overhauled folder nesting visualization:
+    - **Nesting Lines**: Added vertical colored indicator lines to clearly show folder depth.
+    - **Path-based Coloring**: Folders are now assigned stable, unique colors based on their file paths, making it easy to track a single folder's hierarchy visually.
+    - **Folder Endings**: The indicator lines now form a visual corner (L-bracket) when reaching the last item in a folder.
+
+
 ## [1.3.7]
 - **UI Enhancements**:
     - **Dynamic Progress Labels**: Added color-coding for time labels on video thumbnails (Green for watched, Yellow for in-progress, Black for new).
