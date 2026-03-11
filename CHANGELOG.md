@@ -2,12 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.3.9]
+- **Performance**: Extensive memory optimization to reduce footprint
+    - **LRU Cache**: Implemented LRU caching for video thumbnails (200 items) and hover previews (50 items), preventing unbounded RAM growth.
+    - **Pre-scaling**: Thumbnails are now scaled to display size upon loading, significantly reducing memory usage per image.
+    - **Lazy MPV**: The preview player instance is now initialized only on first hover and automatically destroyed after 10 seconds of inactivity to free resources.
+    - **Resource Limit**: Reduced the MPV demuxer buffer for preview player to minimize memory consumption.
+
 ## [1.3.8]
 - **Library UI**: Overhauled folder nesting visualization:
     - **Nesting Lines**: Added vertical colored indicator lines to clearly show folder depth.
     - **Path-based Coloring**: Folders are now assigned stable, unique colors based on their file paths, making it easy to track a single folder's hierarchy visually.
     - **Folder Endings**: The indicator lines now form a visual corner (L-bracket) when reaching the last item in a folder.
-
 
 ## [1.3.7]
 - **UI Enhancements**:

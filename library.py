@@ -1,6 +1,7 @@
 from pathlib import Path
 import logging
 import zlib
+from collections import OrderedDict
 
 from PyQt6.QtWidgets import QTreeWidget, QStyledItemDelegate, QWidget, QLabel
 from PyQt6.QtCore import Qt, QTimer, QRect, QPoint, QRectF, QPointF, QEvent, QModelIndex
@@ -20,7 +21,8 @@ class VideoItemDelegate(QStyledItemDelegate):
         self.config = config
         self.current_thumbnail_index = 0
         self.hovered_index = None
-        self.thumbnail_cache = {}
+        self.THUMBNAIL_CACHE_MAX = 200
+        self.thumbnail_cache = OrderedDict()
         self.playing_path = None
         self.is_paused = True
         self.mouse_pos = None
@@ -253,16 +255,28 @@ class VideoItemDelegate(QStyledItemDelegate):
         return line_width + spacing
 
     def _get_pixmap(self, path):
-        if path not in self.thumbnail_cache:
-            if path and Path(path).exists():
-                pixmap = QPixmap(path)
-                if not pixmap.isNull():
-                    self.thumbnail_cache[path] = pixmap
-                else:
-                    self.thumbnail_cache[path] = None
-            else:
-                self.thumbnail_cache[path] = None
-        return self.thumbnail_cache.get(path)
+        if path in self.thumbnail_cache:
+            # Move to end (most recently used)
+            self.thumbnail_cache.move_to_end(path)
+            return self.thumbnail_cache[path]
+        # Load, scale down, and cache
+        pixmap = None
+        if path and Path(path).exists():
+            raw = QPixmap(path)
+            if not raw.isNull():
+                # Pre-scale to display size to save memory
+                dw = self.config.get('display_width', 192)
+                dh = self.config.get('display_height', 108)
+                pixmap = raw.scaled(
+                    dw, dh,
+                    Qt.AspectRatioMode.KeepAspectRatio,
+                    Qt.TransformationMode.SmoothTransformation
+                )
+        # Evict oldest if over limit
+        if len(self.thumbnail_cache) >= self.THUMBNAIL_CACHE_MAX:
+            self.thumbnail_cache.popitem(last=False)
+        self.thumbnail_cache[path] = pixmap
+        return pixmap
 
     def paint(self, painter, option, index): # Overridden
         try:
@@ -343,13 +357,9 @@ class VideoItemDelegate(QStyledItemDelegate):
 
             pixmap = self._get_pixmap(current_thumb)
             if pixmap:
-                scaled_pixmap = pixmap.scaled(
-                    display_width, display_height,
-                    Qt.AspectRatioMode.KeepAspectRatio,
-                    Qt.TransformationMode.SmoothTransformation
-                )
-                x_offset = (display_width - scaled_pixmap.width()) // 2
-                y_offset = (display_height - scaled_pixmap.height()) // 2
+                # Pixmap is already pre-scaled in _get_pixmap LRU cache
+                x_offset = (display_width - pixmap.width()) // 2
+                y_offset = (display_height - pixmap.height()) // 2
                 
                 path = QPainterPath()
                 path.addRoundedRect(QRectF(thumb_rect), 3.0, 3.0)
@@ -357,7 +367,7 @@ class VideoItemDelegate(QStyledItemDelegate):
                 painter.setClipPath(path)
                 # Fill background first to clear any leftover pixels from previous thumbnail
                 painter.fillRect(thumb_rect, self.empty_thumbnail_bg.palette().color(QPalette.ColorRole.Window))
-                painter.drawPixmap(thumb_rect.left() + x_offset, thumb_rect.top() + y_offset, scaled_pixmap)
+                painter.drawPixmap(thumb_rect.left() + x_offset, thumb_rect.top() + y_offset, pixmap)
                 painter.restore()
 
                 playing_file = index.data(Qt.ItemDataRole.UserRole)

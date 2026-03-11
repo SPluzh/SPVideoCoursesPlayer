@@ -4,9 +4,12 @@ import os
 import tempfile
 import logging
 from pathlib import Path
+from collections import OrderedDict
 from PyQt6.QtWidgets import QWidget, QLabel, QVBoxLayout
 from PyQt6.QtCore import Qt, QTimer, QSize, QPoint
 from PyQt6.QtGui import QPixmap
+
+PREVIEW_CACHE_MAX = 50
 
 class PreviewPopup(QWidget):
     """
@@ -43,11 +46,18 @@ class PreviewPopup(QWidget):
 
         # State
         self.current_video_path = None
-        self.cache = {} # {timestamp_sec: QPixmap}
+        self.cache = OrderedDict()  # LRU cache {timestamp_sec: QPixmap}
         self.pending_time = None
         
-        # MPV instance for preview
+        # MPV instance for preview — created lazily on first hover
         self.preview_mpv = None
+        self._mpv_video_loaded = False
+        
+        # Idle timer: destroy preview MPV after inactivity
+        self._idle_timer = QTimer()
+        self._idle_timer.setSingleShot(True)
+        self._idle_timer.setInterval(10000)  # 10 seconds idle → destroy MPV
+        self._idle_timer.timeout.connect(self._destroy_preview_mpv)
         
         # Temp dir for screenshots
         self._temp_dir = Path(tempfile.gettempdir()) / "spvideoplayer_preview"
@@ -66,19 +76,24 @@ class PreviewPopup(QWidget):
         self.ffmpeg_path = None # Kept for compatibility if external ffmpeg logic is ever needed, but unused now
 
     def set_video(self, file_path):
-        """Update current video path, clear cache, and load into preview MPV."""
+        """Update current video path, clear cache. MPV will load lazily on hover."""
         if self.current_video_path != file_path:
             self.current_video_path = file_path
             self.cache.clear()
-            
-            # Initialize MPV if needed
+            self._mpv_video_loaded = False
+            # Don't init MPV here — it will happen lazily on first hover
+
+    def _ensure_preview_mpv(self):
+        """Lazily initialize preview MPV and load the current video."""
+        if self.preview_mpv is None:
             self._init_preview_mpv()
-            
-            if self.preview_mpv:
-                try:
-                    self.preview_mpv.loadfile(file_path)
-                except Exception as e:
-                    logging.error(f"Preview MPV loadfile error: {e}")
+        
+        if self.preview_mpv and not self._mpv_video_loaded and self.current_video_path:
+            try:
+                self.preview_mpv.loadfile(self.current_video_path)
+                self._mpv_video_loaded = True
+            except Exception as e:
+                logging.error(f"Preview MPV loadfile error: {e}")
 
     def _init_preview_mpv(self):
         """Initialize the hidden MPV instance for previews."""
@@ -96,15 +111,30 @@ class PreviewPopup(QWidget):
                 sid='no',            # No subtitles
                 video_sync='audio',
                 hr_seek='yes',       # Precise seeking
-                demuxer_max_bytes='30MiB', # Buffer for fast seeking
+                demuxer_max_bytes='5MiB',  # Reduced from 30MiB for lower memory
             )
-            # logging.debug("Preview MPV initialized")
+            logging.debug("Preview MPV initialized (lazy)")
         except Exception as e:
             logging.error(f"Failed to create preview MPV: {e}")
             self.preview_mpv = None
 
+    def _destroy_preview_mpv(self):
+        """Destroy preview MPV to free memory when idle."""
+        if self.preview_mpv:
+            try:
+                self.preview_mpv.terminate()
+            except Exception:
+                pass
+            self.preview_mpv = None
+            self._mpv_video_loaded = False
+            logging.debug("Preview MPV destroyed (idle timeout)")
+
     def update_content(self, seconds, global_pos):
         """Update popup content and position."""
+        # Reset idle timer — MPV is being used
+        self._idle_timer.stop()
+        self._idle_timer.start()
+        
         # 1. Update Time Label
         seconds = max(0, seconds)
         m, s = divmod(seconds, 60)
@@ -135,6 +165,7 @@ class PreviewPopup(QWidget):
         time_key = int(seconds)
         
         if time_key in self.cache:
+            self.cache.move_to_end(time_key)  # LRU: mark as recently used
             self.display_pixmap(self.cache[time_key])
             self.debounce_timer.stop()
         else:
@@ -142,7 +173,10 @@ class PreviewPopup(QWidget):
             self.debounce_timer.start()
 
     def _fetch_frame(self):
-        """Seek and capture frame using MPV."""
+        """Seek and capture frame using MPV (lazily initialized)."""
+        # Ensure MPV is ready
+        self._ensure_preview_mpv()
+        
         if not self.preview_mpv or self.pending_time is None:
             return
             
@@ -150,6 +184,7 @@ class PreviewPopup(QWidget):
         
         # Double check cache
         if time_key in self.cache:
+            self.cache.move_to_end(time_key)
             self.display_pixmap(self.cache[time_key])
             return
         
@@ -167,16 +202,9 @@ class PreviewPopup(QWidget):
         """Capture screenshot to temp file and load it."""
         if not self.preview_mpv:
             return
-            
-        # Ensure we are capturing for the time that was requested
-        # (Though logic flow suggests we are fine)
         
         try:
             temp_path = self._temp_dir / f"preview_{hash(self.current_video_path)}_{time_key:.1f}.jpg"
-            
-            # If file exists from previous run/session (unlikely due to cleanup, but possible), reuse it? 
-            # Better to overwrite to ensure correctness.
-            # MPV screenshot_to_file overwrites.
             
             self.preview_mpv.screenshot_to_file(
                 str(temp_path), 
@@ -192,6 +220,9 @@ class PreviewPopup(QWidget):
                         Qt.AspectRatioMode.KeepAspectRatio,
                         Qt.TransformationMode.SmoothTransformation
                     )
+                    # LRU eviction
+                    if len(self.cache) >= PREVIEW_CACHE_MAX:
+                        self.cache.popitem(last=False)
                     self.cache[time_key] = scaled
                     self.display_pixmap(scaled)
                 else:
@@ -213,12 +244,8 @@ class PreviewPopup(QWidget):
         
     def cleanup(self):
         """Release resources."""
-        if self.preview_mpv:
-            try:
-                self.preview_mpv.terminate()
-            except:
-                pass
-            self.preview_mpv = None
+        self._idle_timer.stop()
+        self._destroy_preview_mpv()
         
         # Clean temp folder
         if self._temp_dir.exists():
