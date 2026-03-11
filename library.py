@@ -179,7 +179,7 @@ class VideoItemDelegate(QStyledItemDelegate):
             current = current.parent()
         return chain
 
-    def _draw_nesting_lines(self, painter, rect, chain):
+    def _draw_nesting_lines(self, painter, rect, chain, index=None):
         """Draw colored vertical lines indicating nesting depth, colored uniquely by parent paths."""
         depth = len(chain)
         if depth <= 0:
@@ -194,6 +194,12 @@ class VideoItemDelegate(QStyledItemDelegate):
             indent = tree.indentation()
             
         spacing = max(2, indent - line_width)
+        
+        # Determine if this item is the last child of its immediate parent
+        is_last_child = False
+        if index is not None and index.isValid() and index.parent().isValid():
+            p_idx = index.parent()
+            is_last_child = (index.row() == p_idx.model().rowCount(p_idx) - 1)
         
         painter.save()
         painter.setRenderHint(QPainter.RenderHint.Antialiasing, False)
@@ -212,8 +218,15 @@ class VideoItemDelegate(QStyledItemDelegate):
             # so they perfectly align with the parent's line.
             line_x = rect.left() - (depth - 1 - i) * indent
             
-            # Draw line full height of the row, with a tiny 1px margin top/bottom
-            painter.drawRect(QRectF(line_x, rect.top() + 1, line_width, rect.height() - 2))
+            if i == depth - 1 and is_last_child:
+                # Vertical segment (top to middle)
+                painter.drawRect(QRectF(line_x, rect.top(), line_width, rect.height() / 2 + line_width / 2))
+                # Horizontal segment (middle to right, pointing at thumbnail)
+                # Length covers the indent plus half the line width so it connects nicely
+                painter.drawRect(QRectF(line_x, rect.top() + (rect.height() - line_width) / 2, indent, line_width))
+            else:
+                # Normal full vertical line
+                painter.drawRect(QRectF(line_x, rect.top(), line_width, rect.height()))
             
         painter.restore()
         
@@ -262,7 +275,7 @@ class VideoItemDelegate(QStyledItemDelegate):
 
             # Draw nesting lines
             chain = self._get_nesting_chain(index)
-            nesting_offset = self._draw_nesting_lines(painter, option.rect, chain)
+            nesting_offset = self._draw_nesting_lines(painter, option.rect, chain, index)
 
             # Unpack data
             if isinstance(data, VideoItemData):
@@ -623,7 +636,7 @@ class VideoItemDelegate(QStyledItemDelegate):
 
         # Draw nesting lines
         chain = self._get_nesting_chain(index)
-        nesting_offset = self._draw_nesting_lines(painter, option.rect, chain)
+        nesting_offset = self._draw_nesting_lines(painter, option.rect, chain, index)
 
         # Config dimensions
         video_height = self.config.get('video_row_height', 110)
