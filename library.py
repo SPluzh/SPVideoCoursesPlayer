@@ -414,11 +414,17 @@ class VideoItemDelegate(QStyledItemDelegate):
                         painter.fillRect(filled_rect, self.progress_bar_fill.palette().color(QPalette.ColorRole.Window))
 
                 if self.hovered_index is not None and self.hovered_index == index and thumbnails_list:
-                    dot_y = thumb_rect.top() + 8
-                    dot_width = 6
-                    dot_spacing = 2
+                    painter.save()
+                    # Enable antialiasing for smooth round dots
+                    painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+                    
+                    # Use float coordinates for stable positioning on High DPI screens
+                    dot_y = float(thumb_rect.top()) + 8.0
+                    dot_width = 6.0
+                    dot_spacing = 2.0
                     total_dots_width = dot_width * len(thumbnails_list) + (len(thumbnails_list) - 1) * dot_spacing
-                    start_x = thumb_rect.left() + (display_width - total_dots_width) // 2
+                    start_x = float(thumb_rect.left()) + (float(display_width) - total_dots_width) / 2.0
+                    
                     for i in range(len(thumbnails_list)):
                         dot_x = start_x + i * (dot_width + dot_spacing)
                         if i == self.current_thumbnail_index % len(thumbnails_list):
@@ -426,7 +432,9 @@ class VideoItemDelegate(QStyledItemDelegate):
                         else:
                             painter.setBrush(self.dot_inactive.palette().color(QPalette.ColorRole.Window))
                         painter.setPen(Qt.PenStyle.NoPen)
-                        painter.drawEllipse(dot_x, dot_y, dot_width, dot_width)
+                        # Draw using QRectF for sub-pixel precision and to avoid jumping
+                        painter.drawEllipse(QRectF(dot_x, dot_y, dot_width, dot_width))
+                    painter.restore()
             else:
                 painter.fillRect(thumb_rect, self.empty_thumbnail_bg.palette().color(QPalette.ColorRole.Window))
                 painter.setPen(self.empty_thumbnail_border.palette().color(QPalette.ColorRole.Mid))

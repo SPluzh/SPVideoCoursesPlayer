@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.4.1]
+- **UI/Rendering**: Improved preview indicator dots in the library:
+    - **Smoothing**: Enabled antialiasing for perfectly round and smooth dots.
+    - **Stability**: Implemented float-based positioning (QRectF) to eliminate vertical jitter and "jumping" when switching frames during hover.
+
 ## [1.4.0]
 - **Display**: Implemented comprehensive **High DPI support** for sharp rendering on all displays (4K, laptops with scaling):
     - **High DPI Scaling**: Enabled native Qt scaling with `PassThrough` policy for perfect rendering on fractional scales (e.g. 125%, 150%).
