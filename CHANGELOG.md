@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.4.0]
+- **Display**: Implemented comprehensive **High DPI support** for sharp rendering on all displays (4K, laptops with scaling):
+    - **High DPI Scaling**: Enabled native Qt scaling with `PassThrough` policy for perfect rendering on fractional scales (e.g. 125%, 150%).
+    - **Layout Precision**: Refined image centering and sizing logic to ensure sharp, pixel-perfect alignment in the library view.
+
 ## [1.3.9]
 - **Performance**: Extensive memory optimization to reduce footprint
     - **LRU Cache**: Implemented LRU caching for video thumbnails (200 items) and hover previews (50 items), preventing unbounded RAM growth.

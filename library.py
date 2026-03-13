@@ -255,27 +255,39 @@ class VideoItemDelegate(QStyledItemDelegate):
         return line_width + spacing
 
     def _get_pixmap(self, path):
-        if path in self.thumbnail_cache:
-            # Move to end (most recently used)
-            self.thumbnail_cache.move_to_end(path)
-            return self.thumbnail_cache[path]
-        # Load, scale down, and cache
+        # We cache pixmaps at physical resolution (logical * dpr) to keep them sharp.
+        dpr = 1.0
+        try:
+            parent = self.parent()
+            if parent and parent.window() and parent.window().windowHandle():
+                dpr = parent.window().windowHandle().devicePixelRatio()
+        except:
+            pass
+
+        cache_key = (path, dpr)
+        if cache_key in self.thumbnail_cache:
+            self.thumbnail_cache.move_to_end(cache_key)
+            return self.thumbnail_cache[cache_key]
+
         pixmap = None
         if path and Path(path).exists():
             raw = QPixmap(path)
             if not raw.isNull():
-                # Pre-scale to display size to save memory
-                dw = self.config.get('display_width', 192)
-                dh = self.config.get('display_height', 108)
+                # Scale to physical resolution
+                dw = int(self.config.get('display_width', 192) * dpr)
+                dh = int(self.config.get('display_height', 108) * dpr)
+                
                 pixmap = raw.scaled(
                     dw, dh,
                     Qt.AspectRatioMode.KeepAspectRatio,
                     Qt.TransformationMode.SmoothTransformation
                 )
-        # Evict oldest if over limit
+                if pixmap:
+                    pixmap.setDevicePixelRatio(dpr)
+                    
         if len(self.thumbnail_cache) >= self.THUMBNAIL_CACHE_MAX:
             self.thumbnail_cache.popitem(last=False)
-        self.thumbnail_cache[path] = pixmap
+        self.thumbnail_cache[cache_key] = pixmap
         return pixmap
 
     def paint(self, painter, option, index): # Overridden
@@ -365,9 +377,18 @@ class VideoItemDelegate(QStyledItemDelegate):
                 path.addRoundedRect(QRectF(thumb_rect), 3.0, 3.0)
                 painter.save()
                 painter.setClipPath(path)
-                # Fill background first to clear any leftover pixels from previous thumbnail
                 painter.fillRect(thumb_rect, self.empty_thumbnail_bg.palette().color(QPalette.ColorRole.Window))
-                painter.drawPixmap(thumb_rect.left() + x_offset, thumb_rect.top() + y_offset, pixmap)
+                
+                # Logic to center the pixmap inside thumb_rect if its aspect ratio differs
+                # px_w/px_h here are logical because pixmap has devicePixelRatio set
+                px_w = pixmap.width() / pixmap.devicePixelRatio()
+                px_h = pixmap.height() / pixmap.devicePixelRatio()
+                
+                target_x = thumb_rect.left() + (display_width - px_w) / 2
+                target_y = thumb_rect.top() + (display_height - px_h) / 2
+                target_rect = QRectF(target_x, target_y, px_w, px_h)
+                
+                painter.drawPixmap(target_rect, pixmap, QRectF(pixmap.rect()))
                 painter.restore()
 
                 playing_file = index.data(Qt.ItemDataRole.UserRole)
@@ -703,26 +724,33 @@ class VideoItemDelegate(QStyledItemDelegate):
             is_default = "folder_cover.png" in str(cover_path)
             mode = Qt.AspectRatioMode.KeepAspectRatio if is_default else Qt.AspectRatioMode.KeepAspectRatioByExpanding
             
+            dpr = painter.device().devicePixelRatioF()
+            # Scale to physical resolution
             scaled_pixmap = pixmap.scaled(
-                int(icon_width), int(icon_height),
+                int(icon_width * dpr), int(icon_height * dpr),
                 mode,
                 Qt.TransformationMode.SmoothTransformation
             )
+            scaled_pixmap.setDevicePixelRatio(dpr)
             
-            # Center the pixmap in the rect (for AspectRatio handling)
-            px_x = icon_rect.x() + (icon_rect.width() - scaled_pixmap.width()) / 2
-            px_y = icon_rect.y() + (icon_rect.height() - scaled_pixmap.height()) / 2
+            # Logic to center the pixmap inside icon_rect if its aspect ratio differs
+            px_w = scaled_pixmap.width() / scaled_pixmap.devicePixelRatio()
+            px_h = scaled_pixmap.height() / scaled_pixmap.devicePixelRatio()
+            
+            px_x = icon_rect.x() + (icon_rect.width() - px_w) / 2
+            px_y = icon_rect.y() + (icon_rect.height() - px_h) / 2
+            target_rect = QRectF(px_x, px_y, px_w, px_h)
             
             painter.save()
             clip_path = QPainterPath()
             clip_path.addRoundedRect(icon_rect, 3.0, 3.0)
             painter.setClipPath(clip_path)
             
-            painter.drawPixmap(int(px_x), int(px_y), scaled_pixmap)
+            painter.drawPixmap(target_rect, scaled_pixmap, QRectF(scaled_pixmap.rect()))
             
             # Draw border
-            painter.restore() # Restore so we lose the clip mask
-            painter.setClipping(False) # Turn off clip for border (if any was left from outer context)
+            painter.restore()
+            painter.setClipping(False)
             painter.setPen(self.thumbnail_border.palette().color(QPalette.ColorRole.Mid))
             painter.setBrush(Qt.BrushStyle.NoBrush)
             painter.drawRoundedRect(icon_rect, 3, 3)

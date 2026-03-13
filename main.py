@@ -2792,6 +2792,10 @@ class TaskbarEventFilter(QAbstractNativeEventFilter):
 
 
 def main():
+    # Enable High DPI scaling
+    from PyQt6.QtGui import QGuiApplication
+    QGuiApplication.setHighDpiScaleFactorRoundingPolicy(Qt.HighDpiScaleFactorRoundingPolicy.PassThrough)
+    
     app = QApplication(sys.argv)
     app.setStyle('Fusion')
     app.setStyleSheet(DARK_STYLE)
