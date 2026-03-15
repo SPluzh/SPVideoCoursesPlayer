@@ -899,7 +899,8 @@ class VideoCourseBrowser(QMainWindow):
             
             if duration > 0:
                 percent = int((position / duration) * 100)
-                if percent >= 99:
+                remaining = duration - position
+                if remaining < 1 and percent >= 99:
                     percent = 100
                     position = duration
             else:
@@ -925,7 +926,8 @@ class VideoCourseBrowser(QMainWindow):
 
         if duration > 0:
             percent = int((position / duration) * 100)
-            if percent >= 99:
+            remaining = duration - position
+            if remaining < 1 and percent >= 99:
                 percent = 100
                 position = duration
             
