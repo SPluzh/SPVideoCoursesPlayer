@@ -1377,7 +1377,20 @@ class VideoCourseBrowser(QMainWindow):
                     RESOURCES_DIR / 'icons'
                 )
                 self.thumbnail_buttons.add_buttons()
-                self.thumbnail_buttons.update_play_state(not self.video_player.player.pause if self.video_player.player else False)
+                
+                # Restore play/pause state
+                is_playing = not self.video_player.player.pause if self.video_player and self.video_player.player else False
+                self.thumbnail_buttons.update_play_state(is_playing)
+                
+                # Restore progress bar state and color
+                if self.video_player and self.video_player.current_file:
+                    try:
+                        total = self.video_player.player.duration or 0
+                        current = self.video_player.player.time_pos or 0
+                        if total > 0:
+                            self.taskbar_progress.update_for_playback(is_playing, current, total)
+                    except:
+                        pass
 
 
     def load_icons(self):
@@ -2491,7 +2504,17 @@ class VideoCourseBrowser(QMainWindow):
             try:
                 hwnd = int(self.winId())
                 self.taskbar_progress.set_hwnd(hwnd)
-                self.taskbar_progress.set_normal()
+                
+                # Sync state with player
+                if self.video_player.current_file:
+                    is_playing = not self.video_player.player.pause if self.video_player.player else False
+                    if is_playing:
+                        self.taskbar_progress.set_normal()
+                    else:
+                        self.taskbar_progress.set_paused()
+                else:
+                    self.taskbar_progress.set_normal()
+
                 # Initialize thumbnail toolbar buttons (5 playback controls)
                 if self.taskbar_progress.taskbar:
                     self.thumbnail_buttons = TaskbarThumbnailButtons(
