@@ -1,4 +1,3 @@
-
 import sys
 import os
 import configparser
@@ -15,21 +14,22 @@ from constants import ROOT_DIR, RESOURCES_DIR
 
 from utils import resolve_binary_path
 
+
 def setup_mpv_dll():
     """Set up the MPV DLL path for the application."""
     # Initial read for DLL setup (happens once at startup)
     config = configparser.ConfigParser()
-    config_file = RESOURCES_DIR / 'settings.ini'
+    config_file = RESOURCES_DIR / "settings.ini"
     if config_file.exists():
-        config.read(config_file, encoding='utf-8')
-    
-    dll_path = resolve_binary_path(config, 'libmpv_path', 'bin/libmpv-2.dll')
+        config.read(config_file, encoding="utf-8")
+
+    dll_path = resolve_binary_path(config, "libmpv_path", "bin/libmpv-2.dll")
     bin_dir = dll_path.parent
     if dll_path.exists():
         # Add to PATH for all versions
         os.environ["PATH"] = str(bin_dir) + os.pathsep + os.environ.get("PATH", "")
         # Specifically for Python 3.8+ on Windows
-        if hasattr(os, 'add_dll_directory'):
+        if hasattr(os, "add_dll_directory"):
             os.add_dll_directory(str(bin_dir))
         logging.debug(f"MPV DLL path set: {bin_dir}")
         return True
@@ -38,7 +38,7 @@ def setup_mpv_dll():
         old_dll_path = ROOT_DIR / "libmpv-2.dll"
         if old_dll_path.exists():
             os.environ["PATH"] = str(ROOT_DIR) + os.pathsep + os.environ.get("PATH", "")
-            if hasattr(os, 'add_dll_directory'):
+            if hasattr(os, "add_dll_directory"):
                 os.add_dll_directory(str(ROOT_DIR))
             logging.debug(f"MPV DLL path set: {ROOT_DIR} (legacy)")
             return True
@@ -46,13 +46,15 @@ def setup_mpv_dll():
             logging.warning(f"WARNING: libmpv-2.dll not found at {dll_path}")
             return False
 
+
 class MPVVideoWidget(QFrame):
     """Video widget for MPV with fullscreen, zoom, and pan support."""
+
     requestfloatwindow = pyqtSignal()
     toggle_play_pause = pyqtSignal()
     zoom_changed = pyqtSignal(float)
     toggle_fullscreen_requested = pyqtSignal()
-    
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setMinimumHeight(300)
@@ -66,6 +68,7 @@ class MPVVideoWidget(QFrame):
         self.setAutoFillBackground(True)
         # We need to set the palette locally or import QColor/QPalette
         from PyQt6.QtGui import QPalette, QColor
+
         palette = self.palette()
         palette.setColor(QPalette.ColorRole.Window, QColor(0, 0, 0))
         self.setPalette(palette)
@@ -101,7 +104,11 @@ class MPVVideoWidget(QFrame):
 
     def paintEvent(self, event):
         """Draw a beautiful placeholder when no video is loaded"""
-        if self.player is None or not hasattr(self.player, 'filename') or self.player.filename is None:
+        if (
+            self.player is None
+            or not hasattr(self.player, "filename")
+            or self.player.filename is None
+        ):
             painter = QPainter(self)
             draw_video_placeholder(painter, self.rect())
             painter.end()
@@ -130,6 +137,13 @@ class MPVVideoWidget(QFrame):
         try:
             self.player.video_zoom = self.zoom_level
             self.zoom_changed.emit(self.zoom_level)
+
+            # Show zoom level via MPV OSD
+            zoom_percent = self.get_zoom_percent()
+            from translator import tr
+
+            zoom_text = tr("player.zoom_level", percent=zoom_percent)
+            self.player.show_text(zoom_text, 2500)  # Show for 2.5 seconds
 
             if self.zoom_level <= 0:
                 self.pan_x = 0.0
@@ -188,10 +202,14 @@ class MPVVideoWidget(QFrame):
             event.accept()
         elif self.is_panning and self.player and self.pan_start_pos:
             delta = event.position() - self.pan_start_pos
-            zoom_factor = 2 ** self.zoom_level
+            zoom_factor = 2**self.zoom_level
 
-            sensitivity_x = 1.0 / (self.width() * zoom_factor) if self.width() > 0 else 0
-            sensitivity_y = 1.0 / (self.height() * zoom_factor) if self.height() > 0 else 0
+            sensitivity_x = (
+                1.0 / (self.width() * zoom_factor) if self.width() > 0 else 0
+            )
+            sensitivity_y = (
+                1.0 / (self.height() * zoom_factor) if self.height() > 0 else 0
+            )
 
             self.pan_x = self.pan_start_x + delta.x() * sensitivity_x
             self.pan_y = self.pan_start_y + delta.y() * sensitivity_y
@@ -240,7 +258,7 @@ class MPVVideoWidget(QFrame):
         for screen in QApplication.screens():
             if screen.geometry().contains(cursor_pos):
                 return screen
-        
+
         # 2. Try to find the screen by window center (most accurate for current placement)
         window = self.window()
         if window:
@@ -248,11 +266,11 @@ class MPVVideoWidget(QFrame):
             for screen in QApplication.screens():
                 if screen.geometry().contains(window_center):
                     return screen
-            
+
             # 3. Fallback to the current window's screen association
             if window.screen():
                 return window.screen()
-        
+
         # 4. Final fallback
         return QApplication.primaryScreen()
 
@@ -296,7 +314,7 @@ class MPVVideoWidget(QFrame):
 
     def get_zoom_percent(self):
         """Get current zoom in percent."""
-        return int(100 * (2 ** self.zoom_level))
+        return int(100 * (2**self.zoom_level))
 
     def frame_step(self):
         """Step forward one frame."""
@@ -327,16 +345,18 @@ class MPVVideoWidget(QFrame):
             import tempfile
             import os
 
-            with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as f:
+            with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as f:
                 temp_path = f.name
 
-            self.player.screenshot_to_file(temp_path, includes='video')
+            self.player.screenshot_to_file(temp_path, includes="video")
 
             if os.path.exists(temp_path):
                 pixmap = QPixmap(temp_path)
                 if not pixmap.isNull():
                     QApplication.clipboard().setPixmap(pixmap)
-                    logging.info(f"Screenshot copied to clipboard ({pixmap.width()}x{pixmap.height()})")
+                    logging.info(
+                        f"Screenshot copied to clipboard ({pixmap.width()}x{pixmap.height()})"
+                    )
                     os.remove(temp_path)
                     return True
                 else:

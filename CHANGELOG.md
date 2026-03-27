@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.4.2]
+- **Zoom OSD**: Added on-screen display notification for zoom level changes:
+    - **Visual Feedback**: Shows current zoom percentage (e.g., "Zoom: 150%" / "Масштаб: 150%") in the top-left corner of the video.
+
 ## [1.4.1]
     - **Smoothing**: Enabled antialiasing for perfectly round and smooth dots.
     - **Stability**: Implemented float-based positioning (QRectF) to eliminate vertical jitter and "jumping" when switching frames during hover.

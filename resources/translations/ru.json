@@ -118,6 +118,7 @@
         "no_markers": "Маркеры не найдены",
         "tooltip_pip": "Открепить видео",
         "audio_delay": "Задержка звука",
+        "zoom_level": "Масштаб: {percent}%",
         "volume": "Громкость",
         "audio_track": "Аудиодорожка",
         "osd": {

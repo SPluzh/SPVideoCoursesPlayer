@@ -118,6 +118,7 @@
         "no_markers": "No markers found",
         "tooltip_pip": "Detach video",
         "audio_delay": "Audio Delay",
+        "zoom_level": "Zoom: {percent}%",
         "volume": "Volume",
         "audio_track": "Audio Track",
         "osd": {
