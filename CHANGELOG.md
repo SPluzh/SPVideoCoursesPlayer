@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.4.3]
+- **Library**: Added a toggle for the library panel visibility:
+    - **Hotkey**: Implemented `Ctrl + L` to show or hide the library panel instantly.
+    - **Menu**: Added a checkable "Show Library" item in the 
+
 ## [1.4.2]
 - **Zoom OSD**: Added on-screen display notification for zoom level changes:
     - **Visual Feedback**: Shows current zoom percentage (e.g., "Zoom: 150%" / "Масштаб: 150%") in the top-left corner of the video.
