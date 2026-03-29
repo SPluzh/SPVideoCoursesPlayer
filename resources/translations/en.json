@@ -130,7 +130,20 @@
             "noise": "Denoise",
             "deess": "De-esser",
             "comp": "Compressor",
-            "channel": "Channel"
+            "channel": "Channel",
+            "speed": "Playback Speed: {speed}x",
+            "volume": "Volume: {volume}%",
+            "audio_track": "Audio: {track}",
+            "subtitle_on": "Subtitles: {track}",
+            "subtitle_off": "Subtitles: Off",
+            "audio_delay": "Audio Delay: {delay} ms",
+            "screenshot_success": "Screenshot saved to clipboard",
+            "screenshot_failed": "Screenshot failed",
+            "marker_added": "Marker added: {name}",
+            "marker_deleted": "Marker deleted",
+            "marker_deleted_named": "Marker deleted: {name}",
+            "paused": "Paused",
+            "playing": "Playing"
         },
         "audio_tools": {
             "noise": "Noise",

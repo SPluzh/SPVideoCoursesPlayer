@@ -4,6 +4,7 @@ import time
 from pathlib import Path
 
 from utils import setup_encoding
+
 setup_encoding()
 
 from constants import ROOT_DIR, RESOURCES_DIR, DATA_DIR
@@ -12,24 +13,78 @@ from mpv_handler import setup_mpv_dll, resolve_binary_path
 
 setup_mpv_dll()
 import locale
-locale.setlocale(locale.LC_NUMERIC, 'C')
+
+locale.setlocale(locale.LC_NUMERIC, "C")
 from database import DatabaseManager
 import json
 import logging
+
 # Configure logging
-logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(
+    level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s"
+)
 import io
 from icon_manager import load_icons_dict
 from PyQt6.QtWidgets import (
-    QApplication, QMainWindow, QWidget, QVBoxLayout,
-    QTreeWidget, QTreeWidgetItem, QLabel, QPushButton,
-    QLineEdit, QHBoxLayout, QFileDialog,
-    QStyle, QMenu, QMessageBox, QCheckBox, QSplitter,
-    QTreeWidgetItemIterator, QDialog, QGroupBox, QSpinBox, QSizePolicy, QFrame, QComboBox,
-    QTextEdit, QProgressBar, QListWidget, QListWidgetItem, QGridLayout
+    QApplication,
+    QMainWindow,
+    QWidget,
+    QVBoxLayout,
+    QTreeWidget,
+    QTreeWidgetItem,
+    QLabel,
+    QPushButton,
+    QLineEdit,
+    QHBoxLayout,
+    QFileDialog,
+    QStyle,
+    QMenu,
+    QMessageBox,
+    QCheckBox,
+    QSplitter,
+    QTreeWidgetItemIterator,
+    QDialog,
+    QGroupBox,
+    QSpinBox,
+    QSizePolicy,
+    QFrame,
+    QComboBox,
+    QTextEdit,
+    QProgressBar,
+    QListWidget,
+    QListWidgetItem,
+    QGridLayout,
 )
-from PyQt6.QtCore import Qt, QSize, QRect, QTimer, QUrl, pyqtSignal, QByteArray, QPoint, QThread, QRectF, QEvent
-from PyQt6.QtGui import QIcon, QPixmap, QFont, QBrush, QColor, QPainter, QAction, QKeyEvent, QMouseEvent, QActionGroup, QPalette, QPolygon, QCursor, QPen, QTextCursor
+from PyQt6.QtCore import (
+    Qt,
+    QSize,
+    QRect,
+    QTimer,
+    QUrl,
+    pyqtSignal,
+    QByteArray,
+    QPoint,
+    QThread,
+    QRectF,
+    QEvent,
+)
+from PyQt6.QtGui import (
+    QIcon,
+    QPixmap,
+    QFont,
+    QBrush,
+    QColor,
+    QPainter,
+    QAction,
+    QKeyEvent,
+    QMouseEvent,
+    QActionGroup,
+    QPalette,
+    QPolygon,
+    QCursor,
+    QPen,
+    QTextCursor,
+)
 from styles import DARK_STYLE
 import styles
 from taskbar_progress import TaskbarProgress, TaskbarThumbnailButtons
@@ -46,18 +101,22 @@ from player import VideoPlayerWidget
 from library import HoverTreeWidget, VideoItemDelegate
 from hotkeys import HotkeyManager
 from tags_dialog import TagsDialog
+
 # from floating_player import FloatingVideoWindow, PiPManager
 from tag_filter_popup import TagFilterPopup
 from utils import natural_sort_key, format_time, format_duration, format_size
 from config_manager import ConfigManager
 from search_utils import smart_search
 
+
 class PiPOverlay(QWidget):
     def __init__(self, parent=None):
-        flags = (Qt.WindowType.Tool | 
-                 Qt.WindowType.FramelessWindowHint | 
-                 Qt.WindowType.WindowStaysOnTopHint)
-        if hasattr(Qt.WindowType, 'WindowTransparentForInput'):
+        flags = (
+            Qt.WindowType.Tool
+            | Qt.WindowType.FramelessWindowHint
+            | Qt.WindowType.WindowStaysOnTopHint
+        )
+        if hasattr(Qt.WindowType, "WindowTransparentForInput"):
             flags |= Qt.WindowType.WindowTransparentForInput
         super().__init__(parent, flags)
         self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
@@ -82,30 +141,30 @@ class PiPOverlay(QWidget):
             # logging.debug(f"PiPOverlay paintEvent: edge={self.hover_edge}")
             painter = QPainter(self)
             painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-            
+
             w, h = self.width(), self.height()
             r_large = 6
             r_small = 4
-            
+
             # Border rect connecting the centers of the large dots
             painter.setPen(QPen(self.accent_color, 2))
-            painter.drawRect(r_large, r_large, w - 2*r_large, h - 2*r_large)
-            
+            painter.drawRect(r_large, r_large, w - 2 * r_large, h - 2 * r_large)
+
             painter.setBrush(self.accent_color)
             painter.setPen(Qt.PenStyle.NoPen)
-            
+
             # Corners (exactly on the rect vertices)
             painter.drawEllipse(QPoint(r_large, r_large), r_large, r_large)
             painter.drawEllipse(QPoint(w - r_large, r_large), r_large, r_large)
             painter.drawEllipse(QPoint(r_large, h - r_large), r_large, r_large)
             painter.drawEllipse(QPoint(w - r_large, h - r_large), r_large, r_large)
-            
+
             # Midpoints (on the rect edges)
             painter.drawEllipse(QPoint(w // 2, r_large), r_small, r_small)
             painter.drawEllipse(QPoint(w // 2, h - r_large), r_small, r_small)
             painter.drawEllipse(QPoint(r_large, h // 2), r_small, r_small)
             painter.drawEllipse(QPoint(w - r_large, h // 2), r_small, r_small)
-            
+
             painter.end()
 
 
@@ -116,11 +175,11 @@ class VideoCourseBrowser(QMainWindow):
         super().__init__()
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         self.setFocus()
-        self.setWindowTitle(tr('app.title'))
+        self.setWindowTitle(tr("app.title"))
 
         self.script_dir = Path(__file__).parent
-        self.config_file = RESOURCES_DIR / 'settings.ini'
-        self.db_file = DATA_DIR / 'video_courses.db'
+        self.config_file = RESOURCES_DIR / "settings.ini"
+        self.db_file = DATA_DIR / "video_courses.db"
         self.db = DatabaseManager(self.db_file)
         self.config = ConfigManager(self.config_file, ROOT_DIR, DATA_DIR)
 
@@ -136,7 +195,7 @@ class VideoCourseBrowser(QMainWindow):
 
         self.taskbar_progress = TaskbarProgress()
         self.last_played_path = None
-        
+
         # PiP State
         self.is_pip_mode = False
         self.normal_geometry = None
@@ -162,18 +221,20 @@ class VideoCourseBrowser(QMainWindow):
         self.status = self.statusBar()
         self.status.setSizeGripEnabled(False)
         self.status.setContentsMargins(5, 0, 5, 0)
-        self.info_label = QLabel(tr('status.not_loaded'))
+        self.info_label = QLabel(tr("status.not_loaded"))
         self.status.addWidget(self.info_label, 1)
 
         self.path_edit = QLineEdit(self.library_paths)
         self.path_edit.setVisible(False)
 
         self.splitter = QSplitter(Qt.Orientation.Horizontal)
-        self.splitter.setChildrenCollapsible(False) # Default non-collapsible, specific overrides applied later
+        self.splitter.setChildrenCollapsible(
+            False
+        )  # Default non-collapsible, specific overrides applied later
         main_layout.addWidget(self.splitter, 1)
 
         self.browser_widget = QWidget()
-        self.browser_widget.setMinimumWidth(200) # Ensure library has minimum width
+        self.browser_widget.setMinimumWidth(200)  # Ensure library has minimum width
         browser_layout = QVBoxLayout(self.browser_widget)
         browser_layout.setContentsMargins(0, 0, 0, 0)
         browser_layout.setSpacing(0)
@@ -185,7 +246,7 @@ class VideoCourseBrowser(QMainWindow):
         search_container_layout.setSpacing(5)
 
         self.search_edit = QLineEdit()
-        self.search_edit.setPlaceholderText(tr('library.search_placeholder'))
+        self.search_edit.setPlaceholderText(tr("library.search_placeholder"))
         self.search_edit.setClearButtonEnabled(True)
         self.search_edit.textChanged.connect(self.filter_library)
         self.search_edit.setObjectName("librarySearch")
@@ -193,26 +254,34 @@ class VideoCourseBrowser(QMainWindow):
 
         self.fav_filter_btn = QPushButton()
         self.fav_filter_btn.setCheckable(True)
-        self.fav_filter_btn.setIcon(self.icons.get('context_favorite_on', QIcon()))
-        self.fav_filter_btn.setToolTip(tr('library.filter_favorites'))
+        self.fav_filter_btn.setIcon(self.icons.get("context_favorite_on", QIcon()))
+        self.fav_filter_btn.setToolTip(tr("library.filter_favorites"))
         self.fav_filter_btn.setFixedSize(30, 30)
         self.fav_filter_btn.setObjectName("favFilterBtn")
-        
+
         # Connect toggled BEFORE setting checked state to ensure initial filtering
-        self.fav_filter_btn.toggled.connect(lambda _: self.filter_library(self.search_edit.text()))
-        
+        self.fav_filter_btn.toggled.connect(
+            lambda _: self.filter_library(self.search_edit.text())
+        )
+
         search_container_layout.addWidget(self.fav_filter_btn)
 
         self.tag_filter_btn = QPushButton()
         self.tag_filter_btn.setCheckable(True)
-        self.tag_filter_btn.setIcon(self.icons.get('context_tags', QIcon())) # Assuming context_tags exists
-        self.tag_filter_btn.setToolTip(tr('library.filter_tags'))
+        self.tag_filter_btn.setIcon(
+            self.icons.get("context_tags", QIcon())
+        )  # Assuming context_tags exists
+        self.tag_filter_btn.setToolTip(tr("library.filter_tags"))
         self.tag_filter_btn.setFixedSize(30, 30)
         self.tag_filter_btn.setObjectName("tagFilterBtn")
         self.tag_filter_btn.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
-        self.tag_filter_btn.customContextMenuRequested.connect(self.show_tag_filter_popup)
-        self.tag_filter_btn.toggled.connect(lambda _: self.filter_library(self.search_edit.text()))
-        
+        self.tag_filter_btn.customContextMenuRequested.connect(
+            self.show_tag_filter_popup
+        )
+        self.tag_filter_btn.toggled.connect(
+            lambda _: self.filter_library(self.search_edit.text())
+        )
+
         search_container_layout.addWidget(self.tag_filter_btn)
 
         self.marker_toggle_btn = QPushButton()
@@ -220,16 +289,18 @@ class VideoCourseBrowser(QMainWindow):
         # Use a fallback icon if show_markers doesn't exist, e.g. context_tags or just text if needed
         # But we added "show_markers" to load_icons, relying on IconManager returning empty if missing.
         # Let's set a standard icon or reuse one if empty.
-        icon = self.icons.get('show_markers', QIcon())
+        icon = self.icons.get("show_markers", QIcon())
         if icon.isNull():
-             icon = self.style().standardIcon(QStyle.StandardPixmap.SP_FileDialogDetailedView)
+            icon = self.style().standardIcon(
+                QStyle.StandardPixmap.SP_FileDialogDetailedView
+            )
         self.marker_toggle_btn.setIcon(icon)
-        self.marker_toggle_btn.setToolTip(tr('library.show_markers') or "Show Markers")
+        self.marker_toggle_btn.setToolTip(tr("library.show_markers") or "Show Markers")
         self.marker_toggle_btn.setFixedSize(30, 30)
         self.marker_toggle_btn.setObjectName("markerToggleBtn")
-        self.marker_toggle_btn.setChecked(True) # Default On
+        self.marker_toggle_btn.setChecked(True)  # Default On
         self.marker_toggle_btn.toggled.connect(self.toggle_markers)
-        
+
         search_container_layout.addWidget(self.marker_toggle_btn)
 
         browser_layout.addWidget(search_container)
@@ -246,12 +317,12 @@ class VideoCourseBrowser(QMainWindow):
         self.course_tree.itemCollapsed.connect(self.on_item_collapsed)
 
         delegate_config = {
-            'folder_row_height': self.folder_row_height,
-            'video_row_height': self.video_row_height,
-            'display_width': self.display_width,
-            'display_height': self.display_height,
-            'format_duration': format_duration,
-            'format_size': format_size
+            "folder_row_height": self.folder_row_height,
+            "video_row_height": self.video_row_height,
+            "display_width": self.display_width,
+            "display_height": self.display_height,
+            "format_duration": format_duration,
+            "format_size": format_size,
         }
         self.course_tree.setItemDelegate(
             VideoItemDelegate(delegate_config, self.course_tree)
@@ -260,15 +331,14 @@ class VideoCourseBrowser(QMainWindow):
         browser_layout.addWidget(self.course_tree)
 
         self.video_player = VideoPlayerWidget()
-        self.video_player.setMinimumWidth(400) # Ensure player has minimum width
+        self.video_player.setMinimumWidth(400)  # Ensure player has minimum width
         self.video_player.db = self.db
         self.video_player.taskbar_progress = self.taskbar_progress
         self.video_player.show_preview = self.show_preview_popup
         self.video_player.set_ffmpeg_path(self.ffmpeg_path)
 
         self.video_player.setSizePolicy(
-            QSizePolicy.Policy.Expanding,
-            QSizePolicy.Policy.Expanding
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
         )
 
         self.video_player.video_finished.connect(self.on_video_finished)
@@ -283,26 +353,30 @@ class VideoCourseBrowser(QMainWindow):
         self.video_player.pip_exit_requested.connect(self.exit_pip_mode)
 
         # Apply initial subtitle settings
-        self.video_player.set_subtitle_styles(self.sub_color, self.sub_border_color, self.sub_scale)
+        self.video_player.set_subtitle_styles(
+            self.sub_color, self.sub_border_color, self.sub_scale
+        )
 
         self.splitter.addWidget(self.browser_widget)
         self.splitter.addWidget(self.video_player)
 
         # Set default sizes before restoring state
-        self.splitter.setSizes([int(self.window_width * 0.3), int(self.window_width * 0.7)])
+        self.splitter.setSizes(
+            [int(self.window_width * 0.3), int(self.window_width * 0.7)]
+        )
 
         self.splitter.setStretchFactor(0, 0)
         self.splitter.setStretchFactor(1, 1)
 
         self._init_maximized = self.restore_window_state()
-        
+
         # Override collapsible state from settings: Library (0) collapsible, Player (1) fixed
         self.splitter.setCollapsible(0, True)
         self.splitter.setCollapsible(1, False)
-        
+
         # Double-check splitter sizes after all geometry is set
         QTimer.singleShot(50, self._ensure_player_visible)
-        
+
         self.load_courses()
         self.course_tree.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         QTimer.singleShot(100, self.restore_last_video)
@@ -314,31 +388,36 @@ class VideoCourseBrowser(QMainWindow):
         self._last_stats_update = 0
 
         # Restore filter states AFTER all components (like course_tree) are initialized
-        if hasattr(self, 'fav_filter_active'):
+        if hasattr(self, "fav_filter_active"):
             self.fav_filter_btn.setChecked(self.fav_filter_active)
-        if hasattr(self, 'tag_filter_active'):
+        if hasattr(self, "tag_filter_active"):
             self.tag_filter_btn.setChecked(self.tag_filter_active)
 
         # Auto-update cleanup and check
         from update_app import cleanup_update_artifacts
+
         cleanup_update_artifacts()
         if self.config.get_check_updates_on_start():
             QTimer.singleShot(5000, self._check_for_update)
 
     def keyPressEvent(self, event: QKeyEvent):
         action = self.hotkey_manager.get_action(event)
-        
+
         # Actions that allow auto-repeat (like seeking, volume, or speed with arrows)
         repeatable_actions = [
-            "seek_forward", "seek_backward", 
-            "speed_up", "speed_down", 
-            "volume_up", "volume_down",
-            "zoom_in", "zoom_out"
+            "seek_forward",
+            "seek_backward",
+            "speed_up",
+            "speed_down",
+            "volume_up",
+            "volume_down",
+            "zoom_in",
+            "zoom_out",
         ]
-        
+
         if event.isAutoRepeat() and action not in repeatable_actions:
             return
-            
+
         if action:
             self.handle_player_action(action, pressed=True)
             event.accept()
@@ -356,7 +435,7 @@ class VideoCourseBrowser(QMainWindow):
             super().keyReleaseEvent(event)
 
     def handle_player_action(self, action, pressed=True):
-        if not hasattr(self, 'video_player') or not self.video_player:
+        if not hasattr(self, "video_player") or not self.video_player:
             return
 
         # Special case for hold actions (currently only zoom_mode)
@@ -386,9 +465,19 @@ class VideoCourseBrowser(QMainWindow):
         elif action == "toggle_subtitles":
             self.video_player.toggle_subtitles_hotkey()
         elif action == "take_screenshot":
-            if self.video_player.screenshot_to_clipboard():
-                self.info_label.setText(tr('player.tooltip_screenshot') + " ✓")
-                QTimer.singleShot(2000, lambda: self.info_label.setText(tr('status.ready')))
+            success = self.video_player.screenshot_to_clipboard()
+            # Show OSD notification
+            if (
+                hasattr(self.video_player, "osd_manager")
+                and self.video_player.osd_manager
+            ):
+                self.video_player.osd_manager.show_screenshot(success)
+            # Also update status label for backward compatibility
+            if success:
+                self.info_label.setText(tr("player.tooltip_screenshot") + " ✓")
+                QTimer.singleShot(
+                    2000, lambda: self.info_label.setText(tr("status.ready"))
+                )
         elif action == "reset_zoom":
             self.video_player.reset_zoom()
         elif action == "zoom_in":
@@ -428,7 +517,7 @@ class VideoCourseBrowser(QMainWindow):
 
     def locate_active_video(self):
         """Scroll the library to the currently playing video."""
-        if not hasattr(self, 'video_player') or not self.video_player.current_file:
+        if not hasattr(self, "video_player") or not self.video_player.current_file:
             return
 
         # Show library if hidden
@@ -437,21 +526,21 @@ class VideoCourseBrowser(QMainWindow):
 
         file_path = self.video_player.current_file
         item = self.find_video_item(file_path)
-        
+
         if item:
             # Expand all parents
             parent = item.parent()
             while parent:
                 parent.setExpanded(True)
                 parent = parent.parent()
-            
+
             self.course_tree.setCurrentItem(item)
             self.course_tree.scrollToItem(item, QTreeWidget.ScrollHint.PositionAtCenter)
-            
+
             # Temporary status message
             filename = Path(file_path).name
-            self.info_label.setText(tr('status.located', file=filename))
-            QTimer.singleShot(3000, lambda: self.info_label.setText(tr('status.ready')))
+            self.info_label.setText(tr("status.located", file=filename))
+            QTimer.singleShot(3000, lambda: self.info_label.setText(tr("status.ready")))
         else:
             logging.warning(f"Could not find video item in library for: {file_path}")
 
@@ -464,7 +553,7 @@ class VideoCourseBrowser(QMainWindow):
         else:
             new_state = checked
 
-        if hasattr(self, 'always_on_top_action'):
+        if hasattr(self, "always_on_top_action"):
             self.always_on_top_action.setChecked(new_state)
 
         flags = self.windowFlags()
@@ -472,33 +561,33 @@ class VideoCourseBrowser(QMainWindow):
             self.setWindowFlags(flags | Qt.WindowType.WindowStaysOnTopHint)
         else:
             self.setWindowFlags(flags & ~Qt.WindowType.WindowStaysOnTopHint)
-        
+
         # We must call show() after changing window flags to apply them
         self.show()
-        
+
         # Status message
-        msg = tr('hotkeys.toggle_always_on_top') + (": ON" if new_state else ": OFF")
+        msg = tr("hotkeys.toggle_always_on_top") + (": ON" if new_state else ": OFF")
         self.info_label.setText(msg)
-        QTimer.singleShot(2000, lambda: self.info_label.setText(tr('status.ready')))
+        QTimer.singleShot(2000, lambda: self.info_label.setText(tr("status.ready")))
 
     def toggle_fullscreen(self):
-        if getattr(self, 'is_pip_mode', False):
+        if getattr(self, "is_pip_mode", False):
             self.exit_pip_mode()
 
         if self.isFullScreen():
             self.showNormal()
             self.menuBar().show()
             self.status.show()
-            if hasattr(self, 'browser_widget'):
+            if hasattr(self, "browser_widget"):
                 self.browser_widget.show()
-            if hasattr(self, '_saved_splitter_state'):
+            if hasattr(self, "_saved_splitter_state"):
                 self.splitter.restoreState(self._saved_splitter_state)
         else:
             self._saved_splitter_state = self.splitter.saveState()
             self.showFullScreen()
             self.menuBar().hide()
             self.status.hide()
-            if hasattr(self, 'browser_widget'):
+            if hasattr(self, "browser_widget"):
                 self.browser_widget.hide()
             # Collapse library
             self.splitter.setSizes([0, self.width()])
@@ -523,14 +612,14 @@ class VideoCourseBrowser(QMainWindow):
     def update_all_texts(self):
         try:
             logging.debug("update_all_texts started")
-            self.setWindowTitle(tr('app.title'))
+            self.setWindowTitle(tr("app.title"))
             logging.debug("Clearing menu bar")
             self.menuBar().clear()
             logging.debug("Recreating menu bar")
             self.create_menu_bar()
-            if hasattr(self, 'search_edit'):
-                self.search_edit.setPlaceholderText(tr('library.search_placeholder'))
-            if hasattr(self, 'video_player') and self.video_player:
+            if hasattr(self, "search_edit"):
+                self.search_edit.setPlaceholderText(tr("library.search_placeholder"))
+            if hasattr(self, "video_player") and self.video_player:
                 logging.debug("Updating player texts")
                 self.video_player.update_texts()
             logging.debug("Loading courses")
@@ -541,7 +630,7 @@ class VideoCourseBrowser(QMainWindow):
 
     def on_item_expanded(self, item):
         item_type = item.data(0, Qt.ItemDataRole.UserRole + 1)
-        if item_type != 'folder':
+        if item_type != "folder":
             return
 
         path = item.data(0, Qt.ItemDataRole.UserRole)
@@ -552,7 +641,7 @@ class VideoCourseBrowser(QMainWindow):
 
     def on_item_collapsed(self, item):
         item_type = item.data(0, Qt.ItemDataRole.UserRole + 1)
-        if item_type != 'folder':
+        if item_type != "folder":
             return
 
         path = item.data(0, Qt.ItemDataRole.UserRole)
@@ -563,11 +652,11 @@ class VideoCourseBrowser(QMainWindow):
 
     def update_window_title_for_item(self, item):
         course_item = item.parent()
-        course_name = ''
+        course_name = ""
 
         if course_item is not None:
             full_text = course_item.text(0)
-            idx = full_text.find('(')
+            idx = full_text.find("(")
             course_name = full_text[:idx].strip() if idx > 0 else full_text.strip()
 
         video_name = item.text(0).strip()
@@ -584,12 +673,12 @@ class VideoCourseBrowser(QMainWindow):
         state = self.config.get_window_state()
 
         if state:
-            if 'geometry' in state:
+            if "geometry" in state:
                 try:
                     # Try hex first (default for other fields), fallback to base64 if needed
-                    geo_str = state['geometry']
+                    geo_str = state["geometry"]
                     try:
-                        geometry = QByteArray.fromHex(bytes(geo_str, 'utf-8'))
+                        geometry = QByteArray.fromHex(bytes(geo_str, "utf-8"))
                     except:
                         geometry = QByteArray.fromBase64(geo_str.encode())
                     self.restoreGeometry(geometry)
@@ -598,66 +687,72 @@ class VideoCourseBrowser(QMainWindow):
                     self.resize(self.window_width, self.window_height)
             else:
                 self.resize(self.window_width, self.window_height)
-        
+
             # Restore library visibility
-            show_library = state.get('show_library', True)
-            if hasattr(self, 'browser_widget'):
+            show_library = state.get("show_library", True)
+            if hasattr(self, "browser_widget"):
                 self.browser_widget.setVisible(show_library)
-                if hasattr(self, 'toggle_lib_action'):
+                if hasattr(self, "toggle_lib_action"):
                     self.toggle_lib_action.setChecked(show_library)
 
-            is_maximized = state.get('is_maximized', False)
+            is_maximized = state.get("is_maximized", False)
 
-            if 'splitter_state' in state:
+            if "splitter_state" in state:
                 try:
-                    splitter_state = QByteArray.fromHex(bytes(state['splitter_state'], 'utf-8'))
+                    splitter_state = QByteArray.fromHex(
+                        bytes(state["splitter_state"], "utf-8")
+                    )
                     self.splitter.restoreState(splitter_state)
-                    
+
                     # Ensure player pane (index 1) is not collapsed
                     sizes = self.splitter.sizes()
                     if len(sizes) >= 2 and sizes[1] < 50:
                         total_width = sum(sizes)
                         if total_width > 0:
-                            self.splitter.setSizes([int(total_width * 0.3), int(total_width * 0.7)])
+                            self.splitter.setSizes(
+                                [int(total_width * 0.3), int(total_width * 0.7)]
+                            )
                         else:
                             self.splitter.setSizes([400, 1000])
                 except Exception as e:
                     logging.error(f"Error restoring splitter: {e}")
 
-            if 'playback_speed' in state:
+            if "playback_speed" in state:
                 try:
-                    speed_value = int(state['playback_speed'])
+                    speed_value = int(state["playback_speed"])
                     self.video_player.speed_slider.setValue(speed_value)
                 except Exception as e:
                     logging.error(f"Error restoring playback speed: {e}")
-                    
-            if 'pip_geometry' in state:
+
+            if "pip_geometry" in state:
                 try:
-                    self.pip_geometry = QByteArray.fromHex(bytes(state['pip_geometry'], 'utf-8'))
+                    self.pip_geometry = QByteArray.fromHex(
+                        bytes(state["pip_geometry"], "utf-8")
+                    )
                 except Exception as e:
                     logging.error(f"Error restoring PiP geometry: {e}")
 
-            if 'show_markers' in state:
+            if "show_markers" in state:
                 try:
-                    show = state['show_markers'] 
+                    show = state["show_markers"]
                     if isinstance(show, str):
-                        show = show.lower() == 'true'
+                        show = show.lower() == "true"
                     self.marker_toggle_btn.setChecked(bool(show))
                     self.toggle_markers(bool(show))
                 except Exception as e:
                     logging.error(f"Error restoring marker state: {e}")
-            
-            if 'always_on_top' in state:
+
+            if "always_on_top" in state:
                 try:
-                    on_top = state['always_on_top']
+                    on_top = state["always_on_top"]
                     if isinstance(on_top, str):
-                        on_top = on_top.lower() == 'true'
+                        on_top = on_top.lower() == "true"
                     self.toggle_always_on_top(bool(on_top))
                 except Exception as e:
                     logging.error(f"Error restoring always_on_top state: {e}")
         else:
             self.resize(self.window_width, self.window_height)
-        
+
         return is_maximized
 
     def _ensure_player_visible(self):
@@ -668,7 +763,9 @@ class VideoCourseBrowser(QMainWindow):
                 total_width = self.splitter.width()
                 if total_width > 0:
                     # Give 30% to library, 70% to player
-                    self.splitter.setSizes([int(total_width * 0.3), int(total_width * 0.7)])
+                    self.splitter.setSizes(
+                        [int(total_width * 0.3), int(total_width * 0.7)]
+                    )
                 else:
                     self.splitter.setSizes([400, 1000])
 
@@ -676,35 +773,41 @@ class VideoCourseBrowser(QMainWindow):
         # Save PiP geometry
         if self.is_pip_mode:
             self.pip_geometry = self.saveGeometry()
-            
+
         state = {
-            'geometry': self.saveGeometry().toHex().data().decode('utf-8'),
-            'is_maximized': self.isMaximized(),
-            'show_library': self.browser_widget.isVisible() if hasattr(self, 'browser_widget') else True
+            "geometry": self.saveGeometry().toHex().data().decode("utf-8"),
+            "is_maximized": self.isMaximized(),
+            "show_library": self.browser_widget.isVisible()
+            if hasattr(self, "browser_widget")
+            else True,
         }
-        
-        state['splitter_state'] = self.splitter.saveState().toHex().data().decode('utf-8')
-        
+
+        state["splitter_state"] = (
+            self.splitter.saveState().toHex().data().decode("utf-8")
+        )
+
         if self.pip_geometry:
-            state['pip_geometry'] = self.pip_geometry.toHex().data().decode('utf-8')
+            state["pip_geometry"] = self.pip_geometry.toHex().data().decode("utf-8")
 
         if self.video_player.current_file:
-            state['last_video'] = self.video_player.current_file
+            state["last_video"] = self.video_player.current_file
 
-        state['playback_speed'] = str(self.video_player.speed_slider.value())
-        state['show_markers'] = str(self.marker_toggle_btn.isChecked())
-        state['always_on_top'] = str(bool(self.windowFlags() & Qt.WindowType.WindowStaysOnTopHint))
+        state["playback_speed"] = str(self.video_player.speed_slider.value())
+        state["show_markers"] = str(self.marker_toggle_btn.isChecked())
+        state["always_on_top"] = str(
+            bool(self.windowFlags() & Qt.WindowType.WindowStaysOnTopHint)
+        )
 
         self.config.save_window_state(state)
         self.config.save_filter_state(
             self.fav_filter_btn.isChecked(),
             self.tag_filter_btn.isChecked(),
-            self.selected_tag_ids
+            self.selected_tag_ids,
         )
 
     def restore_last_video(self):
         state = self.config.get_window_state()
-        last_video_path = state.get('last_video')
+        last_video_path = state.get("last_video")
         if not last_video_path:
             return
 
@@ -715,14 +818,16 @@ class VideoCourseBrowser(QMainWindow):
 
         if item:
             saved_position, saved_volume = self.get_saved_position(last_video_path)
-            self.video_player.load_video(last_video_path, saved_position, volume=saved_volume, auto_play=False)
+            self.video_player.load_video(
+                last_video_path, saved_position, volume=saved_volume, auto_play=False
+            )
             # Update delegate
             delegate = self.course_tree.itemDelegate()
             if isinstance(delegate, VideoItemDelegate):
                 delegate.playing_path = last_video_path
-                delegate.is_paused = True # Load paused
+                delegate.is_paused = True  # Load paused
                 self.course_tree.viewport().update()
-                
+
             self.course_tree.setCurrentItem(item)
             self.course_tree.scrollToItem(item)
             self.setFocus()
@@ -742,116 +847,150 @@ class VideoCourseBrowser(QMainWindow):
         menubar = self.menuBar()
 
         # [Library] Menu
-        lib_menu = menubar.addMenu(tr('menu.library'))
+        lib_menu = menubar.addMenu(tr("menu.library"))
 
-        scan_action = QAction(self.icons.get('menu_scan', QIcon()), tr('menu.scan'), self)
-        scan_action.setShortcut('Ctrl+R')
+        scan_action = QAction(
+            self.icons.get("menu_scan", QIcon()), tr("menu.scan"), self
+        )
+        scan_action.setShortcut("Ctrl+R")
         scan_action.triggered.connect(self.rescan_directories)
         lib_menu.addAction(scan_action)
 
-        settings_action = QAction(self.icons.get('menu_settings', QIcon()), tr('menu.settings'), self)
-        settings_action.setShortcut('Ctrl+,')
+        settings_action = QAction(
+            self.icons.get("menu_settings", QIcon()), tr("menu.settings"), self
+        )
+        settings_action.setShortcut("Ctrl+,")
         settings_action.triggered.connect(self.open_settings)
         lib_menu.addAction(settings_action)
-        
+
         # [Tools] Menu
-        tools_menu = menubar.addMenu(tr('menu.tools'))
-        
-        screenshot_action = QAction(self.icons.get('screenshot', QIcon()), tr('menu.screenshot'), self)
-        screenshot_action.setShortcut('S')
-        screenshot_action.triggered.connect(lambda: self.handle_player_action("take_screenshot"))
+        tools_menu = menubar.addMenu(tr("menu.tools"))
+
+        screenshot_action = QAction(
+            self.icons.get("screenshot", QIcon()), tr("menu.screenshot"), self
+        )
+        screenshot_action.setShortcut("S")
+        screenshot_action.triggered.connect(
+            lambda: self.handle_player_action("take_screenshot")
+        )
         tools_menu.addAction(screenshot_action)
-        
-        add_marker_action = QAction(self.icons.get('add', QIcon()), tr('player.add_marker_title'), self)
-        add_marker_action.setShortcut('B')
-        add_marker_action.triggered.connect(lambda: self.handle_player_action("add_marker"))
+
+        add_marker_action = QAction(
+            self.icons.get("add", QIcon()), tr("player.add_marker_title"), self
+        )
+        add_marker_action.setShortcut("B")
+        add_marker_action.triggered.connect(
+            lambda: self.handle_player_action("add_marker")
+        )
         tools_menu.addAction(add_marker_action)
 
-        show_markers_action = QAction(self.icons.get('show_markers', QIcon()), tr('menu.show_markers'), self)
-        show_markers_action.setShortcut('G')
-        show_markers_action.triggered.connect(lambda: self.handle_player_action("toggle_marker_gallery"))
+        show_markers_action = QAction(
+            self.icons.get("show_markers", QIcon()), tr("menu.show_markers"), self
+        )
+        show_markers_action.setShortcut("G")
+        show_markers_action.triggered.connect(
+            lambda: self.handle_player_action("toggle_marker_gallery")
+        )
         tools_menu.addAction(show_markers_action)
 
         tools_menu.addSeparator()
 
-        locate_action = QAction(self.icons.get('menu_video', QIcon()), tr('menu.locate_video'), self)
-        locate_action.setShortcut('L')
+        locate_action = QAction(
+            self.icons.get("menu_video", QIcon()), tr("menu.locate_video"), self
+        )
+        locate_action.setShortcut("L")
         locate_action.triggered.connect(self.locate_active_video)
         tools_menu.addAction(locate_action)
-        
+
         tools_menu.addSeparator()
-        
-        frame_step_action = QAction(self.icons.get('next_frame', QIcon()), tr('menu.frame_step'), self)
-        frame_step_action.setShortcut('.')
-        frame_step_action.triggered.connect(lambda: self.handle_player_action("frame_step"))
+
+        frame_step_action = QAction(
+            self.icons.get("next_frame", QIcon()), tr("menu.frame_step"), self
+        )
+        frame_step_action.setShortcut(".")
+        frame_step_action.triggered.connect(
+            lambda: self.handle_player_action("frame_step")
+        )
         tools_menu.addAction(frame_step_action)
-        
-        frame_back_action = QAction(self.icons.get('prev_frame', QIcon()), tr('menu.frame_back'), self)
-        frame_back_action.setShortcut(',')
-        frame_back_action.triggered.connect(lambda: self.handle_player_action("frame_back"))
+
+        frame_back_action = QAction(
+            self.icons.get("prev_frame", QIcon()), tr("menu.frame_back"), self
+        )
+        frame_back_action.setShortcut(",")
+        frame_back_action.triggered.connect(
+            lambda: self.handle_player_action("frame_back")
+        )
         tools_menu.addAction(frame_back_action)
 
-
-
         # [View] Menu
-        view_menu = menubar.addMenu(tr('menu.view'))
+        view_menu = menubar.addMenu(tr("menu.view"))
 
         # Language selection
-        lang_menu = view_menu.addMenu(tr('menu.language'))
+        lang_menu = view_menu.addMenu(tr("menu.language"))
         lang_group = QActionGroup(self)
         lang_group.setExclusive(True)
 
-        ru_action = QAction(tr('menu.language_ru'), self)
+        ru_action = QAction(tr("menu.language_ru"), self)
         ru_action.setCheckable(True)
-        ru_action.setChecked(tr.current_lang == 'ru')
-        ru_action.triggered.connect(lambda: self.change_language('ru'))
+        ru_action.setChecked(tr.current_lang == "ru")
+        ru_action.triggered.connect(lambda: self.change_language("ru"))
         lang_group.addAction(ru_action)
         lang_menu.addAction(ru_action)
 
-        en_action = QAction(tr('menu.language_en'), self)
+        en_action = QAction(tr("menu.language_en"), self)
         en_action.setCheckable(True)
-        en_action.setChecked(tr.current_lang == 'en')
-        en_action.triggered.connect(lambda: self.change_language('en'))
+        en_action.setChecked(tr.current_lang == "en")
+        en_action.triggered.connect(lambda: self.change_language("en"))
         lang_group.addAction(en_action)
         lang_menu.addAction(en_action)
 
         view_menu.addSeparator()
 
-        self.toggle_lib_action = QAction(tr('menu.show_library'), self)
+        self.toggle_lib_action = QAction(tr("menu.show_library"), self)
         self.toggle_lib_action.setCheckable(True)
-        self.toggle_lib_action.setChecked(self.browser_widget.isVisible() if hasattr(self, 'browser_widget') else True)
-        self.toggle_lib_action.setShortcut('Ctrl+L')
+        self.toggle_lib_action.setChecked(
+            self.browser_widget.isVisible() if hasattr(self, "browser_widget") else True
+        )
+        self.toggle_lib_action.setShortcut("Ctrl+L")
         self.toggle_lib_action.triggered.connect(self.toggle_library)
         view_menu.addAction(self.toggle_lib_action)
 
-        self.always_on_top_action = QAction(tr('menu.always_on_top'), self)
+        self.always_on_top_action = QAction(tr("menu.always_on_top"), self)
         self.always_on_top_action.setCheckable(True)
-        self.always_on_top_action.setShortcut('T')
+        self.always_on_top_action.setShortcut("T")
         self.always_on_top_action.triggered.connect(self.toggle_always_on_top)
         view_menu.addAction(self.always_on_top_action)
 
-        pip_action = QAction(self.icons.get('pip', QIcon()), tr('menu.pip_mode'), self)
-        pip_action.setShortcut('P')
+        pip_action = QAction(self.icons.get("pip", QIcon()), tr("menu.pip_mode"), self)
+        pip_action.setShortcut("P")
         pip_action.triggered.connect(self.toggle_pip_mode)
         view_menu.addAction(pip_action)
 
         view_menu.addSeparator()
 
         # Reload Styles
-        reload_styles_action = QAction(self.icons.get('menu_reload', QIcon()), tr('menu.reload_styles'), self)
-        reload_styles_action.setShortcut('F5')
+        reload_styles_action = QAction(
+            self.icons.get("menu_reload", QIcon()), tr("menu.reload_styles"), self
+        )
+        reload_styles_action.setShortcut("F5")
         reload_styles_action.triggered.connect(self.reload_styles)
         view_menu.addAction(reload_styles_action)
 
-        help_menu = menubar.addMenu(tr('menu.help'))
+        help_menu = menubar.addMenu(tr("menu.help"))
 
-        check_updates_action = QAction(self.icons.get('upload', QIcon()), tr('menu.check_updates'), self)
-        check_updates_action.triggered.connect(lambda: self._check_for_update(force=True))
+        check_updates_action = QAction(
+            self.icons.get("upload", QIcon()), tr("menu.check_updates"), self
+        )
+        check_updates_action.triggered.connect(
+            lambda: self._check_for_update(force=True)
+        )
         help_menu.addAction(check_updates_action)
 
         help_menu.addSeparator()
 
-        about_action = QAction(self.icons.get('menu_about', QIcon()), tr('menu.about'), self)
+        about_action = QAction(
+            self.icons.get("menu_about", QIcon()), tr("menu.about"), self
+        )
         about_action.triggered.connect(self.show_about)
         help_menu.addAction(about_action)
 
@@ -862,42 +1001,47 @@ class VideoCourseBrowser(QMainWindow):
         # If style update needs to be forced
         self.style().unpolish(self)
         self.style().polish(self)
-        self.info_label.setText(tr('status.styles_reloaded'))
+        self.info_label.setText(tr("status.styles_reloaded"))
 
     def moveEvent(self, event):
         """Propagate move event to video player to update overlay positions."""
         super().moveEvent(event)
-        if hasattr(self, 'video_player') and self.video_player:
+        if hasattr(self, "video_player") and self.video_player:
             # Direct call for immediate sync
             self.video_player._update_gallery_geometry()
             # Delayed call for robustness (Windows drag sync)
             QTimer.singleShot(0, self.video_player._update_gallery_geometry)
-        if hasattr(self, 'is_pip_mode') and self.is_pip_mode and getattr(self, 'pip_overlay', None):
+        if (
+            hasattr(self, "is_pip_mode")
+            and self.is_pip_mode
+            and getattr(self, "pip_overlay", None)
+        ):
             self.pip_overlay.setGeometry(self.geometry())
 
     def resizeEvent(self, event):
-        if self.is_pip_mode and getattr(self, 'pip_overlay', None):
+        if self.is_pip_mode and getattr(self, "pip_overlay", None):
             self.pip_overlay.setGeometry(self.geometry())
         super().resizeEvent(event)
 
     def close_db_connection(self):
         """Prepare for DB deletion: stop timers and release resources"""
         # Stop auto-save timer
-        if hasattr(self, 'progress_save_timer') and self.progress_save_timer.isActive():
+        if hasattr(self, "progress_save_timer") and self.progress_save_timer.isActive():
             self.progress_save_timer.stop()
-            
+
         # Stop player to release any file locks
         if self.video_player and self.video_player.player:
             self.video_player.player.stop()
-            
+
         # Close the DatabaseManager connection
         if self.db:
             self.db.close()
-            
+
         # Force garbage collection to close dangling DB connections
         import gc
+
         gc.collect()
-            
+
     def open_settings(self):
         dialog = SettingsDialog(self, self.config_file)
         if dialog.exec() == QDialog.DialogCode.Accepted:
@@ -909,15 +1053,17 @@ class VideoCourseBrowser(QMainWindow):
 
     def update_delegate_config(self):
         """Update delegate configuration with new settings."""
-        if hasattr(self, 'course_tree'):
+        if hasattr(self, "course_tree"):
             delegate = self.course_tree.itemDelegate()
             if isinstance(delegate, VideoItemDelegate):
-                delegate.config.update({
-                    'folder_row_height': self.folder_row_height,
-                    'video_row_height': self.video_row_height,
-                    'display_width': self.display_width,
-                    'display_height': self.display_height,
-                })
+                delegate.config.update(
+                    {
+                        "folder_row_height": self.folder_row_height,
+                        "video_row_height": self.video_row_height,
+                        "display_width": self.display_width,
+                        "display_height": self.display_height,
+                    }
+                )
                 self.course_tree.viewport().update()
 
     def show_about(self):
@@ -928,36 +1074,34 @@ class VideoCourseBrowser(QMainWindow):
         """Check for app updates. If force=True, always show result."""
         try:
             from update_app import check_for_update, get_current_version
+
             update_info = check_for_update()
 
             if update_info:
                 # Skip if user chose to skip this version (unless forced)
                 if not force:
                     skip = self.config.get_skip_version()
-                    if skip and skip == update_info['latest']:
+                    if skip and skip == update_info["latest"]:
                         return
 
                 from update_dialog import UpdateDialog
+
                 dialog = UpdateDialog(self, update_info)
                 dialog.exec()
 
                 if dialog.result_action == UpdateDialog.UPDATE_NOW:
                     self._do_app_update(update_info)
                 elif dialog.result_action == UpdateDialog.SKIP_VERSION:
-                    self.config.set_skip_version(update_info['latest'])
+                    self.config.set_skip_version(update_info["latest"])
             elif force:
                 current = get_current_version()
                 QMessageBox.information(
-                    self,
-                    tr('updater.title'),
-                    tr('updater.no_updates', version=current)
+                    self, tr("updater.title"), tr("updater.no_updates", version=current)
                 )
         except Exception as e:
             if force:
                 QMessageBox.warning(
-                    self,
-                    tr('updater.title'),
-                    tr('updater.error', error=str(e))
+                    self, tr("updater.title"), tr("updater.error", error=str(e))
                 )
 
     def _do_app_update(self, update_info: dict):
@@ -981,11 +1125,11 @@ class VideoCourseBrowser(QMainWindow):
         """Save playback progress."""
         # logging.debug(f"save_progress called for {file_path}")
         try:
-            # Calculate percent here or let database.py handle it. 
+            # Calculate percent here or let database.py handle it.
             # Current database.py save_progress expects (file_path, position_sec, duration_sec)
             # but I added another one later. Let me check my own code.
             # I added: save_progress(self, file_path, position, duration, percent, current_volume)
-            
+
             if not file_path or file_path != self.video_player.current_file:
                 return
 
@@ -998,7 +1142,7 @@ class VideoCourseBrowser(QMainWindow):
             except Exception as e:
                 logging.debug(f"error accessing properties: {e}")
                 return
-            
+
             if duration > 0:
                 percent = int((position / duration) * 100)
                 remaining = duration - position
@@ -1007,8 +1151,10 @@ class VideoCourseBrowser(QMainWindow):
                     position = duration
             else:
                 percent = 0
-            
-            self.db.save_progress(file_path, position, duration, percent, current_volume)
+
+            self.db.save_progress(
+                file_path, position, duration, percent, current_volume
+            )
         except Exception as e:
             logging.error(f"Error saving progress: {e}")
 
@@ -1032,9 +1178,11 @@ class VideoCourseBrowser(QMainWindow):
             if remaining < 1 and percent >= 99:
                 percent = 100
                 position = duration
-            
+
             try:
-                self.db.save_progress(file_path, position, duration, percent, current_volume)
+                self.db.save_progress(
+                    file_path, position, duration, percent, current_volume
+                )
             except Exception as e:
                 logging.error(f"Error saving progress to DB: {e}")
                 return
@@ -1043,7 +1191,9 @@ class VideoCourseBrowser(QMainWindow):
                 current_time = time.time()
                 # Update folder stats FIRST so they can calculate delta based on OLD item data
                 if force_stats_update or current_time - self._last_stats_update >= 30:
-                    self.update_folder_stats_display(file_path, position, duration, percent)
+                    self.update_folder_stats_display(
+                        file_path, position, duration, percent
+                    )
                     self._last_stats_update = current_time
 
                 # Then update the video item itself (which overwrites the stored data in the item)
@@ -1053,7 +1203,7 @@ class VideoCourseBrowser(QMainWindow):
 
     def update_folder_stats_display(self, file_path, position, duration, percent):
         """Update stats of parent folders for the currently playing video.
-        
+
         Uses absolute recalculation: walks all child video items of each parent
         folder and recomputes watched/total from scratch. This avoids delta-based
         issues where stored values and current values are near-identical.
@@ -1069,45 +1219,62 @@ class VideoCourseBrowser(QMainWindow):
                 watched_sum = 0.0
                 total_sum = 0.0
                 video_count = 0
-                
-                self._collect_folder_stats(parent, file_path, position, duration, percent,
-                                           watched_sum, total_sum, video_count)
+
+                self._collect_folder_stats(
+                    parent,
+                    file_path,
+                    position,
+                    duration,
+                    percent,
+                    watched_sum,
+                    total_sum,
+                    video_count,
+                )
                 stats = self._collect_folder_stats_result
-                
-                if stats['count'] > 0 and stats['total'] > 0:
-                    pct = int((stats['watched'] / stats['total']) * 100)
-                    duration_str = format_duration(stats['total'])
-                    watched_str = format_duration(stats['watched'])
+
+                if stats["count"] > 0 and stats["total"] > 0:
+                    pct = int((stats["watched"] / stats["total"]) * 100)
+                    duration_str = format_duration(stats["total"])
+                    watched_str = format_duration(stats["watched"])
                     stats_text = f"{stats['count']} videos \u2022 {watched_str} / {duration_str} ({pct}%)"
-                    
+
                     parent.setData(0, Qt.ItemDataRole.UserRole + 5, stats_text)
                     parent.setData(0, Qt.ItemDataRole.UserRole + 6, pct)
                     parent.setData(0, Qt.ItemDataRole.UserRole + 7, stats)
-                
+
                 parent = parent.parent()
-            
+
             self.course_tree.viewport().update()
         except Exception as e:
             logging.error(f"Error in update_folder_stats_display: {e}", exc_info=True)
-    
-    def _collect_folder_stats(self, folder_item, current_file, current_pos, current_dur, current_pct,
-                               _w=0, _t=0, _c=0):
+
+    def _collect_folder_stats(
+        self,
+        folder_item,
+        current_file,
+        current_pos,
+        current_dur,
+        current_pct,
+        _w=0,
+        _t=0,
+        _c=0,
+    ):
         """Recursively collect stats from all video children of a folder item."""
-        result = {'watched': 0.0, 'total': 0.0, 'count': 0}
-        
+        result = {"watched": 0.0, "total": 0.0, "count": 0}
+
         for i in range(folder_item.childCount()):
             child = folder_item.child(i)
             item_type = child.data(0, Qt.ItemDataRole.UserRole + 1)
-            
-            if item_type == 'video':
+
+            if item_type == "video":
                 child_path = child.data(0, Qt.ItemDataRole.UserRole)
                 data = child.data(0, Qt.ItemDataRole.UserRole + 2)
-                
+
                 if child_path == current_file:
                     # Use live values for the currently playing video
                     w = current_dur if current_pct >= 90 else current_pos
-                    result['watched'] += w
-                    result['total'] += current_dur
+                    result["watched"] += w
+                    result["total"] += current_dur
                 else:
                     # Use stored values for other videos
                     if isinstance(data, VideoItemData):
@@ -1120,21 +1287,23 @@ class VideoCourseBrowser(QMainWindow):
                         pos = data[7]
                     else:
                         continue
-                    
+
                     w = d if p >= 90 else pos
-                    result['watched'] += w
-                    result['total'] += d
-                
-                result['count'] += 1
-                
-            elif item_type == 'folder':
+                    result["watched"] += w
+                    result["total"] += d
+
+                result["count"] += 1
+
+            elif item_type == "folder":
                 # Recurse into subfolders
-                self._collect_folder_stats(child, current_file, current_pos, current_dur, current_pct)
+                self._collect_folder_stats(
+                    child, current_file, current_pos, current_dur, current_pct
+                )
                 sub = self._collect_folder_stats_result
-                result['watched'] += sub['watched']
-                result['total'] += sub['total']
-                result['count'] += sub['count']
-        
+                result["watched"] += sub["watched"]
+                result["total"] += sub["total"]
+                result["count"] += sub["count"]
+
         self._collect_folder_stats_result = result
 
     def update_video_item_display(self, file_path, percent, position):
@@ -1151,15 +1320,51 @@ class VideoCourseBrowser(QMainWindow):
                     else:
                         # Handle tuple (legacy)
                         if len(data) >= 11:
-                            filename, duration, resolution, file_size, _, thumbnail_path, thumbnails_list, _, marker_count, is_favorite, tags = data[:11]
+                            (
+                                filename,
+                                duration,
+                                resolution,
+                                file_size,
+                                _,
+                                thumbnail_path,
+                                thumbnails_list,
+                                _,
+                                marker_count,
+                                is_favorite,
+                                tags,
+                            ) = data[:11]
                         else:
-                            filename, duration, resolution, file_size, _, thumbnail_path, thumbnails_list, _, marker_count = data
+                            (
+                                filename,
+                                duration,
+                                resolution,
+                                file_size,
+                                _,
+                                thumbnail_path,
+                                thumbnails_list,
+                                _,
+                                marker_count,
+                            ) = data
                             is_favorite = 0
                             tags = []
-                            
-                        item.setData(0, Qt.ItemDataRole.UserRole + 2,
-                                   (filename, duration, resolution, file_size,
-                                    percent, thumbnail_path, thumbnails_list, position, marker_count, is_favorite, tags))
+
+                        item.setData(
+                            0,
+                            Qt.ItemDataRole.UserRole + 2,
+                            (
+                                filename,
+                                duration,
+                                resolution,
+                                file_size,
+                                percent,
+                                thumbnail_path,
+                                thumbnails_list,
+                                position,
+                                marker_count,
+                                is_favorite,
+                                tags,
+                            ),
+                        )
                 break
             iterator += 1
 
@@ -1169,8 +1374,10 @@ class VideoCourseBrowser(QMainWindow):
         """Update marker count and list in library when markers are added/removed."""
         new_count = self.db.get_marker_count(file_path)
         new_markers = self.db.get_markers(file_path)
-        
-        iterator = QTreeWidgetItemIterator(self.course_tree, QTreeWidgetItemIterator.IteratorFlag.All)
+
+        iterator = QTreeWidgetItemIterator(
+            self.course_tree, QTreeWidgetItemIterator.IteratorFlag.All
+        )
         while iterator.value():
             item = iterator.value()
             if item.data(0, Qt.ItemDataRole.UserRole) == file_path:
@@ -1187,13 +1394,17 @@ class VideoCourseBrowser(QMainWindow):
                             lst[8] = new_count
                             item.setData(0, Qt.ItemDataRole.UserRole + 2, tuple(lst))
                         else:
-                             # Try to upgrade to VideoItemData if possible, or just ignore
-                             pass
+                            # Try to upgrade to VideoItemData if possible, or just ignore
+                            pass
 
                 # If filter is active, re-apply it
-                if self.search_edit.text() or self.fav_filter_btn.isChecked() or self.tag_filter_btn.isChecked():
+                if (
+                    self.search_edit.text()
+                    or self.fav_filter_btn.isChecked()
+                    or self.tag_filter_btn.isChecked()
+                ):
                     self.filter_library(self.search_edit.text())
-                
+
                 # Force layout update to recalculate row height (triggers sizeHint)
                 self.course_tree.doItemsLayout()
                 break
@@ -1203,7 +1414,7 @@ class VideoCourseBrowser(QMainWindow):
         """Toggle marker visibility in library."""
         delegate = self.course_tree.itemDelegate()
         if isinstance(delegate, VideoItemDelegate):
-            delegate.config['show_markers'] = checked
+            delegate.config["show_markers"] = checked
             # Refresh layout to update row heights
             self.course_tree.doItemsLayout()
             self.course_tree.viewport().update()
@@ -1232,18 +1443,19 @@ class VideoCourseBrowser(QMainWindow):
         if not self.db:
             logging.error("Database manager not initialized")
             return False
-            
+
         try:
             # 1. Clear data via SQL (safe with open connections)
             if not self.db.clear_all_metadata():
                 return False
-            
+
             # 2. Vacuum database file
             self.db.vacuum()
-            
+
             # 3. Clear thumbnails
             if self.thumbnails_dir.exists():
                 import shutil
+
                 try:
                     # Try to remove all subfolders and files
                     for item in self.thumbnails_dir.iterdir():
@@ -1253,18 +1465,18 @@ class VideoCourseBrowser(QMainWindow):
                             else:
                                 item.unlink()
                         except:
-                            pass # Skip if file is busy
+                            pass  # Skip if file is busy
                 except Exception as e:
                     logging.warning(f"Warning clearing thumbnails: {e}")
-                
+
             # 4. Unload current video from player
-            if hasattr(self, 'video_player'):
+            if hasattr(self, "video_player"):
                 self.video_player.unload_video()
-                
+
             # 5. Reload interface (will be empty)
             self.load_courses()
             return True
-            
+
         except Exception as e:
             logging.error(f"Error clearing metadata: {e}")
             return False
@@ -1273,40 +1485,43 @@ class VideoCourseBrowser(QMainWindow):
         """Find a suitable cover image for the folder."""
         if not folder_path or not Path(folder_path).exists():
             return None
-            
+
         try:
             # Priority 1: Specific names
-            priority_names = ['cover', 'folder', 'poster', 'fanart']
+            priority_names = ["cover", "folder", "poster", "fanart"]
             for name in priority_names:
                 for ext in self.folder_image_extensions:
                     p = folder_path / f"{name}{ext}"
                     if p.exists():
                         return str(p)
-            
+
             # Priority 2: Any image file
             # This can be slow for large folders, so limit to first few
             count = 0
             for item in folder_path.iterdir():
-                if item.is_file() and item.suffix.lower() in self.folder_image_extensions:
-                    if 'cover' in item.name.lower() or 'folder' in item.name.lower():
-                         return str(item)
-                    # Return first found if loose mode logic is desired? 
+                if (
+                    item.is_file()
+                    and item.suffix.lower() in self.folder_image_extensions
+                ):
+                    if "cover" in item.name.lower() or "folder" in item.name.lower():
+                        return str(item)
+                    # Return first found if loose mode logic is desired?
                     # The user said "if there is some picture take it"
                     return str(item)
-                
+
                 count += 1
-                if count > 50: # Don't scan forever
+                if count > 50:  # Don't scan forever
                     break
         except Exception as e:
             logging.error(f"Error scanning for folder image: {e}")
-            
+
         return None
 
     def get_saved_position(self, file_path):
         """Return (last_position, volume) for file."""
         progress = self.db.get_video_progress(file_path)
         if progress:
-            return progress['last_position'], progress['volume']
+            return progress["last_position"], progress["volume"]
         return 0, 100
 
     def on_player_pause_changed(self, is_paused):
@@ -1315,20 +1530,20 @@ class VideoCourseBrowser(QMainWindow):
             delegate.is_paused = is_paused
             self.course_tree.viewport().update()
         # Sync taskbar thumbnail play/pause button icon
-        if hasattr(self, 'thumbnail_buttons'):
+        if hasattr(self, "thumbnail_buttons"):
             self.thumbnail_buttons.update_play_state(not is_paused)
 
     def toggle_library(self):
-        if not hasattr(self, 'browser_widget'):
+        if not hasattr(self, "browser_widget"):
             return
-        
+
         if self.browser_widget.isVisible():
             self._saved_splitter_state_manual = self.splitter.saveState()
             self.browser_widget.hide()
             self.splitter.setSizes([0, self.width()])
         else:
             self.browser_widget.show()
-            if hasattr(self, '_saved_splitter_state_manual'):
+            if hasattr(self, "_saved_splitter_state_manual"):
                 self.splitter.restoreState(self._saved_splitter_state_manual)
             else:
                 # Default roughly 30/70 if no state saved
@@ -1338,7 +1553,7 @@ class VideoCourseBrowser(QMainWindow):
                 else:
                     self.splitter.setSizes([400, 1000])
 
-        if hasattr(self, 'toggle_lib_action'):
+        if hasattr(self, "toggle_lib_action"):
             self.toggle_lib_action.setChecked(self.browser_widget.isVisible())
 
     def toggle_pip_mode(self):
@@ -1352,11 +1567,11 @@ class VideoCourseBrowser(QMainWindow):
         """Enter Picture-in-Picture mode."""
         if self.is_pip_mode:
             return
-            
+
         logging.debug("Entering single-window PiP mode")
         self.is_pip_mode = True
         self.normal_geometry = self.saveGeometry()
-        
+
         # Create overlay
         if not self.pip_overlay:
             # Create it as a top-level window so it's above the native video player
@@ -1364,47 +1579,47 @@ class VideoCourseBrowser(QMainWindow):
         self.pip_overlay.setGeometry(self.geometry())
         self.pip_overlay.show()
         self.pip_overlay.raise_()
-        
+
         # Hide UI elements
         self.browser_widget.hide()
         self.menuBar().hide()
         self.statusBar().hide()
         self.video_player.set_controls_visible(False)
-        
+
         # Lower minimum sizes for PiP
         self.video_player.setMinimumWidth(0)
         self.video_player.video_widget.setMinimumHeight(0)
         self.setMinimumSize(100, 100)
-        
+
         # Remove margins to allow edge detection at the very boundaries
         if self.centralWidget() and self.centralWidget().layout():
             self.centralWidget().layout().setContentsMargins(0, 0, 0, 0)
-        
+
         # Install event filter to capture events from ALL PiP area containers and children
         self.video_player.installEventFilter(self)
         self.splitter.installEventFilter(self)
         self.centralWidget().installEventFilter(self)
-        
+
         # Recursive mouse tracking and event filtering for video player children
         for widget in self.video_player.findChildren(QWidget):
             widget.setMouseTracking(True)
             widget.installEventFilter(self)
-        
+
         self.setMouseTracking(True)
         self.video_player.setMouseTracking(True)
         self.splitter.setMouseTracking(True)
         self.centralWidget().setMouseTracking(True)
-        
+
         # Window flags
         self.setWindowFlags(
-            Qt.WindowType.Window |
-            Qt.WindowType.FramelessWindowHint |
-            Qt.WindowType.WindowStaysOnTopHint
+            Qt.WindowType.Window
+            | Qt.WindowType.FramelessWindowHint
+            | Qt.WindowType.WindowStaysOnTopHint
         )
-        
+
         # Determine target PiP size based on video aspect ratio
         ratio = self.video_player.get_video_aspect_ratio()
-        
+
         # Apply PiP geometry
         if self.pip_geometry:
             self.restoreGeometry(self.pip_geometry)
@@ -1418,12 +1633,9 @@ class VideoCourseBrowser(QMainWindow):
             pip_w = 480
             pip_h = int(pip_w / ratio)
             self.setGeometry(
-                screen.width() - pip_w - 20,
-                screen.height() - pip_h - 20,
-                pip_w,
-                pip_h
+                screen.width() - pip_w - 20, screen.height() - pip_h - 20, pip_w, pip_h
             )
-            
+
         self.show()
 
         # Flags change might require re-initializing taskbar buttons
@@ -1433,29 +1645,29 @@ class VideoCourseBrowser(QMainWindow):
         """Exit Picture-in-Picture mode."""
         if not self.is_pip_mode:
             return
-            
+
         logging.debug("Exiting single-window PiP mode")
         self.pip_geometry = self.saveGeometry()
         self.is_pip_mode = False
-        
+
         # Restore window flags
         self.setWindowFlags(Qt.WindowType.Window)
-        
+
         # Show UI elements
         self.browser_widget.show()
         self.menuBar().show()
         self.statusBar().show()
         self.video_player.set_controls_visible(True)
-        
+
         # Restore minimum sizes for normal mode
         self.video_player.setMinimumWidth(400)
         self.video_player.video_widget.setMinimumHeight(300)
         self.setMinimumSize(800, 600)
-        
+
         # Restore margins
         if self.centralWidget() and self.centralWidget().layout():
             self.centralWidget().layout().setContentsMargins(2, 2, 2, 2)
-        
+
         # Remove event filters
         self.video_player.removeEventFilter(self)
         self.splitter.removeEventFilter(self)
@@ -1464,31 +1676,32 @@ class VideoCourseBrowser(QMainWindow):
         if self.video_player:
             from mpv_handler import MPVVideoWidget
             from player import ClickableSlider
+
             for widget in self.video_player.findChildren(QWidget):
                 widget.removeEventFilter(self)
                 if not isinstance(widget, (MPVVideoWidget, ClickableSlider)):
                     widget.setMouseTracking(False)
-            
+
         self.setMouseTracking(False)
         self.video_player.setMouseTracking(False)
         self.splitter.setMouseTracking(False)
         self.centralWidget().setMouseTracking(False)
         self.unsetCursor()
         self.current_hover_edge = None
-        
+
         if self.pip_overlay:
             self.pip_overlay.hide()
             self.pip_overlay.deleteLater()
             self.pip_overlay = None
-        
+
         # Restore normal geometry
         if self.normal_geometry:
             self.restoreGeometry(self.normal_geometry)
-            
+
         self.show()
         self.raise_()
         self.activateWindow()
-        
+
         # Flags change might require re-initializing taskbar buttons
         QTimer.singleShot(500, self._refresh_taskbar_buttons)
 
@@ -1499,47 +1712,66 @@ class VideoCourseBrowser(QMainWindow):
             self.taskbar_progress.set_hwnd(hwnd)
             if self.taskbar_progress.taskbar:
                 self.thumbnail_buttons = TaskbarThumbnailButtons(
-                    self.taskbar_progress.taskbar,
-                    hwnd,
-                    RESOURCES_DIR / 'icons'
+                    self.taskbar_progress.taskbar, hwnd, RESOURCES_DIR / "icons"
                 )
                 self.thumbnail_buttons.add_buttons()
-                
+
                 # Restore play/pause state
-                is_playing = not self.video_player.player.pause if self.video_player and self.video_player.player else False
+                is_playing = (
+                    not self.video_player.player.pause
+                    if self.video_player and self.video_player.player
+                    else False
+                )
                 self.thumbnail_buttons.update_play_state(is_playing)
-                
+
                 # Restore progress bar state and color
                 if self.video_player and self.video_player.current_file:
                     try:
                         total = self.video_player.player.duration or 0
                         current = self.video_player.player.time_pos or 0
                         if total > 0:
-                            self.taskbar_progress.update_for_playback(is_playing, current, total)
+                            self.taskbar_progress.update_for_playback(
+                                is_playing, current, total
+                            )
                     except:
                         pass
-
 
     def load_icons(self):
         # List of icons to load for the browser
         icon_names = [
-            "menu_scan", "menu_settings", "menu_reload", "menu_about",
-            "context_open_folder", "context_mark_read", "context_mark_unread",
-            "context_play", "app_icon", "screenshot", "next_frame", "prev_frame",
-            "volume_hight", "add", "context_favorite_on", "context_favorite_off", "context_tags",
-            "show_markers", "pip"
+            "menu_scan",
+            "menu_settings",
+            "menu_reload",
+            "menu_about",
+            "context_open_folder",
+            "context_mark_read",
+            "context_mark_unread",
+            "context_play",
+            "app_icon",
+            "screenshot",
+            "next_frame",
+            "prev_frame",
+            "volume_hight",
+            "add",
+            "context_favorite_on",
+            "context_favorite_off",
+            "context_tags",
+            "show_markers",
+            "pip",
         ]
         self.icons = load_icons_dict(icon_names)
 
         # Set window icon
-        if 'app_icon' in self.icons:
-            self.setWindowIcon(self.icons['app_icon'])
+        if "app_icon" in self.icons:
+            self.setWindowIcon(self.icons["app_icon"])
 
         self.folder_icon = self.style().standardIcon(QStyle.StandardPixmap.SP_DirIcon)
         self.video_icon = self.style().standardIcon(QStyle.StandardPixmap.SP_MediaPlay)
 
         if self.video_icon.isNull():
-            self.video_icon = self.style().standardIcon(QStyle.StandardPixmap.SP_FileIcon)
+            self.video_icon = self.style().standardIcon(
+                QStyle.StandardPixmap.SP_FileIcon
+            )
 
     def show_context_menu(self, pos):
         item = self.course_tree.itemAt(pos)
@@ -1549,125 +1781,180 @@ class VideoCourseBrowser(QMainWindow):
         menu = QMenu()
         item_type = item.data(0, Qt.ItemDataRole.UserRole + 1)
 
-        if item_type == 'video':
+        if item_type == "video":
             file_path = item.data(0, Qt.ItemDataRole.UserRole)
             saved_pos, _ = self.get_saved_position(file_path)
 
             if saved_pos > 0:
-                resume_action = menu.addAction(self.icons.get('context_play', QIcon()), tr('context_menu.resume', time=format_time(saved_pos)))
-                resume_action.triggered.connect(lambda: self.play_video_in_player(item, resume=True))
+                resume_action = menu.addAction(
+                    self.icons.get("context_play", QIcon()),
+                    tr("context_menu.resume", time=format_time(saved_pos)),
+                )
+                resume_action.triggered.connect(
+                    lambda: self.play_video_in_player(item, resume=True)
+                )
 
-                restart_action = menu.addAction(self.icons.get('context_play', QIcon()), tr('context_menu.restart'))
-                restart_action.triggered.connect(lambda: self.play_video_in_player(item, resume=False))
+                restart_action = menu.addAction(
+                    self.icons.get("context_play", QIcon()), tr("context_menu.restart")
+                )
+                restart_action.triggered.connect(
+                    lambda: self.play_video_in_player(item, resume=False)
+                )
             else:
-                play_action = menu.addAction(self.icons.get('context_play', QIcon()), tr('context_menu.play'))
+                play_action = menu.addAction(
+                    self.icons.get("context_play", QIcon()), tr("context_menu.play")
+                )
                 play_action.triggered.connect(lambda: self.play_video_in_player(item))
 
-            play_external_action = menu.addAction(self.icons.get('context_play', QIcon()), tr('context_menu.play_external'))
+            play_external_action = menu.addAction(
+                self.icons.get("context_play", QIcon()),
+                tr("context_menu.play_external"),
+            )
             play_external_action.triggered.connect(lambda: self.play_video(item))
 
             menu.addSeparator()
 
             # ADDED: Audio track selection submenu
-            audio_menu = menu.addMenu(self.icons.get('volume_hight', QIcon()), tr('player.audio_tracks'))
+            audio_menu = menu.addMenu(
+                self.icons.get("volume_hight", QIcon()), tr("player.audio_tracks")
+            )
             self.populate_audio_submenu(audio_menu, file_path, item)
 
             menu.addSeparator()
 
-            mark_watched_action = menu.addAction(self.icons.get('context_mark_read', QIcon()), tr('context_menu.mark_watched'))
+            mark_watched_action = menu.addAction(
+                self.icons.get("context_mark_read", QIcon()),
+                tr("context_menu.mark_watched"),
+            )
             mark_watched_action.triggered.connect(lambda: self.mark_as_watched(item))
 
-            reset_action = menu.addAction(self.icons.get('context_mark_unread', QIcon()), tr('context_menu.reset_progress'))
+            reset_action = menu.addAction(
+                self.icons.get("context_mark_unread", QIcon()),
+                tr("context_menu.reset_progress"),
+            )
             reset_action.triggered.connect(lambda: self.reset_video_progress(item))
-            
+
             menu.addSeparator()
 
             # Favorites & Tags
             is_fav = False
             data = item.data(0, Qt.ItemDataRole.UserRole + 2)
-            
+
             if isinstance(data, VideoItemData):
                 is_fav = data.is_favorite
             elif data and len(data) >= 10:
-                is_fav = bool(data[9]) # is_favorite at index 9
+                is_fav = bool(data[9])  # is_favorite at index 9
 
-            fav_text = tr('context_menu.remove_favorite') if is_fav else tr('context_menu.add_favorite')
-            fav_icon = self.icons.get('context_favorite_off') if is_fav else self.icons.get('context_favorite_on')
-            
+            fav_text = (
+                tr("context_menu.remove_favorite")
+                if is_fav
+                else tr("context_menu.add_favorite")
+            )
+            fav_icon = (
+                self.icons.get("context_favorite_off")
+                if is_fav
+                else self.icons.get("context_favorite_on")
+            )
+
             fav_action = menu.addAction(fav_icon, fav_text)
             fav_action.triggered.connect(lambda: self.toggle_favorite(item))
 
-            tags_menu = menu.addMenu(self.icons.get('context_tags', QIcon()), tr('context_menu.tags') or "Tags")
-            
+            tags_menu = menu.addMenu(
+                self.icons.get("context_tags", QIcon()),
+                tr("context_menu.tags") or "Tags",
+            )
+
             # Fetch all available tags
             all_tags = self.db.get_tags()
-            
+
             # Get current video tags
             current_tag_ids = set()
             if isinstance(data, VideoItemData):
                 current_tags = data.tags
-                current_tag_ids = {t['id'] for t in current_tags}
+                current_tag_ids = {t["id"] for t in current_tags}
             elif data and len(data) >= 11:
                 current_tags = data[10]
-                current_tag_ids = {t['id'] for t in current_tags}
-            
+                current_tag_ids = {t["id"] for t in current_tags}
+
             for tag in all_tags:
-                tag_action = tags_menu.addAction(tag['name'])
+                tag_action = tags_menu.addAction(tag["name"])
                 tag_action.setCheckable(True)
-                tag_action.setChecked(tag['id'] in current_tag_ids)
-                
+                tag_action.setChecked(tag["id"] in current_tag_ids)
+
                 # Add color icon
-                color_hex = tag['color'] if tag['color'] else '#3498db'
+                color_hex = tag["color"] if tag["color"] else "#3498db"
                 pixmap = QPixmap(16, 16)
                 pixmap.fill(Qt.GlobalColor.transparent)
-                
+
                 painter = QPainter(pixmap)
                 painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-                
+
                 # Draw colored circle/rounded rect background
                 painter.setBrush(QColor(color_hex))
                 painter.setPen(Qt.PenStyle.NoPen)
                 painter.drawRoundedRect(0, 0, 16, 16, 3, 3)
-                
+
                 # Draw dot if checked
-                if tag['id'] in current_tag_ids:
-                    painter.setBrush(QColor('white'))
+                if tag["id"] in current_tag_ids:
+                    painter.setBrush(QColor("white"))
                     painter.drawEllipse(5, 5, 6, 6)
-                
+
                 painter.end()
-                
+
                 tag_action.setIcon(QIcon(pixmap))
-                
-                tag_action.triggered.connect(lambda checked, t=tag: self.toggle_video_tag_from_menu(item, t, checked))
-                
+
+                tag_action.triggered.connect(
+                    lambda checked, t=tag: self.toggle_video_tag_from_menu(
+                        item, t, checked
+                    )
+                )
+
             tags_menu.addSeparator()
 
-            tag_action = tags_menu.addAction(tr('context_menu.edit_tags') or "Edit Tags...")
+            tag_action = tags_menu.addAction(
+                tr("context_menu.edit_tags") or "Edit Tags..."
+            )
             tag_action.triggered.connect(lambda: self.edit_tags(item))
 
             menu.addSeparator()
-            open_dir_action = menu.addAction(self.icons.get('context_open_folder', QIcon()), tr('context_menu.open_directory'))
+            open_dir_action = menu.addAction(
+                self.icons.get("context_open_folder", QIcon()),
+                tr("context_menu.open_directory"),
+            )
             open_dir_action.triggered.connect(lambda: self.open_video_directory(item))
 
-        elif item_type == 'folder':
-            open_action = menu.addAction(self.icons.get('context_open_folder', QIcon()), tr('context_menu.open_folder'))
+        elif item_type == "folder":
+            open_action = menu.addAction(
+                self.icons.get("context_open_folder", QIcon()),
+                tr("context_menu.open_folder"),
+            )
             open_action.triggered.connect(lambda: self.open_folder(item))
 
             menu.addSeparator()
 
-            stats_action = menu.addAction(self.icons.get('menu_about', QIcon()), tr('context_menu.folder_stats'))
+            stats_action = menu.addAction(
+                self.icons.get("menu_about", QIcon()), tr("context_menu.folder_stats")
+            )
             stats_action.triggered.connect(lambda: self.show_folder_stats(item))
 
             menu.addSeparator()
 
-            play_all_action = menu.addAction(self.icons.get('context_play', QIcon()), tr('context_menu.play_all'))
+            play_all_action = menu.addAction(
+                self.icons.get("context_play", QIcon()), tr("context_menu.play_all")
+            )
 
             play_all_action.triggered.connect(lambda: self.play_folder(item))
 
-            mark_all_action = menu.addAction(self.icons.get('context_mark_read', QIcon()), tr('context_menu.mark_all_watched'))
+            mark_all_action = menu.addAction(
+                self.icons.get("context_mark_read", QIcon()),
+                tr("context_menu.mark_all_watched"),
+            )
             mark_all_action.triggered.connect(lambda: self.mark_folder_as_watched(item))
 
-            reset_all_action = menu.addAction(self.icons.get('context_mark_unread', QIcon()), tr('context_menu.reset_all_progress'))
+            reset_all_action = menu.addAction(
+                self.icons.get("context_mark_unread", QIcon()),
+                tr("context_menu.reset_all_progress"),
+            )
             reset_all_action.triggered.connect(lambda: self.reset_folder_progress(item))
 
         menu.exec(self.course_tree.viewport().mapToGlobal(pos))
@@ -1675,16 +1962,20 @@ class VideoCourseBrowser(QMainWindow):
     def show_folder_stats(self, item):
         """Shows statistics for the selected folder/course."""
         folder_path = item.data(0, Qt.ItemDataRole.UserRole)
-        
+
         # We allow showing stats even if the folder doesn't exist on disk,
         # as long as it exists in the database.
-        
+
         stats = self.db.get_folder_statistics(folder_path)
         if stats:
             dialog = FolderStatsDialog(stats, item.text(0), self)
             dialog.exec()
         else:
-            QMessageBox.warning(self, tr('status.error'), tr('error.folder_not_found', folder=folder_path))
+            QMessageBox.warning(
+                self,
+                tr("status.error"),
+                tr("error.folder_not_found", folder=folder_path),
+            )
 
     # ADDED: Context menu audio track methods
     def populate_audio_submenu(self, menu, filepath, item):
@@ -1694,28 +1985,28 @@ class VideoCourseBrowser(QMainWindow):
             if not video_info:
                 return
 
-            video_id = video_info['id']
+            video_id = video_info["id"]
             tracks, selected_audio_id = self.db.load_audio_tracks(filepath)
 
             if not tracks:
-                menu.addAction(tr('player.no_tracks')).setEnabled(False)
+                menu.addAction(tr("player.no_tracks")).setEnabled(False)
                 return
 
             action_group = QActionGroup(self)
             action_group.setExclusive(True)
 
             for track in tracks:
-                track_id = track['id']
-                track_type = track['track_type']
-                stream_index = track['stream_index']
-                audio_file_name = track['audio_file_name']
-                language = track['language']
-                title = track['title']
-                codec = track['codec']
-                channels = track['channels']
-                is_default = track['is_default']
+                track_id = track["id"]
+                track_type = track["track_type"]
+                stream_index = track["stream_index"]
+                audio_file_name = track["audio_file_name"]
+                language = track["language"]
+                title = track["title"]
+                codec = track["codec"]
+                channels = track["channels"]
+                is_default = track["is_default"]
 
-                if track_type == 'embedded':
+                if track_type == "embedded":
                     label = f"#{stream_index}"
                     if language:
                         label += f" [{language}]"
@@ -1727,13 +2018,14 @@ class VideoCourseBrowser(QMainWindow):
                 if is_default:
                     label += f" [{tr('player.default')}]"
 
-                action = menu.addAction(self.icons.get('volume_hight', QIcon()), label)
+                action = menu.addAction(self.icons.get("volume_hight", QIcon()), label)
                 action.setCheckable(True)
                 action.setChecked(track_id == selected_audio_id)
                 action.setActionGroup(action_group)
                 action.triggered.connect(
-                    lambda checked, tid=track_id, fp=filepath:
-                    self.set_audio_track_for_file(tid, fp, item)
+                    lambda checked,
+                    tid=track_id,
+                    fp=filepath: self.set_audio_track_for_file(tid, fp, item)
                 )
 
         except Exception as e:
@@ -1765,14 +2057,14 @@ class VideoCourseBrowser(QMainWindow):
             logging.debug(f"file_path: {file_path}")
             data = item.data(0, Qt.ItemDataRole.UserRole + 2)
             logging.debug(f"current data type: {type(data)}")
-            
+
             # Determine current state
             is_fav = False
             if isinstance(data, VideoItemData):
                 is_fav = data.is_favorite
             elif data and len(data) >= 10:
                 is_fav = bool(data[9])
-                
+
             new_state = not is_fav
             logging.debug(f"Toggling favorite to: {new_state}")
 
@@ -1787,19 +2079,23 @@ class VideoCourseBrowser(QMainWindow):
                     while len(lst) < 10:
                         lst.append(0)
                     if len(lst) == 10:
-                        lst.append([]) # tags
-                    
-                    lst[9] = 1 if new_state else 0 # Toggle
+                        lst.append([])  # tags
+
+                    lst[9] = 1 if new_state else 0  # Toggle
                     item.setData(0, Qt.ItemDataRole.UserRole + 2, tuple(lst))
                 else:
-                    logging.debug("Data format not recognized or incomplete, reloading courses")
-                    self.load_courses() # Fallback
+                    logging.debug(
+                        "Data format not recognized or incomplete, reloading courses"
+                    )
+                    self.load_courses()  # Fallback
                 self.course_tree.viewport().update()
             else:
                 logging.error("Failed to toggle favorite in DB")
         except Exception as e:
             logging.error(f"Error in toggle_favorite: {e}", exc_info=True)
-            QMessageBox.critical(self, tr('error.title'), f"Error toggling favorite: {e}")
+            QMessageBox.critical(
+                self, tr("error.title"), f"Error toggling favorite: {e}"
+            )
 
     def edit_tags(self, item):
         """Open tags dialog."""
@@ -1809,7 +2105,7 @@ class VideoCourseBrowser(QMainWindow):
             # We need to refresh the tags on the item
             new_tags = self.db.get_video_tags(file_path)
             data = item.data(0, Qt.ItemDataRole.UserRole + 2)
-            
+
             if isinstance(data, VideoItemData):
                 data.tags = new_tags
                 item.setData(0, Qt.ItemDataRole.UserRole + 2, data)
@@ -1825,55 +2121,54 @@ class VideoCourseBrowser(QMainWindow):
     def toggle_video_tag_from_menu(self, item, tag, checked):
         """Toggle a tag on a video from the context menu."""
         file_path = item.data(0, Qt.ItemDataRole.UserRole)
-        
+
         if checked:
-            success = self.db.add_tag_to_video(file_path, tag['id'])
+            success = self.db.add_tag_to_video(file_path, tag["id"])
         else:
-            success = self.db.remove_tag_from_video(file_path, tag['id'])
-            
+            success = self.db.remove_tag_from_video(file_path, tag["id"])
+
         if success:
             # Update item data
             data = item.data(0, Qt.ItemDataRole.UserRole + 2)
-            
+
             if isinstance(data, VideoItemData):
-                current_tags = list(data.tags) # Copy
+                current_tags = list(data.tags)  # Copy
                 if checked:
-                    if not any(t['id'] == tag['id'] for t in current_tags):
+                    if not any(t["id"] == tag["id"] for t in current_tags):
                         current_tags.append(tag)
                 else:
-                    current_tags = [t for t in current_tags if t['id'] != tag['id']]
-                
+                    current_tags = [t for t in current_tags if t["id"] != tag["id"]]
+
                 data.tags = current_tags
                 # Trigger update
-                item.setData(0, Qt.ItemDataRole.UserRole + 2, data) 
+                item.setData(0, Qt.ItemDataRole.UserRole + 2, data)
                 self.course_tree.viewport().update()
-                
+
             elif isinstance(data, (tuple, list)) and len(data) >= 11:
                 lst = list(data)
-                current_tags = list(lst[10]) # Copy the list of tags
-                
+                current_tags = list(lst[10])  # Copy the list of tags
+
                 if checked:
                     # Add if not exists (shouldn't exist if checked was false before)
-                    if not any(t['id'] == tag['id'] for t in current_tags):
+                    if not any(t["id"] == tag["id"] for t in current_tags):
                         current_tags.append(tag)
                 else:
                     # Remove
-                    current_tags = [t for t in current_tags if t['id'] != tag['id']]
-                
+                    current_tags = [t for t in current_tags if t["id"] != tag["id"]]
+
                 # Update list in tuple
                 lst[10] = current_tags
                 item.setData(0, Qt.ItemDataRole.UserRole + 2, tuple(lst))
                 self.course_tree.viewport().update()
             else:
-                self.load_courses() # Fallback
-
+                self.load_courses()  # Fallback
 
     def item_double_clicked(self, item):
         item_type = item.data(0, Qt.ItemDataRole.UserRole + 1)
 
-        if item_type == 'video':
+        if item_type == "video":
             self.play_video_in_player(item, resume=True)
-        elif item_type == 'folder':
+        elif item_type == "folder":
             item.setExpanded(not item.isExpanded())
 
     def play_next_video(self):
@@ -1892,19 +2187,21 @@ class VideoCourseBrowser(QMainWindow):
         if self.video_player.player and not should_play:
             should_play = not self.video_player.player.pause
 
-        iterator = QTreeWidgetItemIterator(self.course_tree, QTreeWidgetItemIterator.IteratorFlag.All)
+        iterator = QTreeWidgetItemIterator(
+            self.course_tree, QTreeWidgetItemIterator.IteratorFlag.All
+        )
         # Advance to current
         while iterator.value():
             item = iterator.value()
             iterator += 1
             if item == current_item:
                 break
-        
+
         # Continue to find next video
         while iterator.value():
             item = iterator.value()
             item_type = item.data(0, Qt.ItemDataRole.UserRole + 1)
-            if item_type == 'video':
+            if item_type == "video":
                 self.play_video_in_player(item, resume=True, auto_play=should_play)
                 self.course_tree.scrollToItem(item)
                 self.course_tree.setCurrentItem(item)
@@ -1926,20 +2223,24 @@ class VideoCourseBrowser(QMainWindow):
         if self.video_player.player and not should_play:
             should_play = not self.video_player.player.pause
 
-        iterator = QTreeWidgetItemIterator(self.course_tree, QTreeWidgetItemIterator.IteratorFlag.All)
+        iterator = QTreeWidgetItemIterator(
+            self.course_tree, QTreeWidgetItemIterator.IteratorFlag.All
+        )
         last_video_item = None
 
         while iterator.value():
             item = iterator.value()
             if item == current_item:
                 if last_video_item:
-                    self.play_video_in_player(last_video_item, resume=True, auto_play=should_play)
+                    self.play_video_in_player(
+                        last_video_item, resume=True, auto_play=should_play
+                    )
                     self.course_tree.scrollToItem(last_video_item)
                     self.course_tree.setCurrentItem(last_video_item)
                 return
-            
+
             item_type = item.data(0, Qt.ItemDataRole.UserRole + 1)
-            if item_type == 'video':
+            if item_type == "video":
                 last_video_item = item
             iterator += 1
 
@@ -1952,25 +2253,27 @@ class VideoCourseBrowser(QMainWindow):
 
         # Check for previous video
         has_prev = False
-        iterator = QTreeWidgetItemIterator(self.course_tree, QTreeWidgetItemIterator.IteratorFlag.All)
+        iterator = QTreeWidgetItemIterator(
+            self.course_tree, QTreeWidgetItemIterator.IteratorFlag.All
+        )
         while iterator.value():
             item = iterator.value()
             if item == current_item:
                 break
-            if item.data(0, Qt.ItemDataRole.UserRole + 1) == 'video':
+            if item.data(0, Qt.ItemDataRole.UserRole + 1) == "video":
                 has_prev = True
             iterator += 1
-        
+
         # Check for next video
         has_next = False
         if iterator.value() == current_item:
             iterator += 1
             while iterator.value():
-                if iterator.value().data(0, Qt.ItemDataRole.UserRole + 1) == 'video':
+                if iterator.value().data(0, Qt.ItemDataRole.UserRole + 1) == "video":
                     has_next = True
                     break
                 iterator += 1
-        
+
         self.video_player.prev_video_btn.setEnabled(has_prev)
         self.video_player.next_video_btn.setEnabled(has_next)
 
@@ -1978,17 +2281,17 @@ class VideoCourseBrowser(QMainWindow):
         """Play video starting at specific position (from marker click)."""
         if not file_path or not Path(file_path).exists():
             return
-            
+
         # Find item to select it in the tree
         item = self.find_video_item(file_path)
         if item:
             self.course_tree.setCurrentItem(item)
             self.course_tree.scrollToItem(item)
             self.update_window_title_for_item(item)
-            
+
         # Load video
         self.video_player.load_video(file_path, position, auto_play=True)
-        
+
         # Update delegate state
         delegate = self.course_tree.itemDelegate()
         if isinstance(delegate, VideoItemDelegate):
@@ -1998,13 +2301,13 @@ class VideoCourseBrowser(QMainWindow):
 
     def play_video_in_player(self, item, resume=False, auto_play=True):
         logging.debug("play_video_in_player called")
-        
+
         # Save progress and update folder stats for the PREVIOUS video before switching
         if self.video_player.current_file:
             self.periodic_progress_save(force_stats_update=True)
         file_path = item.data(0, Qt.ItemDataRole.UserRole)
         logging.debug(f"file_path: {file_path}")
-        
+
         self.last_played_path = file_path
 
         if file_path and Path(file_path).exists():
@@ -2013,15 +2316,17 @@ class VideoCourseBrowser(QMainWindow):
             if resume:
                 saved_position, saved_volume = self.get_saved_position(file_path)
 
-            self.video_player.load_video(file_path, saved_position, volume=saved_volume, auto_play=auto_play)
+            self.video_player.load_video(
+                file_path, saved_position, volume=saved_volume, auto_play=auto_play
+            )
             # Update delegate
             delegate = self.course_tree.itemDelegate()
             if isinstance(delegate, VideoItemDelegate):
                 delegate.playing_path = file_path
                 delegate.is_paused = not auto_play
                 self.course_tree.viewport().update()
-                
-            #self.video_player.restore_audio_track(file_path)
+
+            # self.video_player.restore_audio_track(file_path)
             self.update_window_title_for_item(item)
             self.update_navigation_buttons(item)
 
@@ -2029,45 +2334,46 @@ class VideoCourseBrowser(QMainWindow):
         """Play video starting at specific marker position."""
         # Check if file exists
         if not Path(file_path).exists():
-             QMessageBox.warning(self, tr("app.error"), tr("player.file_not_found"))
-             return
+            QMessageBox.warning(self, tr("app.error"), tr("player.file_not_found"))
+            return
 
         item = self.find_video_item(file_path)
         if item:
-             # If it's the same file currently playing, just seek
-             if self.video_player.current_file == str(Path(file_path)):
-                 self.video_player.player.seek(position, 'absolute')
-                 if not self.video_player.is_playing:
-                     self.video_player.play_pause()
-             else:
-                 # Otherwise load and play
-                 # We play, but we need to ensure position is set.
-                 # play_video_in_player logic usually resumes or starts from 0.
-                 # Let's use load_video directly for explicit control?
-                 # But play_video_in_player handles UI updates (selection, etc).
-                 
-                 # Let's call load_video directly on video_player as it seems safest for custom pos.
-                 # And then update UI.
-                 
-                 self.video_player.load_video(file_path, position, auto_play=True)
-                 
-                 # Update UI state similar to play_video_in_player
-                 self.course_tree.setCurrentItem(item)
-                 self.course_tree.scrollToItem(item)
-                 self.update_window_title_for_item(item)
-                 
-                 # Update delegate state
-                 delegate = self.course_tree.itemDelegate()
-                 if isinstance(delegate, VideoItemDelegate):
-                     delegate.playing_path = file_path
-                     delegate.is_paused = False
-                     self.course_tree.viewport().update()
+            # If it's the same file currently playing, just seek
+            if self.video_player.current_file == str(Path(file_path)):
+                self.video_player.player.seek(position, "absolute")
+                if not self.video_player.is_playing:
+                    self.video_player.play_pause()
+            else:
+                # Otherwise load and play
+                # We play, but we need to ensure position is set.
+                # play_video_in_player logic usually resumes or starts from 0.
+                # Let's use load_video directly for explicit control?
+                # But play_video_in_player handles UI updates (selection, etc).
+
+                # Let's call load_video directly on video_player as it seems safest for custom pos.
+                # And then update UI.
+
+                self.video_player.load_video(file_path, position, auto_play=True)
+
+                # Update UI state similar to play_video_in_player
+                self.course_tree.setCurrentItem(item)
+                self.course_tree.scrollToItem(item)
+                self.update_window_title_for_item(item)
+
+                # Update delegate state
+                delegate = self.course_tree.itemDelegate()
+                if isinstance(delegate, VideoItemDelegate):
+                    delegate.playing_path = file_path
+                    delegate.is_paused = False
+                    self.course_tree.viewport().update()
 
     def play_video(self, item):
         file_path = item.data(0, Qt.ItemDataRole.UserRole)
 
         if file_path and Path(file_path).exists():
             import os
+
             os.startfile(file_path)
             self.mark_as_watched(item)
 
@@ -2089,7 +2395,7 @@ class VideoCourseBrowser(QMainWindow):
     def play_folder(self, item):
         if item.childCount() > 0:
             first_child = item.child(0)
-            if first_child.data(0, Qt.ItemDataRole.UserRole + 1) == 'video':
+            if first_child.data(0, Qt.ItemDataRole.UserRole + 1) == "video":
                 self.play_video_in_player(first_child, resume=True)
 
     def open_folder(self, item):
@@ -2098,27 +2404,37 @@ class VideoCourseBrowser(QMainWindow):
 
         if path and root_path:
             import os
+
             folder = Path(root_path) / path
 
             if folder.exists():
                 logging.debug(folder)
                 os.startfile(folder)
             else:
-                QMessageBox.warning(self, tr('error.title'), tr('error.folder_not_found', folder=folder))
+                QMessageBox.warning(
+                    self, tr("error.title"), tr("error.folder_not_found", folder=folder)
+                )
         else:
-            QMessageBox.warning(self, tr('error.title'), tr('error.folder_path_unknown'))
+            QMessageBox.warning(
+                self, tr("error.title"), tr("error.folder_path_unknown")
+            )
 
     def open_video_directory(self, item):
         file_path = item.data(0, Qt.ItemDataRole.UserRole)
         if file_path and Path(file_path).exists():
             import os
+
             folder = Path(file_path).parent
             if folder.exists():
                 os.startfile(folder)
             else:
-                QMessageBox.warning(self, tr('error.title'), tr('error.folder_not_found', folder=folder))
+                QMessageBox.warning(
+                    self, tr("error.title"), tr("error.folder_not_found", folder=folder)
+                )
         else:
-            QMessageBox.warning(self, tr('error.title'), tr('error.folder_path_unknown'))
+            QMessageBox.warning(
+                self, tr("error.title"), tr("error.folder_path_unknown")
+            )
 
     def reset_video_progress(self, item):
         file_path = item.data(0, Qt.ItemDataRole.UserRole)
@@ -2130,22 +2446,22 @@ class VideoCourseBrowser(QMainWindow):
         try:
             # Find item in tree
             target_item = self.find_video_item(file_path)
-            
+
             if target_item:
                 # If same file, just seek
                 if self.video_player.current_file == str(Path(file_path)):
-                    self.video_player.player.seek(position, 'absolute', 'exact')
+                    self.video_player.player.seek(position, "absolute", "exact")
                     if not self.video_player.is_playing:
                         self.video_player.play_pause()
                 else:
                     # Load video at specific position
                     self.video_player.load_video(file_path, position, auto_play=True)
-                    
+
                     # Update UI
                     self.course_tree.setCurrentItem(target_item)
                     self.course_tree.scrollToItem(target_item)
                     self.update_window_title_for_item(target_item)
-                    
+
                     delegate = self.course_tree.itemDelegate()
                     if isinstance(delegate, VideoItemDelegate):
                         delegate.playing_path = str(Path(file_path))
@@ -2157,7 +2473,9 @@ class VideoCourseBrowser(QMainWindow):
             logging.error(f"Error in play_video_at_marker: {e}", exc_info=True)
 
     def browse_directory(self):
-        directory = QFileDialog.getExistingDirectory(self, tr('dialog.select_directory'), self.path_edit.text())
+        directory = QFileDialog.getExistingDirectory(
+            self, tr("dialog.select_directory"), self.path_edit.text()
+        )
 
         if directory:
             self.path_edit.setText(directory)
@@ -2166,7 +2484,7 @@ class VideoCourseBrowser(QMainWindow):
         try:
             from scanner import VideoScanner
         except ImportError:
-            self.info_label.setText(tr('status.scanner_not_found'))
+            self.info_label.setText(tr("status.scanner_not_found"))
             return 0, 0
 
         scanner = VideoScanner(str(self.config_file.name))
@@ -2175,20 +2493,20 @@ class VideoCourseBrowser(QMainWindow):
     def rescan_directories(self, paths=None):
         # If no paths provided, load from config
         if paths is None or isinstance(paths, bool):
-            all_paths = self.config.get_library_paths().split(';')
+            all_paths = self.config.get_library_paths().split(";")
             excluded_set = self.config.get_excluded_library_paths()
-            
-            paths = [p.strip() for p in all_paths if p.strip() and os.path.normpath(p.strip()) not in excluded_set]
-            
+
+            paths = [
+                p.strip()
+                for p in all_paths
+                if p.strip() and os.path.normpath(p.strip()) not in excluded_set
+            ]
+
             if not paths:
                 QMessageBox.warning(
-                    self,
-                    tr('settings.warning'),
-                    tr('settings.specify_path')
+                    self, tr("settings.warning"), tr("settings.specify_path")
                 )
                 return
-
-
 
         # Show progress dialog with console output
         dialog = ScanProgressDialog(self)
@@ -2199,7 +2517,9 @@ class VideoCourseBrowser(QMainWindow):
         dialog.exec()
 
     def _on_scan_complete(self, total_videos, total_folders):
-        self.info_label.setText(tr('status.found', folders=total_folders, videos=total_videos))
+        self.info_label.setText(
+            tr("status.found", folders=total_folders, videos=total_videos)
+        )
         # Refresh courses immediately while dialog might still be open
         self.load_courses()
 
@@ -2217,9 +2537,15 @@ class VideoCourseBrowser(QMainWindow):
 
         # Binary files - use raw config for resolve_binary_path
         raw_config = self.config.get_raw_config()
-        self.ffmpeg_path = resolve_binary_path(raw_config, 'ffmpeg_path', 'bin/ffmpeg.exe')
-        self.ffprobe_path = resolve_binary_path(raw_config, 'ffprobe_path', 'bin/ffprobe.exe')
-        self.libmpv_path = resolve_binary_path(raw_config, 'libmpv_path', 'bin/libmpv-2.dll')
+        self.ffmpeg_path = resolve_binary_path(
+            raw_config, "ffmpeg_path", "bin/ffmpeg.exe"
+        )
+        self.ffprobe_path = resolve_binary_path(
+            raw_config, "ffprobe_path", "bin/ffprobe.exe"
+        )
+        self.libmpv_path = resolve_binary_path(
+            raw_config, "libmpv_path", "bin/libmpv-2.dll"
+        )
 
         self.window_width = self.config.get_window_width()
         self.window_height = self.config.get_window_height()
@@ -2233,7 +2559,9 @@ class VideoCourseBrowser(QMainWindow):
         self.animation_interval = self.config.get_animation_interval()
 
         # Subtitle settings
-        self.sub_color, self.sub_border_color, self.sub_scale = self.config.get_subtitle_settings()
+        self.sub_color, self.sub_border_color, self.sub_scale = (
+            self.config.get_subtitle_settings()
+        )
 
     def save_subtitle_settings(self, property_name, value):
         """Save subtitle style settings to ini file."""
@@ -2248,66 +2576,68 @@ class VideoCourseBrowser(QMainWindow):
         folder_font.setBold(True)
 
         # Safety: Disable progress timer and hover during reload
-        if hasattr(self, 'progress_save_timer'):
+        if hasattr(self, "progress_save_timer"):
             self.progress_save_timer.stop()
-            
+
         self.course_tree.stop_hover()
         self.course_tree.blockSignals(True)
         self.course_tree.clear()
-        
+
         delegate = self.course_tree.itemDelegate()
         if isinstance(delegate, VideoItemDelegate):
             delegate.thumbnail_cache.clear()
 
         if not self.db_file.exists():
-            self.info_label.setText(tr('status.db_not_found'))
+            self.info_label.setText(tr("status.db_not_found"))
             return
-        
+
         folders, videos = self.db.get_courses()
-        
+
         # Index folders
         folder_items = {}
         folders_data = {}
         for f in folders:
-            folders_data[f['path']] = f
+            folders_data[f["path"]] = f
 
         # Calculate folder stats
         # 1. Initialize for all folders
         folder_stats = {}
         for f in folders:
-            folder_stats[f['path']] = {'watched': 0.0, 'total': 0.0, 'count': 0}
+            folder_stats[f["path"]] = {"watched": 0.0, "total": 0.0, "count": 0}
 
         # 2. Add direct video stats
         for v in videos:
-            f_path = v['folder_path']
+            f_path = v["folder_path"]
             # If for some reason video folder is not in folders list (shouldn't happen with FK)
             if f_path not in folder_stats:
-                folder_stats[f_path] = {'watched': 0.0, 'total': 0.0, 'count': 0}
-            
-            p = v['watched_percent']
-            d = v['duration']
-            pos = v['last_position']
-            
+                folder_stats[f_path] = {"watched": 0.0, "total": 0.0, "count": 0}
+
+            p = v["watched_percent"]
+            d = v["duration"]
+            pos = v["last_position"]
+
             # Logic: if watched >= 90%, count full duration. Else use last position.
             w = d if p >= 90 else pos
-            
-            folder_stats[f_path]['watched'] += w
-            folder_stats[f_path]['total'] += d
-            folder_stats[f_path]['count'] += 1
+
+            folder_stats[f_path]["watched"] += w
+            folder_stats[f_path]["total"] += d
+            folder_stats[f_path]["count"] += 1
 
         # 3. Aggregate recursively (Deepest first)
         # Sort by path length (depth) descending to ensure children are processed before parents
         # We use strict string length as a proxy for depth, or count separators
-        sorted_folders = sorted(folders, key=lambda x: len(Path(x['path']).parts), reverse=True)
+        sorted_folders = sorted(
+            folders, key=lambda x: len(Path(x["path"]).parts), reverse=True
+        )
 
         for f in sorted_folders:
-            parent_path = f['parent_path']
+            parent_path = f["parent_path"]
             if parent_path and parent_path in folder_stats:
-                child_stats = folder_stats[f['path']]
-                if child_stats['count'] > 0:
-                    folder_stats[parent_path]['watched'] += child_stats['watched']
-                    folder_stats[parent_path]['total'] += child_stats['total']
-                    folder_stats[parent_path]['count'] += child_stats['count']
+                child_stats = folder_stats[f["path"]]
+                if child_stats["count"] > 0:
+                    folder_stats[parent_path]["watched"] += child_stats["watched"]
+                    folder_stats[parent_path]["total"] += child_stats["total"]
+                    folder_stats[parent_path]["count"] += child_stats["count"]
 
         # Default folder cover image
         default_cover = str(RESOURCES_DIR / "icons" / "folder_cover.png")
@@ -2316,56 +2646,74 @@ class VideoCourseBrowser(QMainWindow):
         for f in folders:
             # Skip excluded paths (and their children potentially, but simplistic check on root_path here)
             # Use strict string comparison for now, assuming paths are normalized in DB/config
-            if os.path.normpath(f['root_path']) in self.excluded_library_paths:
+            if os.path.normpath(f["root_path"]) in self.excluded_library_paths:
                 continue
 
-            if not f['parent_path'] or f['parent_path'] not in folders_data:
+            if not f["parent_path"] or f["parent_path"] not in folders_data:
                 item = QTreeWidgetItem(self.course_tree)
-                item.setText(0, f['name'])
-                
+                item.setText(0, f["name"])
+
                 stats_text = ""
                 # Use calculated stats if available, else fallback to DB (though DB count should match)
-                f_stats = folder_stats.get(f['path'])
-                
-                if f_stats and f_stats['count'] > 0:
-                    count = f_stats['count']
-                    total = f_stats['total']
-                    watched = f_stats['watched']
+                f_stats = folder_stats.get(f["path"])
+
+                if f_stats and f_stats["count"] > 0:
+                    count = f_stats["count"]
+                    total = f_stats["total"]
+                    watched = f_stats["watched"]
                     percent = int((watched / total * 100)) if total > 0 else 0
-                    
+
                     # Format: "X videos • Watched / Total (Y%)"
                     duration_str = format_duration(total)
                     watched_str = format_duration(watched)
-                    
-                    stats_text = f"{count} videos • {watched_str} / {duration_str} ({percent}%)"
-                elif f['video_count'] > 0:
-                     # Fallback if video list didn't have them for some reason (e.g. filter mismatch?)
-                     stats_text = f"{f['video_count']} videos • {format_duration(f['total_duration'])}"
-                     percent = 0
+
+                    stats_text = (
+                        f"{count} videos • {watched_str} / {duration_str} ({percent}%)"
+                    )
+                elif f["video_count"] > 0:
+                    # Fallback if video list didn't have them for some reason (e.g. filter mismatch?)
+                    stats_text = f"{f['video_count']} videos • {format_duration(f['total_duration'])}"
+                    percent = 0
 
                 item.setFont(0, folder_font)
-                item.setData(0, Qt.ItemDataRole.UserRole, f['path'])
-                item.setData(0, Qt.ItemDataRole.UserRole + 1, 'folder')
-                item.setData(0, Qt.ItemDataRole.UserRole + 5, stats_text) # Store stats separately
-                item.setData(0, Qt.ItemDataRole.UserRole + 6, percent if 'percent' in locals() else 0) # Store progress percent
+                item.setData(0, Qt.ItemDataRole.UserRole, f["path"])
+                item.setData(0, Qt.ItemDataRole.UserRole + 1, "folder")
+                item.setData(
+                    0, Qt.ItemDataRole.UserRole + 5, stats_text
+                )  # Store stats separately
+                item.setData(
+                    0,
+                    Qt.ItemDataRole.UserRole + 6,
+                    percent if "percent" in locals() else 0,
+                )  # Store progress percent
                 # Store raw stats for live updates
                 if f_stats:
                     item.setData(0, Qt.ItemDataRole.UserRole + 7, f_stats.copy())
                 else:
-                    item.setData(0, Qt.ItemDataRole.UserRole + 7, {'watched': 0.0, 'total': 0.0, 'count': 0})
-                    
-                item.setData(0, Qt.ItemDataRole.UserRole + 3, f['root_path']) # Store root_path
+                    item.setData(
+                        0,
+                        Qt.ItemDataRole.UserRole + 7,
+                        {"watched": 0.0, "total": 0.0, "count": 0},
+                    )
+
+                item.setData(
+                    0, Qt.ItemDataRole.UserRole + 3, f["root_path"]
+                )  # Store root_path
 
                 # Find folder image
-                full_path = Path(f['root_path']) / f['path'] if f['path'] != '.' else Path(f['root_path'])
+                full_path = (
+                    Path(f["root_path"]) / f["path"]
+                    if f["path"] != "."
+                    else Path(f["root_path"])
+                )
                 cover_image = self._find_folder_image(full_path) or default_cover
                 item.setData(0, Qt.ItemDataRole.UserRole + 4, cover_image)
-                
+
                 # Icon (we might not need the default icon if drawing custom)
                 # item.setIcon(0, self.folder_icon)
-                
-                folder_items[f['path']] = item
-                if f.get('is_expanded'):
+
+                folder_items[f["path"]] = item
+                if f.get("is_expanded"):
                     item.setExpanded(True)
 
         # Now insert remaining folders (multiple passes if needed)
@@ -2373,131 +2721,150 @@ class VideoCourseBrowser(QMainWindow):
         for _ in range(max_iterations):
             added_any = False
             for f in folders:
-                if os.path.normpath(f['root_path']) in self.excluded_library_paths:
+                if os.path.normpath(f["root_path"]) in self.excluded_library_paths:
                     continue
-                    
-                if f['path'] in folder_items:
+
+                if f["path"] in folder_items:
                     continue
-                
-                if f['parent_path'] in folder_items:
-                    parent_item = folder_items[f['parent_path']]
+
+                if f["parent_path"] in folder_items:
+                    parent_item = folder_items[f["parent_path"]]
                     item = QTreeWidgetItem(parent_item)
-                    
-                    item.setText(0, f['name'])
-                    
+
+                    item.setText(0, f["name"])
+
                     stats_text = ""
-                    f_stats = folder_stats.get(f['path'])
-                    
-                    if f_stats and f_stats['count'] > 0:
-                        count = f_stats['count']
-                        total = f_stats['total']
-                        watched = f_stats['watched']
+                    f_stats = folder_stats.get(f["path"])
+
+                    if f_stats and f_stats["count"] > 0:
+                        count = f_stats["count"]
+                        total = f_stats["total"]
+                        watched = f_stats["watched"]
                         percent = int((watched / total * 100)) if total > 0 else 0
-                        
+
                         duration_str = format_duration(total)
                         watched_str = format_duration(watched)
-                        
+
                         stats_text = f"{count} videos • {watched_str} / {duration_str} ({percent}%)"
-                    elif f['video_count'] > 0:
-                         stats_text = f"{f['video_count']} videos • {format_duration(f['total_duration'])}"
-                         percent = 0
+                    elif f["video_count"] > 0:
+                        stats_text = f"{f['video_count']} videos • {format_duration(f['total_duration'])}"
+                        percent = 0
 
                     item.setFont(0, folder_font)
-                    item.setData(0, Qt.ItemDataRole.UserRole, f['path'])
-                    item.setData(0, Qt.ItemDataRole.UserRole + 1, 'folder')
-                    item.setData(0, Qt.ItemDataRole.UserRole + 5, stats_text) # Store stats separately
-                    item.setData(0, Qt.ItemDataRole.UserRole + 6, percent if 'percent' in locals() else 0) # Store progress percent
+                    item.setData(0, Qt.ItemDataRole.UserRole, f["path"])
+                    item.setData(0, Qt.ItemDataRole.UserRole + 1, "folder")
+                    item.setData(
+                        0, Qt.ItemDataRole.UserRole + 5, stats_text
+                    )  # Store stats separately
+                    item.setData(
+                        0,
+                        Qt.ItemDataRole.UserRole + 6,
+                        percent if "percent" in locals() else 0,
+                    )  # Store progress percent
                     # Store raw stats for live updates
                     if f_stats:
                         item.setData(0, Qt.ItemDataRole.UserRole + 7, f_stats.copy())
                     else:
-                        item.setData(0, Qt.ItemDataRole.UserRole + 7, {'watched': 0.0, 'total': 0.0, 'count': 0})
+                        item.setData(
+                            0,
+                            Qt.ItemDataRole.UserRole + 7,
+                            {"watched": 0.0, "total": 0.0, "count": 0},
+                        )
 
-                    item.setData(0, Qt.ItemDataRole.UserRole + 3, f['root_path']) # Store root_path
+                    item.setData(
+                        0, Qt.ItemDataRole.UserRole + 3, f["root_path"]
+                    )  # Store root_path
 
                     # Find folder image
-                    full_path = Path(f['root_path']) / f['path']
+                    full_path = Path(f["root_path"]) / f["path"]
                     cover_image = self._find_folder_image(full_path) or default_cover
                     item.setData(0, Qt.ItemDataRole.UserRole + 4, cover_image)
 
                     # item.setIcon(0, self.folder_icon)
-                    
-                    folder_items[f['path']] = item
-                    if f.get('is_expanded'):
+
+                    folder_items[f["path"]] = item
+                    if f.get("is_expanded"):
                         item.setExpanded(True)
                     added_any = True
-            
+
             if not added_any:
                 break
 
         # Add videos
         for v in videos:
-            if v['folder_path'] in folder_items:
-                parent_item = folder_items[v['folder_path']]
+            if v["folder_path"] in folder_items:
+                parent_item = folder_items[v["folder_path"]]
                 video_item = QTreeWidgetItem(parent_item)
-                
-                display_name = v['file_name']
-                if v['track_number']:
+
+                display_name = v["file_name"]
+                if v["track_number"]:
                     display_name = f"{v['track_number']}. {display_name}"
-                
+
                 video_item.setText(0, display_name)
-                video_item.setData(0, Qt.ItemDataRole.UserRole, v['file_path'])
-                video_item.setData(0, Qt.ItemDataRole.UserRole + 1, 'video')
-                
+                video_item.setData(0, Qt.ItemDataRole.UserRole, v["file_path"])
+                video_item.setData(0, Qt.ItemDataRole.UserRole + 1, "video")
+
                 thumbnails_list = []
-                if v['thumbnails_json']:
+                if v["thumbnails_json"]:
                     try:
-                        thumbnails_list = json.loads(v['thumbnails_json'])
+                        thumbnails_list = json.loads(v["thumbnails_json"])
                     except:
                         pass
 
                 # Data for delegate using VideoItemData
                 try:
                     video_data = VideoItemData(
-                        filename=v['file_name'],
-                        duration=v['duration'],
-                        resolution=v['resolution'],
-                        file_size=v['file_size'],
-                        watched_percent=v['watched_percent'] or 0,
-                        thumbnail_path=v['thumbnail_path'],
+                        filename=v["file_name"],
+                        duration=v["duration"],
+                        resolution=v["resolution"],
+                        file_size=v["file_size"],
+                        watched_percent=v["watched_percent"] or 0,
+                        thumbnail_path=v["thumbnail_path"],
                         thumbnails_list=thumbnails_list,
-                        last_position=v['last_position'] or 0,
-                        marker_count=v['marker_count'] or 0,
-                        is_favorite=bool(v.get('is_favorite', 0)),
-                        tags=v.get('tags', []),
-                        markers=v.get('markers', [])
+                        last_position=v["last_position"] or 0,
+                        marker_count=v["marker_count"] or 0,
+                        is_favorite=bool(v.get("is_favorite", 0)),
+                        tags=v.get("tags", []),
+                        markers=v.get("markers", []),
                     )
                     video_item.setData(0, Qt.ItemDataRole.UserRole + 2, video_data)
                 except Exception as e:
-                    logging.critical(f"CRITICAL ERROR creating VideoItemData for {v.get('file_name')}: {e}", exc_info=True)
-                
+                    logging.critical(
+                        f"CRITICAL ERROR creating VideoItemData for {v.get('file_name')}: {e}",
+                        exc_info=True,
+                    )
+
                 video_item.setIcon(0, self.video_icon)
                 # Disable selection for video rows
                 video_item.setFlags(video_item.flags() & ~Qt.ItemFlag.ItemIsSelectable)
 
         self.course_tree.blockSignals(False)
-        
+
         # Re-enable progress timer
-        if hasattr(self, 'progress_save_timer'):
+        if hasattr(self, "progress_save_timer"):
             self.progress_save_timer.start(1000)
 
         # Info panel statistics
         folder_count = len(folders)
         video_count = len(videos)
-        thumb_count = sum(1 for v in videos if v.get('thumbnails_json'))
-        resumed_count = sum(1 for v in videos if v.get('last_position', 0) > 0)
+        thumb_count = sum(1 for v in videos if v.get("thumbnails_json"))
+        resumed_count = sum(1 for v in videos if v.get("last_position", 0) > 0)
 
-        self.info_label.setText(tr('status.loaded',
-                                   folders=folder_count,
-                                   videos=video_count,
-                                   thumbs=thumb_count,
-                                   resumed=resumed_count))
-        
+        self.info_label.setText(
+            tr(
+                "status.loaded",
+                folders=folder_count,
+                videos=video_count,
+                thumbs=thumb_count,
+                resumed=resumed_count,
+            )
+        )
+
         # Apply current filter if any
-        search_text = self.search_edit.text() if hasattr(self, 'search_edit') else ""
-        fav_active = hasattr(self, 'fav_filter_btn') and self.fav_filter_btn.isChecked()
-        tag_active = hasattr(self, 'tag_filter_btn') and self.tag_filter_btn.isChecked()
-        
+        search_text = self.search_edit.text() if hasattr(self, "search_edit") else ""
+        fav_active = hasattr(self, "fav_filter_btn") and self.fav_filter_btn.isChecked()
+        tag_active = hasattr(self, "tag_filter_btn") and self.tag_filter_btn.isChecked()
+
         if search_text or fav_active or tag_active:
             self.filter_library(search_text)
 
@@ -2505,11 +2872,13 @@ class VideoCourseBrowser(QMainWindow):
         """Show the tag filter selection popup."""
         all_tags = self.db.get_tags()
         self.tag_popup = TagFilterPopup(all_tags, self.selected_tag_ids, self)
-        
+
         # Position popup above or below the button
         button_pos = self.tag_filter_btn.mapToGlobal(QPoint(0, 0))
-        self.tag_popup.move(button_pos.x(), button_pos.y() + self.tag_filter_btn.height())
-        
+        self.tag_popup.move(
+            button_pos.x(), button_pos.y() + self.tag_filter_btn.height()
+        )
+
         self.tag_popup.filter_changed.connect(self._on_tag_filter_changed)
         self.tag_popup.show()
 
@@ -2523,18 +2892,24 @@ class VideoCourseBrowser(QMainWindow):
     def filter_library(self, text):
         """Filter library items by text, favorites and tags."""
         query = text.lower()
-        fav_only = hasattr(self, 'fav_filter_btn') and self.fav_filter_btn.isChecked()
-        tag_ids = self.selected_tag_ids if (hasattr(self, 'tag_filter_btn') and 
-                                           self.tag_filter_btn.isChecked() and 
-                                           self.selected_tag_ids) else None
-        
+        fav_only = hasattr(self, "fav_filter_btn") and self.fav_filter_btn.isChecked()
+        tag_ids = (
+            self.selected_tag_ids
+            if (
+                hasattr(self, "tag_filter_btn")
+                and self.tag_filter_btn.isChecked()
+                and self.selected_tag_ids
+            )
+            else None
+        )
+
         # Hide progress save timer during bulk operations
-        if hasattr(self, 'progress_save_timer'):
+        if hasattr(self, "progress_save_timer"):
             self.progress_save_timer.stop()
-            
+
         self.course_tree.setUpdatesEnabled(False)
         self.course_tree.blockSignals(True)
-        
+
         try:
             for i in range(self.course_tree.topLevelItemCount()):
                 item = self.course_tree.topLevelItem(i)
@@ -2543,20 +2918,21 @@ class VideoCourseBrowser(QMainWindow):
             self.course_tree.blockSignals(False)
             self.course_tree.setUpdatesEnabled(True)
             self.course_tree.viewport().update()
-            
-            # Re-enable timer if needed (it will be started in load_courses or similar if active)
-            if hasattr(self, 'progress_save_timer'):
-                self.progress_save_timer.start(1000)
-    
 
-    def _apply_filter(self, item, query, fav_only=False, tag_ids=None, parent_matches=False):
+            # Re-enable timer if needed (it will be started in load_courses or similar if active)
+            if hasattr(self, "progress_save_timer"):
+                self.progress_save_timer.start(1000)
+
+    def _apply_filter(
+        self, item, query, fav_only=False, tag_ids=None, parent_matches=False
+    ):
         """Recursively apply filter to item and children."""
         item_text = item.text(0).lower()
         item_type = item.data(0, Qt.ItemDataRole.UserRole + 1)
-        
+
         # Favorite check
         is_favorite = False
-        if item_type == 'video':
+        if item_type == "video":
             data = item.data(0, Qt.ItemDataRole.UserRole + 2)
             if isinstance(data, VideoItemData):
                 is_favorite = data.is_favorite
@@ -2565,49 +2941,57 @@ class VideoCourseBrowser(QMainWindow):
 
         # Tag check
         tag_match = True
-        if tag_ids is not None and item_type == 'video':
+        if tag_ids is not None and item_type == "video":
             # Tags are stored in UserRole + 2, at index 10
             data = item.data(0, Qt.ItemDataRole.UserRole + 2)
             if isinstance(data, VideoItemData):
                 item_tags = data.tags
-                tag_match = any(t['id'] in tag_ids for t in item_tags)
+                tag_match = any(t["id"] in tag_ids for t in item_tags)
             elif data and len(data) >= 11:
                 item_tags = data[10]
-                tag_match = any(t['id'] in tag_ids for t in item_tags)
+                tag_match = any(t["id"] in tag_ids for t in item_tags)
             else:
                 tag_match = False
 
         # Text search (also check tags names in text search)
         text_matches_item = smart_search(query, item_text)
-        if query and not text_matches_item and item_type == 'video':
+        if query and not text_matches_item and item_type == "video":
             data = item.data(0, Qt.ItemDataRole.UserRole + 2)
             if isinstance(data, VideoItemData):
                 item_tags = data.tags
-                text_matches_item = any(smart_search(query, t['name']) for t in item_tags)
+                text_matches_item = any(
+                    smart_search(query, t["name"]) for t in item_tags
+                )
                 if not text_matches_item and data.markers:
-                     text_matches_item = any(smart_search(query, m['label']) for m in data.markers)
+                    text_matches_item = any(
+                        smart_search(query, m["label"]) for m in data.markers
+                    )
 
             elif data and len(data) >= 11:
                 item_tags = data[10]
-                text_matches_item = any(smart_search(query, t['name']) for t in item_tags)
+                text_matches_item = any(
+                    smart_search(query, t["name"]) for t in item_tags
+                )
 
         # Logic for this item
         text_match = text_matches_item or parent_matches
-        
+
         item_matches = text_match
-        if fav_only and item_type == 'video':
+        if fav_only and item_type == "video":
             item_matches = item_matches and is_favorite
-        if tag_ids is not None and item_type == 'video':
+        if tag_ids is not None and item_type == "video":
             item_matches = item_matches and tag_match
-            
+
         child_visible = False
         for i in range(item.childCount()):
-            if self._apply_filter(item.child(i), query, fav_only, tag_ids, item_matches):
+            if self._apply_filter(
+                item.child(i), query, fav_only, tag_ids, item_matches
+            ):
                 child_visible = True
-        
+
         # Visibility decision
         is_visible = False
-        if item_type == 'video':
+        if item_type == "video":
             is_visible = item_matches
         else:
             # Folder visibility
@@ -2615,12 +2999,12 @@ class VideoCourseBrowser(QMainWindow):
                 is_visible = child_visible
             else:
                 is_visible = text_match or child_visible
-                
+
         item.setHidden(not is_visible)
-        
+
         if (query or fav_only or tag_ids) and child_visible:
             item.setExpanded(True)
-            
+
         return is_visible
 
     def showEvent(self, event):
@@ -2631,10 +3015,14 @@ class VideoCourseBrowser(QMainWindow):
             try:
                 hwnd = int(self.winId())
                 self.taskbar_progress.set_hwnd(hwnd)
-                
+
                 # Sync state with player
                 if self.video_player.current_file:
-                    is_playing = not self.video_player.player.pause if self.video_player.player else False
+                    is_playing = (
+                        not self.video_player.player.pause
+                        if self.video_player.player
+                        else False
+                    )
                     if is_playing:
                         self.taskbar_progress.set_normal()
                     else:
@@ -2645,13 +3033,15 @@ class VideoCourseBrowser(QMainWindow):
                 # Initialize thumbnail toolbar buttons (5 playback controls)
                 if self.taskbar_progress.taskbar:
                     self.thumbnail_buttons = TaskbarThumbnailButtons(
-                        self.taskbar_progress.taskbar,
-                        hwnd,
-                        RESOURCES_DIR / 'icons'
+                        self.taskbar_progress.taskbar, hwnd, RESOURCES_DIR / "icons"
                     )
                     # Defer to ensure window is fully registered with taskbar
                     QTimer.singleShot(1000, self.thumbnail_buttons.add_buttons)
-                    self.thumbnail_buttons.update_play_state(not self.video_player.player.pause if self.video_player.player else False)
+                    self.thumbnail_buttons.update_play_state(
+                        not self.video_player.player.pause
+                        if self.video_player.player
+                        else False
+                    )
             except Exception as e:
                 logging.error(f"Taskbar error: {e}")
 
@@ -2665,13 +3055,19 @@ class VideoCourseBrowser(QMainWindow):
                 # Check if mouse is actually outside the main window area
                 if self.pip_overlay:
                     from PyQt6.QtGui import QCursor
+
                     if not self.geometry().contains(QCursor.pos()):
                         self.pip_overlay.set_active(False)
                         self.pip_overlay.set_hover_edge(None)
 
             # Use global position for consistent coordinate mapping across widgets
-            if event.type() in [QEvent.Type.MouseMove, QEvent.Type.MouseButtonPress, QEvent.Type.MouseButtonRelease, QEvent.Type.MouseButtonDblClick]:
-                if hasattr(event, 'globalPosition'):
+            if event.type() in [
+                QEvent.Type.MouseMove,
+                QEvent.Type.MouseButtonPress,
+                QEvent.Type.MouseButtonRelease,
+                QEvent.Type.MouseButtonDblClick,
+            ]:
+                if hasattr(event, "globalPosition"):
                     window_pos = self.mapFromGlobal(event.globalPosition().toPoint())
                 else:
                     return super().eventFilter(source, event)
@@ -2679,7 +3075,11 @@ class VideoCourseBrowser(QMainWindow):
                 if event.type() == QEvent.Type.MouseMove:
                     self.handle_pip_mouse_move(event, window_pos)
                     # Always swallow moves if in margin to prevent player hover effects
-                    if self.resizing or self.dragging or self._get_resize_edge(window_pos):
+                    if (
+                        self.resizing
+                        or self.dragging
+                        or self._get_resize_edge(window_pos)
+                    ):
                         return True
                 elif event.type() == QEvent.Type.MouseButtonPress:
                     if self.handle_pip_mouse_press(event, window_pos):
@@ -2701,7 +3101,7 @@ class VideoCourseBrowser(QMainWindow):
     def handle_pip_mouse_press(self, event, window_pos=None):
         if window_pos is None:
             window_pos = self.mapFromGlobal(event.globalPosition().toPoint())
-            
+
         if event.button() == Qt.MouseButton.LeftButton:
             edge = self._get_resize_edge(window_pos)
             if edge:
@@ -2724,10 +3124,10 @@ class VideoCourseBrowser(QMainWindow):
             except AttributeError:
                 gpos = event.globalPos()
             window_pos = self.mapFromGlobal(gpos)
-            
+
         edge = self._get_resize_edge(window_pos)
         # if edge: logging.debug(f"PiP edge detected: {edge}")
-        
+
         if self.resizing:
             self.handle_resize(event.globalPosition().toPoint())
         elif self.dragging:
@@ -2766,20 +3166,24 @@ class VideoCourseBrowser(QMainWindow):
     def _get_resize_edge(self, pos):
         m = self.resize_margin
         w, h = self.width(), self.height()
-        
+
         # Determine vertical part
         v_edge = ""
-        if pos.y() < m: v_edge = "top"
-        elif pos.y() > h - m: v_edge = "bottom"
-        
+        if pos.y() < m:
+            v_edge = "top"
+        elif pos.y() > h - m:
+            v_edge = "bottom"
+
         # Determine horizontal part
         h_edge = ""
-        if pos.x() < m: h_edge = "left"
-        elif pos.x() > w - m: h_edge = "right"
-        
+        if pos.x() < m:
+            h_edge = "left"
+        elif pos.x() > w - m:
+            h_edge = "right"
+
         # Combine: vertical first (top/bottom) then horizontal (left/right)
         edge = v_edge + h_edge
-        
+
         return edge if edge else None
 
     def update_cursor(self, edge):
@@ -2805,40 +3209,40 @@ class VideoCourseBrowser(QMainWindow):
         diff = global_pos - self.drag_start_pos
         geo = self.window_start_geo
         new_geo = QRect(geo)
-        
+
         # Get video aspect ratio
         ratio = self.video_player.get_video_aspect_ratio()
-        
+
         # Determine master resize axes
         is_horizontal = "left" in self.resize_edge or "right" in self.resize_edge
         is_vertical = "top" in self.resize_edge or "bottom" in self.resize_edge
-        
+
         # Proposed changes based on mouse movement
         if "left" in self.resize_edge:
             new_geo.setLeft(geo.left() + diff.x())
         elif "right" in self.resize_edge:
             new_geo.setRight(geo.right() + diff.x())
-            
+
         if "top" in self.resize_edge:
             new_geo.setTop(geo.top() + diff.y())
         elif "bottom" in self.resize_edge:
             new_geo.setBottom(geo.bottom() + diff.y())
-            
+
         # Enforce aspect ratio and min size
         min_w = 160
         min_h = int(min_w / ratio)
-        
+
         if is_horizontal:
             # Width change dictates height (standard for proportional resize)
             w = max(min_w, new_geo.width())
             h = int(w / ratio)
-            
+
             # Align horizontally
             if "left" in self.resize_edge:
                 new_geo.setLeft(geo.right() - w + 1)
             else:
                 new_geo.setWidth(w)
-                
+
             # Align vertically
             if "top" in self.resize_edge:
                 # If dragging top edge or top corners, top boundary moves up/down
@@ -2850,12 +3254,12 @@ class VideoCourseBrowser(QMainWindow):
             # Pure vertical resize (top/bottom)
             h = max(min_h, new_geo.height())
             w = int(h * ratio)
-            
+
             if "top" in self.resize_edge:
                 new_geo.setTop(geo.bottom() - h + 1)
             else:
                 new_geo.setHeight(h)
-                
+
             # Keep left edge fixed for pure horizontal growth/shrink
             new_geo.setWidth(w)
 
@@ -2863,11 +3267,11 @@ class VideoCourseBrowser(QMainWindow):
 
     def closeEvent(self, event):
         self.save_window_state()
-        if hasattr(self, 'hotkey_manager'):
+        if hasattr(self, "hotkey_manager"):
             self.hotkey_manager.stop()
-        
+
         # Cleanup player resources
-        if hasattr(self, 'video_player') and self.video_player:
+        if hasattr(self, "video_player") and self.video_player:
             try:
                 self.video_player.cleanup()
             except Exception as e:
@@ -2882,20 +3286,23 @@ from PyQt6.QtCore import QAbstractNativeEventFilter
 from ctypes import wintypes as _wintypes
 
 # Button IDs must match THUMBBUTTON_* in taskbar_progress.py
-_THUMBBUTTON_PREV      = 0
-_THUMBBUTTON_REWIND    = 1
+_THUMBBUTTON_PREV = 0
+_THUMBBUTTON_REWIND = 1
 _THUMBBUTTON_PLAYPAUSE = 2
-_THUMBBUTTON_FORWARD   = 3
-_THUMBBUTTON_NEXT      = 4
+_THUMBBUTTON_FORWARD = 3
+_THUMBBUTTON_NEXT = 4
 
-WM_COMMAND   = 0x0111
+WM_COMMAND = 0x0111
 THBN_CLICKED = 0x1800
 
 import ctypes
+
 WM_TASKBARBUTTONCREATED = 0
-if sys.platform == 'win32':
+if sys.platform == "win32":
     try:
-        WM_TASKBARBUTTONCREATED = ctypes.windll.user32.RegisterWindowMessageW("TaskbarButtonCreated")
+        WM_TASKBARBUTTONCREATED = ctypes.windll.user32.RegisterWindowMessageW(
+            "TaskbarButtonCreated"
+        )
     except:
         pass
 
@@ -2932,7 +3339,10 @@ class TaskbarEventFilter(QAbstractNativeEventFilter):
                             elif button_id == _THUMBBUTTON_NEXT:
                                 w.play_next_video()
                                 return True, 0
-                    elif WM_TASKBARBUTTONCREATED and msg.message == WM_TASKBARBUTTONCREATED:
+                    elif (
+                        WM_TASKBARBUTTONCREATED
+                        and msg.message == WM_TASKBARBUTTONCREATED
+                    ):
                         # Taskbar buttons need to be re-added when this message is received
                         QTimer.singleShot(100, self.window._refresh_taskbar_buttons)
                         return True, 0
@@ -2944,36 +3354,43 @@ class TaskbarEventFilter(QAbstractNativeEventFilter):
 def main():
     # Enable High DPI scaling
     from PyQt6.QtGui import QGuiApplication
-    QGuiApplication.setHighDpiScaleFactorRoundingPolicy(Qt.HighDpiScaleFactorRoundingPolicy.PassThrough)
-    
+
+    QGuiApplication.setHighDpiScaleFactorRoundingPolicy(
+        Qt.HighDpiScaleFactorRoundingPolicy.PassThrough
+    )
+
     app = QApplication(sys.argv)
-    app.setStyle('Fusion')
+    app.setStyle("Fusion")
     app.setStyleSheet(DARK_STYLE)
 
     try:
-        logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        logging.basicConfig(
+            level=logging.DEBUG,
+            format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        )
         logging.debug("Application starting...")
         window = VideoCourseBrowser()
         logging.debug("Window created")
-        
+
         # Register native event filter for taskbar thumbnail button clicks
         taskbar_filter = TaskbarEventFilter(window)
         app.installNativeEventFilter(taskbar_filter)
 
         # Show the window in its final correct state immediately to prevent flickers
-        if getattr(window, '_init_maximized', False):
+        if getattr(window, "_init_maximized", False):
             # Explicitly synchronize screen association before maximizing if needed
             window.showMaximized()
         else:
             window.show()
-            
+
         logging.debug("Window shown")
         sys.exit(app.exec())
     except Exception as e:
         import traceback
+
         error_msg = traceback.format_exc()
         logging.critical(error_msg, exc_info=True)
-        
+
         # Write to file
         try:
             with open("crash_log.txt", "w", encoding="utf-8") as f:
@@ -2983,20 +3400,19 @@ def main():
 
         # Also try to show a message box if possible
         try:
-             from PyQt6.QtWidgets import QMessageBox
-             msg = QMessageBox()
-             msg.setIcon(QMessageBox.Icon.Critical)
-             msg.setText("Application Crashed")
-             msg.setInformativeText(error_msg)
-             msg.setDetailedText("Error saved to crash_log.txt")
-             msg.setWindowTitle("Error")
-             msg.exec()
+            from PyQt6.QtWidgets import QMessageBox
+
+            msg = QMessageBox()
+            msg.setIcon(QMessageBox.Icon.Critical)
+            msg.setText("Application Crashed")
+            msg.setInformativeText(error_msg)
+            msg.setDetailedText("Error saved to crash_log.txt")
+            msg.setWindowTitle("Error")
+            msg.exec()
         except:
-             pass
+            pass
         sys.exit(1)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
-
-

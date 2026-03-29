@@ -1,0 +1,154 @@
+"""
+OSD Manager for SPVideoCoursesPlayer
+
+Centralized manager for all on-screen display (OSD) notifications.
+Provides a consistent, extensible interface for showing user feedback.
+"""
+
+import logging
+from translator import tr
+
+
+class OSDManager:
+    """Manages all OSD notifications through MPV's show_text API."""
+
+    def __init__(self, player):
+        """
+        Initialize OSD Manager.
+
+        Args:
+            player: MPV player instance with show_text() method
+        """
+        self.player = player
+        self.default_duration = 2500  # milliseconds (same as zoom)
+
+    def show_osd(self, message, duration=None):
+        """
+        Show a generic OSD message.
+
+        Args:
+            message: Text to display
+            duration: Display duration in milliseconds (default: 2500ms)
+        """
+        if not self.player:
+            return
+
+        try:
+            duration = duration if duration is not None else self.default_duration
+            self.player.show_text(message, duration)
+        except Exception as e:
+            logging.error(f"Error showing OSD: {e}", exc_info=True)
+
+    def show_speed(self, speed):
+        """
+        Show playback speed OSD.
+
+        Args:
+            speed: Playback speed (e.g., 1.0, 1.5, 2.0)
+        """
+        message = tr("player.osd.speed", speed=f"{speed:.1f}")
+        self.show_osd(message)
+
+    def show_zoom(self, zoom_percent):
+        """
+        Show zoom level OSD.
+
+        Args:
+            zoom_percent: Zoom percentage (e.g., 100, 150, 200)
+        """
+        message = tr("player.zoom_level", percent=zoom_percent)
+        self.show_osd(message)
+
+    def show_volume(self, volume):
+        """
+        Show volume level OSD.
+
+        Args:
+            volume: Volume level 0-100
+        """
+        message = tr("player.osd.volume", volume=volume)
+        self.show_osd(message)
+
+    def show_audio_track(self, track_name):
+        """
+        Show audio track selection OSD.
+
+        Args:
+            track_name: Name of the selected audio track
+        """
+        message = tr("player.osd.audio_track", track=track_name)
+        self.show_osd(message)
+
+    def show_subtitle_track(self, track_name=None, enabled=True):
+        """
+        Show subtitle track selection OSD.
+
+        Args:
+            track_name: Name of the subtitle track (None if disabled)
+            enabled: Whether subtitles are enabled
+        """
+        if enabled and track_name:
+            message = tr("player.osd.subtitle_on", track=track_name)
+        else:
+            message = tr("player.osd.subtitle_off")
+        self.show_osd(message)
+
+    def show_audio_delay(self, delay_ms):
+        """
+        Show audio delay OSD.
+
+        Args:
+            delay_ms: Audio delay in milliseconds (can be negative)
+        """
+        sign = "+" if delay_ms >= 0 else ""
+        message = tr("player.osd.audio_delay", delay=f"{sign}{delay_ms}")
+        self.show_osd(message)
+
+    def show_screenshot(self, success=True):
+        """
+        Show screenshot result OSD.
+
+        Args:
+            success: Whether screenshot was successful
+        """
+        if success:
+            message = tr("player.osd.screenshot_success")
+        else:
+            message = tr("player.osd.screenshot_failed")
+        self.show_osd(message)
+
+    def show_marker_added(self, marker_name):
+        """
+        Show marker added OSD.
+
+        Args:
+            marker_name: Name of the added marker
+        """
+        message = tr("player.osd.marker_added", name=marker_name)
+        self.show_osd(message)
+
+    def show_marker_deleted(self, marker_name=None):
+        """
+        Show marker deleted OSD.
+
+        Args:
+            marker_name: Name of the deleted marker (optional)
+        """
+        if marker_name:
+            message = tr("player.osd.marker_deleted_named", name=marker_name)
+        else:
+            message = tr("player.osd.marker_deleted")
+        self.show_osd(message)
+
+    def show_pause_state(self, paused):
+        """
+        Show pause/play state OSD.
+
+        Args:
+            paused: True if paused, False if playing
+        """
+        if paused:
+            message = tr("player.osd.paused")
+        else:
+            message = tr("player.osd.playing")
+        self.show_osd(message)

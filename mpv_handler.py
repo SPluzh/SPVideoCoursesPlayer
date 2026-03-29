@@ -98,9 +98,16 @@ class MPVVideoWidget(QFrame):
         self.zoom_start_pos = None
         self.zoom_start_level = 0.0
 
+        self.osd_manager = None
+
     def set_player(self, player):
         """Set reference to MPV player."""
         self.player = player
+        # Initialize OSD manager when player is set
+        if player:
+            from osd_manager import OSDManager
+
+            self.osd_manager = OSDManager(player)
 
     def paintEvent(self, event):
         """Draw a beautiful placeholder when no video is loaded"""
@@ -138,12 +145,10 @@ class MPVVideoWidget(QFrame):
             self.player.video_zoom = self.zoom_level
             self.zoom_changed.emit(self.zoom_level)
 
-            # Show zoom level via MPV OSD
-            zoom_percent = self.get_zoom_percent()
-            from translator import tr
-
-            zoom_text = tr("player.zoom_level", percent=zoom_percent)
-            self.player.show_text(zoom_text, 2500)  # Show for 2.5 seconds
+            # Show zoom level via OSD Manager
+            if self.osd_manager:
+                zoom_percent = self.get_zoom_percent()
+                self.osd_manager.show_zoom(zoom_percent)
 
             if self.zoom_level <= 0:
                 self.pan_x = 0.0
@@ -315,12 +320,9 @@ class MPVVideoWidget(QFrame):
                 self.zoom_changed.emit(0.0)
 
                 # Show OSD notification for zoom reset (if requested)
-                if show_osd:
+                if show_osd and self.osd_manager:
                     zoom_percent = self.get_zoom_percent()
-                    from translator import tr
-
-                    zoom_text = tr("player.zoom_level", percent=zoom_percent)
-                    self.player.show_text(zoom_text, 2500)  # Show for 2.5 seconds
+                    self.osd_manager.show_zoom(zoom_percent)
             except Exception as e:
                 logging.error(f"Error resetting zoom/pan: {e}", exc_info=True)
 

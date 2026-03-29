@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.4.6]
+- **OSD System**: Implemented a comprehensive, extensible on-screen display (OSD) notification system:
+    - **Playback Speed**: Shows current speed (e.g., "Playback Speed: 1.5x") when adjusted via hotkeys or slider.
+    - **Volume Control**: Displays volume level (e.g., "Volume: 75%") when changed.
+    - **Audio Tracks**: Shows selected audio track name when switched.
+    - **Subtitles**: Displays subtitle track selection or "Subtitles: Off" when toggled.
+    - **Audio Delay**: Shows audio sync adjustment in milliseconds (e.g., "Audio Delay: +100 ms").
+    - **Screenshots**: Confirms successful screenshot capture or displays error.
+    - **Markers**: Shows confirmation when markers are added or deleted.
+    - **Play/Pause State**: Displays "Paused" or "Playing" when toggling playback via Space or button click.
+    - **Zoom**: Refactored existing zoom OSD to use the new centralized system.
+
 ## [1.4.5]
 - **Always On Top**: Added a toggle to keep the player window above all other windows:
     - **Hotkey**: Press `T` to toggle "Always on Top" mode.

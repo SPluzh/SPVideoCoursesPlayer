@@ -130,7 +130,20 @@
             "noise": "Шумодав",
             "deess": "Дэ-эссер",
             "comp": "Компрессор",
-            "channel": "Канал"
+            "channel": "Канал",
+            "speed": "Скорость воспроизведения: {speed}x",
+            "volume": "Громкость: {volume}%",
+            "audio_track": "Аудио: {track}",
+            "subtitle_on": "Субтитры: {track}",
+            "subtitle_off": "Субтитры: Выкл",
+            "audio_delay": "Задержка звука: {delay} мс",
+            "screenshot_success": "Скриншот сохранён в буфер обмена",
+            "screenshot_failed": "Ошибка создания скриншота",
+            "marker_added": "Маркер добавлен: {name}",
+            "marker_deleted": "Маркер удалён",
+            "marker_deleted_named": "Маркер удалён: {name}",
+            "paused": "Пауза",
+            "playing": "Воспроизведение"
         },
         "audio_tools": {
             "noise": "Шум",

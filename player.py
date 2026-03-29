@@ -200,6 +200,7 @@ class VideoPlayerWidget(QWidget):
         self.is_loading = False
         self.auto_play_pending = False
         self.player = None
+        self.osd_manager = None  # Will be initialized in setup_mpv
         self.sub_color = "#FFFFFF"
         self.sub_border_color = "#000000"
         self.sub_scale = 1.0
@@ -523,10 +524,10 @@ class VideoPlayerWidget(QWidget):
             current = self.player.audio_delay or 0
             new_val = current + delta
             self.player.audio_delay = new_val
-            # Show OSD
-            ms_val = int(new_val * 1000)
-            sign = "+" if ms_val > 0 else ""
-            self.player.show_text(f"{tr('player.audio_delay')}: {sign}{ms_val} ms")
+            # Show OSD notification via OSD Manager
+            if self.osd_manager:
+                ms_val = int(new_val * 1000)
+                self.osd_manager.show_audio_delay(ms_val)
         except Exception as e:
             logging.error(f"Error adjusting delay: {e}")
 
@@ -536,9 +537,10 @@ class VideoPlayerWidget(QWidget):
             return
         try:
             self.player.audio_delay = value
-            ms = int(value * 1000)
-            sign = "+" if ms > 0 else ""
-            self.player.show_text(f"{tr('player.audio_delay')}: {sign}{ms} ms")
+            # Show OSD notification via OSD Manager
+            if self.osd_manager:
+                ms = int(value * 1000)
+                self.osd_manager.show_audio_delay(ms)
         except Exception as e:
             logging.error(f"Error setting delay: {e}")
 
@@ -852,6 +854,12 @@ class VideoPlayerWidget(QWidget):
                     QTimer.singleShot(50, self.restore_position)
 
             self.video_widget.set_player(self.player)
+
+            # Initialize OSD Manager
+            from osd_manager import OSDManager
+
+            self.osd_manager = OSDManager(self.player)
+
             logging.info("MPV initialized successfully")
             logging.info(f"libmpv version: {self.player.mpv_version}")
 
@@ -1198,6 +1206,11 @@ class VideoPlayerWidget(QWidget):
             # Save to DB
             self.db.save_selected_audio(self.current_file, track_id)
 
+            # Show OSD notification for audio track change
+            if self.osd_manager:
+                track_title = track.get("title") or track.get("track_type", "Unknown")
+                self.osd_manager.show_audio_track(track_title)
+
         except Exception as e:
             logging.error(f"❌ Switch error: {e}", exc_info=True)
 
@@ -1505,6 +1518,9 @@ class VideoPlayerWidget(QWidget):
                         logging.debug("Reloading markers...")  # DEBUG
                         self.load_markers(self.current_file)
                         self.markers_changed.emit(self.current_file)
+                        # Show OSD notification for marker added
+                        if self.osd_manager:
+                            self.osd_manager.show_marker_added(label)
                     else:
                         logging.error("Error - self.db is None")  # DEBUG
             else:
@@ -1613,6 +1629,9 @@ class VideoPlayerWidget(QWidget):
                 self.db.delete_marker(marker_id)
                 self.load_markers(self.current_file)
             self.markers_changed.emit(self.current_file)
+            # Show OSD notification for marker deleted
+            if self.osd_manager:
+                self.osd_manager.show_marker_deleted()
 
     def set_subtitle_styles(self, color, border_color, scale):
         """Set initial subtitle styles."""
@@ -1670,6 +1689,9 @@ class VideoPlayerWidget(QWidget):
             except:
                 pass
             self._save_selected_subtitle(None)
+            # Show OSD notification for subtitles disabled
+            if self.osd_manager:
+                self.osd_manager.show_subtitle_track(enabled=False)
             return
 
         if not self.db:
@@ -1709,6 +1731,11 @@ class VideoPlayerWidget(QWidget):
                     logging.error(f"❌ Subtitle file not found: {subtitle_file_path}")
 
             self._save_selected_subtitle(track_id)
+
+            # Show OSD notification for subtitle track change
+            if self.osd_manager:
+                track_title = track.get("title") or track.get("track_type", "Unknown")
+                self.osd_manager.show_subtitle_track(track_title, enabled=True)
 
         except Exception as e:
             logging.error(f"Error changing subtitle track: {e}", exc_info=True)
@@ -1871,6 +1898,10 @@ class VideoPlayerWidget(QWidget):
                 else:
                     self.taskbar_progress.set_normal()
 
+            # Show OSD notification for pause/play state
+            if self.osd_manager:
+                self.osd_manager.show_pause_state(self.player.pause)
+
         except Exception as e:
             logging.error(f"Error toggling playback: {e}", exc_info=True)
 
@@ -1930,6 +1961,9 @@ class VideoPlayerWidget(QWidget):
         try:
             if self.player:
                 self.player.volume = value
+                # Show OSD notification for volume change
+                if self.osd_manager:
+                    self.osd_manager.show_volume(value)
         except Exception as e:
             logging.error(f"Error changing volume: {e}", exc_info=True)
 
@@ -1939,6 +1973,9 @@ class VideoPlayerWidget(QWidget):
             if self.player:
                 self.player.speed = speed
                 self.speed_label.setText(tr("player.speed", speed=f"{speed:.1f}"))
+                # Show OSD notification for speed change
+                if self.osd_manager:
+                    self.osd_manager.show_speed(speed)
         except Exception as e:
             logging.error(f"Error changing speed: {e}", exc_info=True)
 
