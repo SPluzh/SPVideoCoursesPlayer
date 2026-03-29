@@ -54,13 +54,7 @@ class AboutDialog(QDialog):
         version.setObjectName("aboutVersion")
         version.setAlignment(Qt.AlignmentFlag.AlignCenter)
         container_layout.addWidget(version)
-        
-        # Separator
-        line = QFrame()
-        line.setObjectName("aboutSeparator")
-        line.setFrameShape(QFrame.Shape.HLine)
-        container_layout.addWidget(line)
-        
+                
         # Description
         desc = QLabel(tr('about.description'))
         desc.setObjectName("aboutDescription")

@@ -11,7 +11,7 @@
 
 
 <p align="center">
-  <strong>Video player for local courses with hierarchical library, progress tracking, bookmarks, tags, and learning statistics</strong>
+  <strong>Video player for local courses with hierarchical library, progress tracking, bookmarks, tags, and learning statistics. Includes video zoom, audio enhancement, custom subtitle settings, and instant thumbnail previews on the timeline</strong>
 </p>
 
 <p align="center">
@@ -27,7 +27,7 @@
 
 ### Overview
 
-SP Video Courses Player is a desktop application for watching and managing local video courses with library organization, progress tracking, and learning statistics.
+SP Video Courses Player is a desktop application for watching and managing local video courses with hierarchical library organization, progress tracking, and learning statistics. Includes video zoom, audio enhancement, custom subtitle settings, and instant thumbnail previews on the timeline.
 
 ### ✨ Features
 
@@ -119,7 +119,7 @@ SP Video Courses Player/
 
 ### Обзор
 
-SP Video Courses Player — плеер для локальных видеокурсов с древовидной библиотекой, сохранением прогресса, закладками, тегами и статистикой обучения.
+SP Video Courses Player — плеер для локальных видеокурсов с древовидной библиотекой, сохранением прогресса, закладками, тегами и статистикой обучения. Включает масштабирование кадра, улучшение звука, настройку субтитров и мгновенные превью на таймлайне.
 
 ### ✨ Возможности
 
