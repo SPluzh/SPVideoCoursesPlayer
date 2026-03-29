@@ -725,11 +725,14 @@ class VideoCourseBrowser(QMainWindow):
             if "playback_speed" in state:
                 try:
                     speed_value = int(state["playback_speed"])
-                    self.video_player.speed_slider.blockSignals(True)
+                    self.video_player._restoring_state = True
                     self.video_player.speed_slider.setValue(speed_value)
-                    self.video_player.speed_slider.blockSignals(False)
+                    self.video_player._restoring_state = False
                 except Exception as e:
                     logging.error(f"Error restoring playback speed: {e}")
+                    self.video_player._restoring_state = (
+                        False  # Ensure flag is reset on error
+                    )
 
             if "pip_geometry" in state:
                 try:

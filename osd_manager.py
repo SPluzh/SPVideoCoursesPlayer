@@ -279,3 +279,17 @@ class OSDManager:
         """
         message = tr("player.osd.mono_on" if enabled else "player.osd.mono_off")
         self.show_osd(message)
+
+    def show_bookmarks_gallery(self, visible, count):
+        """
+        Show bookmarks gallery state OSD.
+
+        Args:
+            visible: True if gallery is now visible, False if hidden
+            count: Number of bookmarks
+        """
+        if visible:
+            message = tr("player.osd.bookmarks_shown", count=count)
+        else:
+            message = tr("player.osd.bookmarks_hidden")
+        self.show_osd(message)

@@ -161,7 +161,9 @@
             "deesser_on": "Де-эссер: Вкл",
             "deesser_off": "Де-эссер: Выкл",
             "mono_on": "Моно режим: Вкл",
-            "mono_off": "Моно режим: Выкл"
+            "mono_off": "Моно режим: Выкл",
+            "bookmarks_shown": "Галерея закладок: Закладки: {count}",
+            "bookmarks_hidden": "Галерея закладок: Скрыта"
         },
         "audio_tools": {
             "noise": "Шум",

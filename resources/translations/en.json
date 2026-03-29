@@ -161,7 +161,9 @@
             "deesser_on": "De-esser: On",
             "deesser_off": "De-esser: Off",
             "mono_on": "Mono Mode: On",
-            "mono_off": "Mono Mode: Off"
+            "mono_off": "Mono Mode: Off",
+            "bookmarks_shown": "Bookmarks Gallery: Bookmarks: {count}",
+            "bookmarks_hidden": "Bookmarks Gallery: Hidden"
         },
         "audio_tools": {
             "noise": "Noise",

@@ -207,6 +207,7 @@ class VideoPlayerWidget(QWidget):
         self.sub_scale = 1.0
         self.sub_scale = 1.0
         self.markers = []
+        self._restoring_state = False  # Flag to suppress OSD during state restoration
 
         # Marker Gallery & Thumbnailing
         self.thumb_provider = ThumbnailProvider(self)
@@ -1596,6 +1597,10 @@ class VideoPlayerWidget(QWidget):
 
         if self.marker_gallery.isVisible():
             self.marker_gallery.hide()
+            # Show OSD notification
+            if self.osd_manager:
+                marker_count = len(self.markers) if self.markers else 0
+                self.osd_manager.show_bookmarks_gallery(False, marker_count)
         else:
             self._update_gallery_geometry()
             self.marker_gallery.show()
@@ -1606,6 +1611,10 @@ class VideoPlayerWidget(QWidget):
                     self.thumb_provider.get_thumbnail(
                         self.current_file, m["position_seconds"], m["id"]
                     )
+            # Show OSD notification
+            if self.osd_manager:
+                marker_count = len(self.markers) if self.markers else 0
+                self.osd_manager.show_bookmarks_gallery(True, marker_count)
 
     def _on_marker_thumbnail_ready(self, request_id, pixmap):
         """Slot called when a marker thumbnail is generated."""
@@ -1992,8 +2001,8 @@ class VideoPlayerWidget(QWidget):
             if self.player:
                 self.player.speed = speed
                 self.speed_label.setText(tr("player.speed", speed=f"{speed:.1f}"))
-                # Show OSD notification for speed change
-                if self.osd_manager:
+                # Show OSD notification for speed change (but not during state restoration)
+                if self.osd_manager and not self._restoring_state:
                     self.osd_manager.show_speed(speed)
         except Exception as e:
             logging.error(f"Error changing speed: {e}", exc_info=True)
