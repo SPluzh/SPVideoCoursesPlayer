@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.4.7]
+- **OSD Toggle**: Added user control for on-screen display notifications:
+    - **Menu Option**: Added "Show OSD Notifications" toggle in the View menu (before "Show Library").
+    - **Default**: OSD notifications are enabled by default.
+
 ## [1.4.6]
 - **OSD System**: Implemented a comprehensive, extensible on-screen display (OSD) notification system:
     - **Playback Speed**: Shows current speed (e.g., "Playback Speed: 1.5x") when adjusted via hotkeys or slider.

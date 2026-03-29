@@ -333,6 +333,7 @@ class VideoCourseBrowser(QMainWindow):
         self.video_player = VideoPlayerWidget()
         self.video_player.setMinimumWidth(400)  # Ensure player has minimum width
         self.video_player.db = self.db
+        self.video_player.config = self.config
         self.video_player.taskbar_progress = self.taskbar_progress
         self.video_player.show_preview = self.show_preview_popup
         self.video_player.set_ffmpeg_path(self.ffmpeg_path)
@@ -950,6 +951,12 @@ class VideoCourseBrowser(QMainWindow):
 
         view_menu.addSeparator()
 
+        self.toggle_osd_action = QAction(tr("menu.show_osd"), self)
+        self.toggle_osd_action.setCheckable(True)
+        self.toggle_osd_action.setChecked(self.config.get_show_osd())
+        self.toggle_osd_action.triggered.connect(self.toggle_osd_display)
+        view_menu.addAction(self.toggle_osd_action)
+
         self.toggle_lib_action = QAction(tr("menu.show_library"), self)
         self.toggle_lib_action.setCheckable(True)
         self.toggle_lib_action.setChecked(
@@ -1559,6 +1566,13 @@ class VideoCourseBrowser(QMainWindow):
 
         if hasattr(self, "toggle_lib_action"):
             self.toggle_lib_action.setChecked(self.browser_widget.isVisible())
+
+    def toggle_osd_display(self):
+        """Toggle OSD notifications on/off."""
+        checked = self.toggle_osd_action.isChecked()
+        self.config.set_show_osd(checked)
+        if hasattr(self.video_player, "osd_manager") and self.video_player.osd_manager:
+            self.video_player.osd_manager.set_enabled(checked)
 
     def toggle_pip_mode(self):
         """Toggle Picture-in-Picture mode."""

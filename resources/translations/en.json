@@ -22,6 +22,7 @@
         "frame_back": "Previous Frame",
         "show_markers": "Show Bookmarks",
         "show_library": "Show Library",
+        "show_osd": "Show OSD Notifications",
         "check_updates": "Check for Updates...",
         "locate_video": "Locate Active Video",
         "always_on_top": "Always on Top"

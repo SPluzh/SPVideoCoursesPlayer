@@ -191,6 +191,7 @@ class VideoPlayerWidget(QWidget):
         super().__init__(parent)
         logging.debug("VideoPlayerWidget init start")
         self.db = None
+        self.config = None  # Will be set by MainWindow
         self.current_file = None
         self.saved_position = 0
         self.position_restore_attempted = False
@@ -859,6 +860,13 @@ class VideoPlayerWidget(QWidget):
             from osd_manager import OSDManager
 
             self.osd_manager = OSDManager(self.player)
+
+            # Load OSD enabled state from config if available
+            if hasattr(self, "config") and self.config:
+                self.osd_manager.set_enabled(self.config.get_show_osd())
+
+            # Share OSD Manager with video_widget for zoom notifications
+            self.video_widget.osd_manager = self.osd_manager
 
             logging.info("MPV initialized successfully")
             logging.info(f"libmpv version: {self.player.mpv_version}")

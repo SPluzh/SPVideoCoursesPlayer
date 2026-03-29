@@ -21,6 +21,16 @@ class OSDManager:
         """
         self.player = player
         self.default_duration = 2500  # milliseconds (same as zoom)
+        self.enabled = True  # OSD notifications enabled by default
+
+    def set_enabled(self, enabled: bool):
+        """
+        Enable or disable OSD notifications.
+
+        Args:
+            enabled: True to enable OSD, False to disable
+        """
+        self.enabled = enabled
 
     def show_osd(self, message, duration=None):
         """
@@ -30,7 +40,7 @@ class OSDManager:
             message: Text to display
             duration: Display duration in milliseconds (default: 2500ms)
         """
-        if not self.player:
+        if not self.enabled or not self.player:
             return
 
         try:

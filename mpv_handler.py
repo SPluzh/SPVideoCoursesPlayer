@@ -103,11 +103,6 @@ class MPVVideoWidget(QFrame):
     def set_player(self, player):
         """Set reference to MPV player."""
         self.player = player
-        # Initialize OSD manager when player is set
-        if player:
-            from osd_manager import OSDManager
-
-            self.osd_manager = OSDManager(player)
 
     def paintEvent(self, event):
         """Draw a beautiful placeholder when no video is loaded"""
