@@ -323,7 +323,7 @@
     },
     "about": {
         "title": "About",
-        "description": "A specialized video player for viewing downloaded video courses with progress tracking.",
+        "description": "Video player for local courses with hierarchical library, progress tracking, bookmarks, tags, and learning statistics.",
         "version": "Version {version}",
         "close": "Close"
     },

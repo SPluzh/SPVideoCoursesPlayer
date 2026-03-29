@@ -11,7 +11,7 @@
 
 
 <p align="center">
-  <strong>A specialized video player for watching downloaded video courses with progress tracking</strong>
+  <strong>Video player for local courses with hierarchical library, progress tracking, bookmarks, tags, and learning statistics</strong>
 </p>
 
 <p align="center">
@@ -27,7 +27,7 @@
 
 ### Overview
 
-SP Video Courses Player is a desktop application designed specifically for watching and managing downloaded video courses. It provides a seamless experience for organizing your video library, tracking your progress, and picking up where you left off.
+SP Video Courses Player is a desktop application for watching and managing local video courses with library organization, progress tracking, and learning statistics.
 
 ### ✨ Features
 
@@ -119,7 +119,7 @@ SP Video Courses Player/
 
 ### Обзор
 
-SP Video Courses Player — это настольное приложение, специально разработанное для просмотра и управления скачанными видеокурсами. Оно обеспечивает удобную организацию видеотеки, отслеживание прогресса и возможность продолжить просмотр с того места, где вы остановились.
+SP Video Courses Player — плеер для локальных видеокурсов с древовидной библиотекой, сохранением прогресса, закладками, тегами и статистикой обучения.
 
 ### ✨ Возможности
 
