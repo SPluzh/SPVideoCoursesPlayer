@@ -294,7 +294,7 @@ class VideoCourseBrowser(QMainWindow):
         self.splitter.setStretchFactor(0, 0)
         self.splitter.setStretchFactor(1, 1)
 
-        self.restore_window_state()
+        self._init_maximized = self.restore_window_state()
         
         # Override collapsible state from settings: Library (0) collapsible, Player (1) fixed
         self.splitter.setCollapsible(0, True)
@@ -2830,22 +2830,19 @@ def main():
         logging.debug("Application starting...")
         window = VideoCourseBrowser()
         logging.debug("Window created")
-        is_maximized = window.restore_window_state()
-        logging.debug("Window state restored")
+        
         # Register native event filter for taskbar thumbnail button clicks
         taskbar_filter = TaskbarEventFilter(window)
         app.installNativeEventFilter(taskbar_filter)
-        window.show()
+
+        # Show the window in its final correct state immediately to prevent flickers
+        if getattr(window, '_init_maximized', False):
+            # Explicitly synchronize screen association before maximizing if needed
+            window.showMaximized()
+        else:
+            window.show()
+            
         logging.debug("Window shown")
-        if is_maximized:
-            # Explicitly synchronize screen association before maximizing
-            center = window.geometry().center()
-            screen = QApplication.screenAt(center)
-            if screen and window.windowHandle():
-                window.windowHandle().setScreen(screen)
-                
-            # Still using a small delay to ensure OS window manager is ready
-            QTimer.singleShot(100, window.showMaximized)
         sys.exit(app.exec())
     except Exception as e:
         import traceback
