@@ -49,6 +49,9 @@ python debug_scanner.py
 
 # Verify refactoring integrity
 python verify_refactoring.py
+
+# Check Python version (requires 3.10+, tested with 3.14.2)
+python --version
 ```
 
 ## Project Structure
@@ -127,8 +130,9 @@ from translator import tr
 ### Error Handling
 - Use try-except blocks for file I/O, database operations, and external processes
 - Log errors with `logging.error()` including traceback: `logging.error(f"Error: {e}", exc_info=True)`
-- Use descriptive error messages with emoji prefixes: `❌ ERROR`, `⚠️ WARNING`
+- Use descriptive error messages with emoji prefixes: `❌ ERROR`, `⚠️ WARNING`, `✅ SUCCESS`, `ℹ️ INFO`
 - Fail gracefully in UI code - don't crash the application
+- Always wrap MPV operations in try-except blocks (MPV can throw exceptions during playback)
 
 Example:
 ```python
@@ -260,3 +264,28 @@ except Exception as e:
 - **Menu Initialization**: Define `QAction` objects before usage to avoid crashes
 - **Preview Performance**: FFmpeg frame extraction via `QProcess` has unavoidable delay but is stable
 - **Splitter State**: `restoreState()` overwrites code-level settings - always re-apply `setCollapsible()` after restore
+
+## Quick Reference
+
+### File Locations
+- **Main entry**: `main.py` (3000+ lines, contains MainWindow, PiPOverlay)
+- **Config**: `resources/settings.ini` (gitignored, managed by ConfigManager)
+- **Database**: `data/video_courses.db` (SQLite, WAL mode enabled)
+- **Translations**: `resources/translations/en.json`, `ru.json`
+- **Binaries**: `resources/bin/` (ffmpeg.exe, ffprobe.exe, libmpv-2.dll)
+
+### Key Classes
+- `MainWindow` (main.py): Main application window
+- `VideoPlayerWidget` (player.py): MPV-based video player
+- `HoverTreeWidget` (library.py): Video library tree view
+- `DatabaseManager` (database.py): All DB operations
+- `ConfigManager` (config_manager.py): Settings.ini management
+- `VideoScanner` (scanner.py): Video scanning and thumbnail generation
+- `HotkeyManager` (hotkeys.py): Centralized keyboard handling
+
+### Common Operations
+- **Get config value**: `config.get_language()`, `config.get_video_extensions()`
+- **Set config value**: `config.set_language('en')`, `config.save()`
+- **DB query**: `with self.db.get_connection() as conn: cursor = conn.cursor(); ...`
+- **Translate text**: `tr('player.play')`, `tr('video_info.size_kb', size='123.4')`
+- **Load icon**: `QIcon(str(RESOURCES_DIR / 'icons' / 'play.png'))`
