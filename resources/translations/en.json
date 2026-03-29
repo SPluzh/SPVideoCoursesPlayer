@@ -152,7 +152,16 @@
             "seek_forward": "Forward +{seconds}s",
             "seek_backward": "Backward -{seconds}s",
             "frame_forward": "Next Frame",
-            "frame_backward": "Previous Frame"
+            "frame_backward": "Previous Frame",
+            "noise_off": "Noise Reduction: Off",
+            "noise_standard": "Noise Reduction: Standard",
+            "noise_ai": "Noise Reduction: AI",
+            "compressor_on": "Compressor: On",
+            "compressor_off": "Compressor: Off",
+            "deesser_on": "De-esser: On",
+            "deesser_off": "De-esser: Off",
+            "mono_on": "Mono Mode: On",
+            "mono_off": "Mono Mode: Off"
         },
         "audio_tools": {
             "noise": "Noise",

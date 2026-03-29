@@ -89,18 +89,21 @@ class OSDManager:
         message = tr("player.osd.audio_track", track=track_name)
         self.show_osd(message)
 
-    def show_subtitle_track(self, track_name=None, enabled=True):
+    def show_subtitle_on(self, track_name):
         """
-        Show subtitle track selection OSD.
+        Show subtitle enabled OSD.
 
         Args:
-            track_name: Name of the subtitle track (None if disabled)
-            enabled: Whether subtitles are enabled
+            track_name: Name of the subtitle track
         """
-        if enabled and track_name:
-            message = tr("player.osd.subtitle_on", track=track_name)
-        else:
-            message = tr("player.osd.subtitle_off")
+        message = tr("player.osd.subtitle_on", track=track_name)
+        self.show_osd(message)
+
+    def show_subtitle_off(self):
+        """
+        Show subtitle disabled OSD.
+        """
+        message = tr("player.osd.subtitle_off")
         self.show_osd(message)
 
     def show_audio_delay(self, delay_ms):
@@ -226,4 +229,53 @@ class OSDManager:
             message = tr("player.osd.frame_forward")
         else:
             message = tr("player.osd.frame_backward")
+        self.show_osd(message)
+
+    def show_noise_mode(self, mode):
+        """
+        Show noise reduction mode OSD.
+
+        Args:
+            mode: Noise reduction mode ('off', 'standard', 'ai')
+        """
+        if mode == "off":
+            message = tr("player.osd.noise_off")
+        elif mode == "standard":
+            message = tr("player.osd.noise_standard")
+        elif mode == "ai":
+            message = tr("player.osd.noise_ai")
+        else:
+            return
+        self.show_osd(message)
+
+    def show_compressor(self, enabled):
+        """
+        Show compressor state OSD.
+
+        Args:
+            enabled: True if compressor is enabled, False otherwise
+        """
+        message = tr(
+            "player.osd.compressor_on" if enabled else "player.osd.compressor_off"
+        )
+        self.show_osd(message)
+
+    def show_deesser(self, enabled):
+        """
+        Show de-esser state OSD.
+
+        Args:
+            enabled: True if de-esser is enabled, False otherwise
+        """
+        message = tr("player.osd.deesser_on" if enabled else "player.osd.deesser_off")
+        self.show_osd(message)
+
+    def show_mono_mode(self, enabled):
+        """
+        Show mono mode state OSD.
+
+        Args:
+            enabled: True if mono mode is enabled, False otherwise
+        """
+        message = tr("player.osd.mono_on" if enabled else "player.osd.mono_off")
         self.show_osd(message)

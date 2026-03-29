@@ -616,28 +616,6 @@ class VideoPlayerWidget(QWidget):
                 logging.debug(f"DEBUG: Applying audio filters: {af_cmd}")
                 self.player.af = af_cmd
 
-                # OSD Feedback
-                active = []
-                if mode != "off":
-                    active.append(f"{tr('player.osd.noise')}: {mode.capitalize()}")
-                if self.audio_opts.get("deesser"):
-                    active.append(tr("player.osd.deess"))
-                if self.audio_opts.get("compressor"):
-                    active.append(tr("player.osd.comp"))
-                if self.audio_opts.get("channel_mode") != "normal":
-                    active.append(
-                        f"{tr('player.osd.channel')}: {self.audio_opts['channel_mode'].capitalize()}"
-                    )
-
-                prefix = tr("player.osd.audio")
-                normal = tr("player.osd.normal")
-                text = (
-                    f"{prefix}: " + ", ".join(active)
-                    if active
-                    else f"{prefix}: {normal}"
-                )
-                self.player.show_text(text)
-
             else:
                 logging.debug("DEBUG: Clearing audio filters")
                 self.player.af = ""
@@ -657,6 +635,10 @@ class VideoPlayerWidget(QWidget):
             self.volume_btn.popup.blockSignals(False)
         self._update_audio_filters()
 
+        # Show OSD notification
+        if self.osd_manager:
+            self.osd_manager.show_noise_mode(mode)
+
     def toggle_compressor(self, enabled):
         logging.debug(f"DEBUG: player.toggle_compressor({enabled})")
         if self.audio_opts["compressor"] == enabled:
@@ -668,6 +650,10 @@ class VideoPlayerWidget(QWidget):
             self.volume_btn.popup.comp_btn.setChecked(enabled)
             self.volume_btn.popup.blockSignals(False)
         self._update_audio_filters()
+
+        # Show OSD notification
+        if self.osd_manager:
+            self.osd_manager.show_compressor(enabled)
 
     def _on_deesser_toggled(self, enabled):
         logging.debug(f"DEBUG: player._on_deesser_toggled({enabled})")
@@ -681,6 +667,10 @@ class VideoPlayerWidget(QWidget):
             self.volume_btn.popup.blockSignals(False)
         self._update_audio_filters()
 
+        # Show OSD notification
+        if self.osd_manager:
+            self.osd_manager.show_deesser(enabled)
+
     def _on_channel_mode_changed(self, mode):
         logging.debug(f"DEBUG: player._on_channel_mode_changed('{mode}')")
         if self.audio_opts["channel_mode"] == mode:
@@ -693,16 +683,20 @@ class VideoPlayerWidget(QWidget):
             self.volume_btn.popup.blockSignals(False)
         self._update_audio_filters()
 
+        # Show OSD notification
+        if self.osd_manager:
+            self.osd_manager.show_mono_mode(mode == "mono")
+
     def _on_audio_delay_changed(self, delay_sec):
         """Update audio delay in MPV."""
         self.audio_opts["delay"] = delay_sec
         if self.player:
             try:
                 self.player["audio-delay"] = delay_sec
-                # Show OSD
-                ms = int(delay_sec * 1000)
-                sign = "+" if ms > 0 else ""
-                self.player.show_text(f"{tr('player.audio_delay')}: {sign}{ms} ms")
+                # Show OSD notification for audio delay
+                if self.osd_manager:
+                    ms = int(delay_sec * 1000)
+                    self.osd_manager.show_audio_delay(ms)
                 logging.debug(f"DEBUG: Audio delay set to {delay_sec}s")
             except Exception as e:
                 logging.error(f"Error setting audio delay: {e}")
@@ -1416,6 +1410,10 @@ class VideoPlayerWidget(QWidget):
                 pass
             self._save_selected_subtitle(None)
 
+            # Show OSD notification for subtitles disabled
+            if self.osd_manager:
+                self.osd_manager.show_subtitle_off()
+
         # Save on/off state for current video
         if self.current_file and self.db:
             self.db.update_subtitle_enabled(self.current_file, enabled)
@@ -1708,7 +1706,7 @@ class VideoPlayerWidget(QWidget):
             self._save_selected_subtitle(None)
             # Show OSD notification for subtitles disabled
             if self.osd_manager:
-                self.osd_manager.show_subtitle_track(enabled=False)
+                self.osd_manager.show_subtitle_off()
             return
 
         if not self.db:
@@ -1752,7 +1750,7 @@ class VideoPlayerWidget(QWidget):
             # Show OSD notification for subtitle track change
             if self.osd_manager:
                 track_title = track.get("title") or track.get("track_type", "Unknown")
-                self.osd_manager.show_subtitle_track(track_title, enabled=True)
+                self.osd_manager.show_subtitle_on(track_title)
 
         except Exception as e:
             logging.error(f"Error changing subtitle track: {e}", exc_info=True)

@@ -152,7 +152,16 @@
             "seek_forward": "Вперёд +{seconds} сек",
             "seek_backward": "Назад -{seconds} сек",
             "frame_forward": "Следующий кадр",
-            "frame_backward": "Предыдущий кадр"
+            "frame_backward": "Предыдущий кадр",
+            "noise_off": "Шумоподавление: Выкл",
+            "noise_standard": "Шумоподавление: Стандарт",
+            "noise_ai": "Шумоподавление: AI",
+            "compressor_on": "Компрессор: Вкл",
+            "compressor_off": "Компрессор: Выкл",
+            "deesser_on": "Де-эссер: Вкл",
+            "deesser_off": "Де-эссер: Выкл",
+            "mono_on": "Моно режим: Вкл",
+            "mono_off": "Моно режим: Выкл"
         },
         "audio_tools": {
             "noise": "Шум",
