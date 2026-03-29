@@ -143,7 +143,9 @@
             "marker_deleted": "Маркер удалён",
             "marker_deleted_named": "Маркер удалён: {name}",
             "paused": "Пауза",
-            "playing": "Воспроизведение"
+            "playing": "Воспроизведение",
+            "playing_next": "Воспроизводится следующее: {name}",
+            "playing_prev": "Воспроизводится предыдущее: {name}"
         },
         "audio_tools": {
             "noise": "Шум",

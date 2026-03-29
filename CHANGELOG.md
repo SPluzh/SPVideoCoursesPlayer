@@ -13,6 +13,7 @@ All notable changes to this project will be documented in this file.
     - **Markers**: Shows confirmation when markers are added or deleted.
     - **Play/Pause State**: Displays "Paused" or "Playing" when toggling playback via Space or button click.
     - **Zoom**: Refactored existing zoom OSD to use the new centralized system.
+    - **Next/Previous Video**: Shows video name when switching between videos (e.g., "Playing Next: video.mp4", "Playing Previous: video.mp4").
 
 ## [1.4.5]
 - **Always On Top**: Added a toggle to keep the player window above all other windows:

@@ -143,7 +143,9 @@
             "marker_deleted": "Marker deleted",
             "marker_deleted_named": "Marker deleted: {name}",
             "paused": "Paused",
-            "playing": "Playing"
+            "playing": "Playing",
+            "playing_next": "Playing Next: {name}",
+            "playing_prev": "Playing Previous: {name}"
         },
         "audio_tools": {
             "noise": "Noise",

@@ -152,3 +152,29 @@ class OSDManager:
         else:
             message = tr("player.osd.playing")
         self.show_osd(message)
+
+    def show_next_video(self, video_name: str):
+        """
+        Show next video OSD.
+
+        Args:
+            video_name: Name of the next video
+        """
+        # Обрезаем имя файла до 50 символов
+        if len(video_name) > 50:
+            video_name = video_name[:47] + "..."
+        message = tr("player.osd.playing_next", name=video_name)
+        self.show_osd(message)
+
+    def show_prev_video(self, video_name: str):
+        """
+        Show previous video OSD.
+
+        Args:
+            video_name: Name of the previous video
+        """
+        # Обрезаем имя файла до 50 символов
+        if len(video_name) > 50:
+            video_name = video_name[:47] + "..."
+        message = tr("player.osd.playing_prev", name=video_name)
+        self.show_osd(message)

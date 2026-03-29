@@ -2202,6 +2202,17 @@ class VideoCourseBrowser(QMainWindow):
             item = iterator.value()
             item_type = item.data(0, Qt.ItemDataRole.UserRole + 1)
             if item_type == "video":
+                # Get the name of the next video for OSD
+                next_file_path = item.data(0, Qt.ItemDataRole.UserRole)
+                next_filename = Path(next_file_path).name
+
+                # Show OSD notification before playing
+                if (
+                    hasattr(self.video_player, "osd_manager")
+                    and self.video_player.osd_manager
+                ):
+                    self.video_player.osd_manager.show_next_video(next_filename)
+
                 self.play_video_in_player(item, resume=True, auto_play=should_play)
                 self.course_tree.scrollToItem(item)
                 self.course_tree.setCurrentItem(item)
@@ -2232,6 +2243,17 @@ class VideoCourseBrowser(QMainWindow):
             item = iterator.value()
             if item == current_item:
                 if last_video_item:
+                    # Get the name of the previous video for OSD
+                    prev_file_path = last_video_item.data(0, Qt.ItemDataRole.UserRole)
+                    prev_filename = Path(prev_file_path).name
+
+                    # Show OSD notification before playing
+                    if (
+                        hasattr(self.video_player, "osd_manager")
+                        and self.video_player.osd_manager
+                    ):
+                        self.video_player.osd_manager.show_prev_video(prev_filename)
+
                     self.play_video_in_player(
                         last_video_item, resume=True, auto_play=should_play
                     )
