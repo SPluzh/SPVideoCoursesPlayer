@@ -565,7 +565,11 @@ class VideoCourseBrowser(QMainWindow):
         # We must call show() after changing window flags to apply them
         self.show()
 
-        # Status message
+        # Show OSD notification
+        if hasattr(self.video_player, "osd_manager") and self.video_player.osd_manager:
+            self.video_player.osd_manager.show_always_on_top(new_state)
+
+        # Status message (keep for backward compatibility)
         msg = tr("hotkeys.toggle_always_on_top") + (": ON" if new_state else ": OFF")
         self.info_label.setText(msg)
         QTimer.singleShot(2000, lambda: self.info_label.setText(tr("status.ready")))

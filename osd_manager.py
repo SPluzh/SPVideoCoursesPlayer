@@ -178,3 +178,16 @@ class OSDManager:
             video_name = video_name[:47] + "..."
         message = tr("player.osd.playing_prev", name=video_name)
         self.show_osd(message)
+
+    def show_always_on_top(self, enabled: bool):
+        """
+        Show always on top state OSD.
+
+        Args:
+            enabled: True if always on top is enabled, False otherwise
+        """
+        if enabled:
+            message = tr("player.osd.always_on_top_enabled")
+        else:
+            message = tr("player.osd.always_on_top_disabled")
+        self.show_osd(message)

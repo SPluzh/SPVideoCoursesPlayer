@@ -12,6 +12,7 @@ All notable changes to this project will be documented in this file.
     - **Screenshots**: Confirms successful screenshot capture or displays error.
     - **Markers**: Shows confirmation when markers are added or deleted.
     - **Play/Pause State**: Displays "Paused" or "Playing" when toggling playback via Space or button click.
+    - **Always on Top**: Shows "Always on Top: Enabled/Disabled" when toggling via hotkey or menu.
     - **Zoom**: Refactored existing zoom OSD to use the new centralized system.
     - **Next/Previous Video**: Shows video name when switching between videos (e.g., "Playing Next: video.mp4", "Playing Previous: video.mp4").
 
