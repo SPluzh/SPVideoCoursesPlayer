@@ -110,6 +110,7 @@ class HotkeyManager(QObject):
             Qt.Key.Key_B: "add_marker",
             Qt.Key.Key_G: "toggle_marker_gallery",
             Qt.Key.Key_P: "toggle_pip",
+            Qt.Key.Key_L: "locate_video",
             
             
             # Fallback for Cyrillic layout (Russian)
@@ -127,6 +128,7 @@ class HotkeyManager(QObject):
             0x418: "add_marker",        # RU I (where B is)
             0x41f: "toggle_marker_gallery", # RU P (where G is)
             0x417: "toggle_pip",        # RU Z (where P is)
+            0x414: "locate_video",      # RU D (where L is)
             
             
             # Multimedia keys (local behavior)
@@ -177,6 +179,7 @@ class HotkeyManager(QObject):
             0x47: "toggle_marker_gallery", # G
             0x50: "toggle_pip",        # P
             0x47: "toggle_marker_gallery", # G
+            0x4C: "locate_video",      # L
         }
         
         # Start global listener thread

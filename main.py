@@ -421,6 +421,37 @@ class VideoCourseBrowser(QMainWindow):
             self.video_player.adjust_audio_delay(-0.05)
         elif action == "toggle_library":
             self.toggle_library()
+        elif action == "locate_video":
+            self.locate_active_video()
+
+    def locate_active_video(self):
+        """Scroll the library to the currently playing video."""
+        if not hasattr(self, 'video_player') or not self.video_player.current_file:
+            return
+
+        # Show library if hidden
+        if not self.browser_widget.isVisible():
+            self.toggle_library()
+
+        file_path = self.video_player.current_file
+        item = self.find_video_item(file_path)
+        
+        if item:
+            # Expand all parents
+            parent = item.parent()
+            while parent:
+                parent.setExpanded(True)
+                parent = parent.parent()
+            
+            self.course_tree.setCurrentItem(item)
+            self.course_tree.scrollToItem(item, QTreeWidget.ScrollHint.PositionAtCenter)
+            
+            # Temporary status message
+            filename = Path(file_path).name
+            self.info_label.setText(tr('status.located', file=filename))
+            QTimer.singleShot(3000, lambda: self.info_label.setText(tr('status.ready')))
+        else:
+            logging.warning(f"Could not find video item in library for: {file_path}")
 
     def toggle_fullscreen(self):
         if getattr(self, 'is_pip_mode', False):
@@ -707,6 +738,13 @@ class VideoCourseBrowser(QMainWindow):
         show_markers_action.setShortcut('G')
         show_markers_action.triggered.connect(lambda: self.handle_player_action("toggle_marker_gallery"))
         tools_menu.addAction(show_markers_action)
+
+        tools_menu.addSeparator()
+
+        locate_action = QAction(self.icons.get('menu_video', QIcon()), tr('menu.locate_video'), self)
+        locate_action.setShortcut('L')
+        locate_action.triggered.connect(self.locate_active_video)
+        tools_menu.addAction(locate_action)
         
         tools_menu.addSeparator()
         

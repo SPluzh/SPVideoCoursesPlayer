@@ -22,7 +22,8 @@
         "frame_back": "Previous Frame",
         "show_markers": "Show Bookmarks",
         "show_library": "Show Library",
-        "check_updates": "Check for Updates..."
+        "check_updates": "Check for Updates...",
+        "locate_video": "Locate Active Video"
     },
     "library": {
         "search_placeholder": "Search...",
@@ -152,6 +153,7 @@
         "scanning": "Scanning...",
         "styles_reloaded": "Styles Reloaded",
         "db_not_found": "Database not found",
+        "located": "Located: {file}",
         "loaded": "Loaded: {folders} folders, {videos} videos, {thumbs} thumbs, {resumed} resumed",
         "found": "Found: {folders} folders, {videos} videos",
         "scanner_not_found": "Error: Scanner not found",
@@ -409,6 +411,7 @@
         "add_marker": "Add Marker",
         "toggle_marker_gallery": "Marker Gallery",
         "toggle_library": "Show/Hide Library",
+        "locate_video": "Locate Active Video in Library",
         "toggle_pip": "Picture-in-Picture",
         "prev_video": "Previous Video",
         "next_video": "Next Video",

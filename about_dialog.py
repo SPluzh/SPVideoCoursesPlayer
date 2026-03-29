@@ -127,6 +127,7 @@ class AboutDialog(QDialog):
             (".", tr('hotkeys.frame_step')),
             ("B", tr('hotkeys.add_marker')),
             ("G", tr('hotkeys.toggle_marker_gallery')),
+            ("L", tr('hotkeys.locate_video')),
             ("P", tr('hotkeys.toggle_pip')),
             (f"{tr('hotkeys.keys.shift')} + ←", tr('hotkeys.prev_video')),
             (f"{tr('hotkeys.keys.shift')} + →", tr('hotkeys.next_video')),

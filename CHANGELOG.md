@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.4.4]
+- **Library**: Added "Locate Active Video" feature:
+    - **Hotkey**: Press `L` to instantly scroll the library to the currently playing video.
+    - **Navigation**: Automatically expands parent folders and reveals hidden video items.
+
 ## [1.4.3]
 - **Library**: Added a toggle for the library panel visibility:
     - **Hotkey**: Implemented `Ctrl + L` to show or hide the library panel instantly.

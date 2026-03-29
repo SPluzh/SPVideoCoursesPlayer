@@ -22,7 +22,8 @@
         "frame_back": "Предыдущий кадр",
         "show_markers": "Показать закладки",
         "show_library": "Показать библиотеку",
-        "check_updates": "Проверить обновления..."
+        "check_updates": "Проверить обновления...",
+        "locate_video": "Показать текущее видео"
     },
     "library": {
         "search_placeholder": "Поиск...",
@@ -152,6 +153,7 @@
         "scanning": "Сканирование...",
         "styles_reloaded": "Стили перезагружены",
         "db_not_found": "База данных не найдена",
+        "located": "Видео найдено: {file}",
         "loaded": "Загружено: {folders} папок, {videos} видео, {thumbs} миниатюр, {resumed} в процессе",
         "found": "Найдено: {folders} папок, {videos} видео",
         "scanner_not_found": "Ошибка: Сканер не найден",
@@ -409,6 +411,7 @@
         "add_marker": "Добавить закладку",
         "toggle_marker_gallery": "Галерея закладок",
         "toggle_library": "Показать/скрыть библиотеку",
+        "locate_video": "Показать текущее видео в библиотеке",
         "toggle_pip": "Картинка в картинке",
         "prev_video": "Предыдущее видео",
         "next_video": "Следующее видео",
