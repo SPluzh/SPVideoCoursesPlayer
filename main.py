@@ -419,6 +419,8 @@ class VideoCourseBrowser(QMainWindow):
             self.video_player.adjust_audio_delay(0.05)
         elif action == "audio_delay_down":
             self.video_player.adjust_audio_delay(-0.05)
+        elif action == "toggle_library":
+            self.toggle_library()
 
     def toggle_fullscreen(self):
         if getattr(self, 'is_pip_mode', False):
@@ -525,13 +527,25 @@ class VideoCourseBrowser(QMainWindow):
         if state:
             if 'geometry' in state:
                 try:
-                    geometry = QByteArray.fromHex(bytes(state['geometry'], 'utf-8'))
+                    # Try hex first (default for other fields), fallback to base64 if needed
+                    geo_str = state['geometry']
+                    try:
+                        geometry = QByteArray.fromHex(bytes(geo_str, 'utf-8'))
+                    except:
+                        geometry = QByteArray.fromBase64(geo_str.encode())
                     self.restoreGeometry(geometry)
                 except Exception as e:
                     logging.error(f"Error restoring geometry: {e}")
                     self.resize(self.window_width, self.window_height)
             else:
                 self.resize(self.window_width, self.window_height)
+        
+            # Restore library visibility
+            show_library = state.get('show_library', True)
+            if hasattr(self, 'browser_widget'):
+                self.browser_widget.setVisible(show_library)
+                if hasattr(self, 'toggle_lib_action'):
+                    self.toggle_lib_action.setChecked(show_library)
 
             is_maximized = state.get('is_maximized', False)
 
@@ -596,18 +610,20 @@ class VideoCourseBrowser(QMainWindow):
                     self.splitter.setSizes([400, 1000])
 
     def save_window_state(self):
-        state = {}
-        state['geometry'] = self.saveGeometry().toHex().data().decode('utf-8')
-        state['splitter_state'] = self.splitter.saveState().toHex().data().decode('utf-8')
-        
         # Save PiP geometry
         if self.is_pip_mode:
             self.pip_geometry = self.saveGeometry()
             
+        state = {
+            'geometry': self.saveGeometry().toHex().data().decode('utf-8'),
+            'is_maximized': self.isMaximized(),
+            'show_library': self.browser_widget.isVisible() if hasattr(self, 'browser_widget') else True
+        }
+        
+        state['splitter_state'] = self.splitter.saveState().toHex().data().decode('utf-8')
+        
         if self.pip_geometry:
             state['pip_geometry'] = self.pip_geometry.toHex().data().decode('utf-8')
-
-        state['is_maximized'] = str(self.isMaximized())
 
         if self.video_player.current_file:
             state['last_video'] = self.video_player.current_file
@@ -732,6 +748,15 @@ class VideoCourseBrowser(QMainWindow):
         en_action.triggered.connect(lambda: self.change_language('en'))
         lang_group.addAction(en_action)
         lang_menu.addAction(en_action)
+
+        view_menu.addSeparator()
+
+        self.toggle_lib_action = QAction(tr('menu.show_library'), self)
+        self.toggle_lib_action.setCheckable(True)
+        self.toggle_lib_action.setChecked(self.browser_widget.isVisible() if hasattr(self, 'browser_widget') else True)
+        self.toggle_lib_action.setShortcut('Ctrl+L')
+        self.toggle_lib_action.triggered.connect(self.toggle_library)
+        view_menu.addAction(self.toggle_lib_action)
 
         view_menu.addSeparator()
 
@@ -1215,6 +1240,29 @@ class VideoCourseBrowser(QMainWindow):
         # Sync taskbar thumbnail play/pause button icon
         if hasattr(self, 'thumbnail_buttons'):
             self.thumbnail_buttons.update_play_state(not is_paused)
+
+    def toggle_library(self):
+        if not hasattr(self, 'browser_widget'):
+            return
+        
+        if self.browser_widget.isVisible():
+            self._saved_splitter_state_manual = self.splitter.saveState()
+            self.browser_widget.hide()
+            self.splitter.setSizes([0, self.width()])
+        else:
+            self.browser_widget.show()
+            if hasattr(self, '_saved_splitter_state_manual'):
+                self.splitter.restoreState(self._saved_splitter_state_manual)
+            else:
+                # Default roughly 30/70 if no state saved
+                width = self.splitter.width()
+                if width > 0:
+                    self.splitter.setSizes([int(width * 0.3), int(width * 0.7)])
+                else:
+                    self.splitter.setSizes([400, 1000])
+
+        if hasattr(self, 'toggle_lib_action'):
+            self.toggle_lib_action.setChecked(self.browser_widget.isVisible())
 
     def toggle_pip_mode(self):
         """Toggle Picture-in-Picture mode."""

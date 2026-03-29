@@ -113,6 +113,7 @@ class AboutDialog(QDialog):
         hotkeys = [
             (tr('hotkeys.keys.space'), tr('hotkeys.toggle_pause')),
             ("Ctrl + R", tr('hotkeys.rescan')),
+            ("Ctrl + L", tr('hotkeys.toggle_library')),
             ("Ctrl + ,", tr('hotkeys.open_settings')),
             ("F", tr('hotkeys.toggle_fullscreen')),
             ("M", tr('hotkeys.toggle_mute')),

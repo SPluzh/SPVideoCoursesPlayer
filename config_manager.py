@@ -353,6 +353,11 @@ class ConfigManager:
                  state['show_markers'] = config.getboolean('Window', 'show_markers')
              except (ValueError, TypeError):
                  pass
+        if config.has_option('Window', 'show_library'):
+             try:
+                 state['show_library'] = config.getboolean('Window', 'show_library')
+             except (ValueError, TypeError):
+                 pass
 
         return state
 

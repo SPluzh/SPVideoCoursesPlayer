@@ -21,6 +21,7 @@
         "frame_step": "Next Frame",
         "frame_back": "Previous Frame",
         "show_markers": "Show Bookmarks",
+        "show_library": "Show Library",
         "check_updates": "Check for Updates..."
     },
     "library": {
@@ -407,6 +408,7 @@
         "frame_step": "Next Frame",
         "add_marker": "Add Marker",
         "toggle_marker_gallery": "Marker Gallery",
+        "toggle_library": "Show/Hide Library",
         "toggle_pip": "Picture-in-Picture",
         "prev_video": "Previous Video",
         "next_video": "Next Video",

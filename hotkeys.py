@@ -140,7 +140,11 @@ class HotkeyManager(QObject):
             Qt.Key.Key_VolumeDown: "volume_down",
             Qt.Key.Key_VolumeMute: "toggle_mute",
         }
-        
+                # Actions strictly requiring Ctrl modifier
+        self.ctrl_mappings = {
+            Qt.Key.Key_L: "toggle_library",
+        }
+
         # Actions strictly requiring Shift modifier
         self.shift_mappings = {
             Qt.Key.Key_Left: "prev_video",
@@ -196,6 +200,11 @@ class HotkeyManager(QObject):
         vk = event.nativeVirtualKey()
         modifiers = event.modifiers()
         
+        # Check for Ctrl + key first
+        if modifiers == Qt.KeyboardModifier.ControlModifier:
+            if key in self.ctrl_mappings:
+                return self.ctrl_mappings[key]
+
         # Check for Shift + Arrow keys first
         if modifiers == Qt.KeyboardModifier.ShiftModifier:
             if key in self.shift_mappings:
@@ -214,6 +223,7 @@ class HotkeyManager(QObject):
         # If not found by key, check by native virtual key (Windows layout independent)
         if modifiers == Qt.KeyboardModifier.NoModifier:
              if vk in self.win_vk_mappings:
-                 return self.win_vk_mappings[vk]
+                  return self.win_vk_mappings[vk]
 
         return None
+
