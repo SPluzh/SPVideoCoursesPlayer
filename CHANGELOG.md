@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.4.5]
+- **Always On Top**: Added a toggle to keep the player window above all other windows:
+    - **Hotkey**: Press `T` to toggle "Always on Top" mode.
+- **UI Refinement**: Improved menu organization and information:
+    - Moved **Picture-in-Picture (PiP)** toggle from the "Tools" to the "View" menu for better grouping.
+
 ## [1.4.4]
 - **Library**: Added "Locate Active Video" feature:
     - **Hotkey**: Press `L` to instantly scroll the library to the currently playing video.

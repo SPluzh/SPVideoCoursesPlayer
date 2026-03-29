@@ -15,7 +15,7 @@
         "language": "Language",
         "language_ru": "Русский",
         "language_en": "English",
-        "pip_mode": "Picture-in-Picture",
+                "pip_mode": "Floating Window",
         "tools": "Tools",
         "screenshot": "Take Screenshot",
         "frame_step": "Next Frame",
@@ -23,7 +23,8 @@
         "show_markers": "Show Bookmarks",
         "show_library": "Show Library",
         "check_updates": "Check for Updates...",
-        "locate_video": "Locate Active Video"
+        "locate_video": "Locate Active Video",
+        "always_on_top": "Always on Top"
     },
     "library": {
         "search_placeholder": "Search...",
@@ -412,6 +413,7 @@
         "toggle_marker_gallery": "Marker Gallery",
         "toggle_library": "Show/Hide Library",
         "locate_video": "Locate Active Video in Library",
+        "toggle_always_on_top": "Always on Top",
         "toggle_pip": "Picture-in-Picture",
         "prev_video": "Previous Video",
         "next_video": "Next Video",
@@ -443,6 +445,7 @@
             "b": "B",
             "g": "G",
             "p": "P",
+            "t": "T",
             "shift": "Shift"
         }
     },

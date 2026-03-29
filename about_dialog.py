@@ -36,7 +36,7 @@ class AboutDialog(QDialog):
         self.container = QFrame()
         self.container.setObjectName("aboutContainer")
         self.container.setFixedWidth(850) # Make window wider
-        self.container.setFixedHeight(600) # Increase height
+        self.container.setFixedHeight(650) # Increase height
         
         container_layout = QVBoxLayout(self.container)
         container_layout.setContentsMargins(25, 30, 25, 25)
@@ -69,7 +69,6 @@ class AboutDialog(QDialog):
         container_layout.addWidget(desc)
         
         # Hotkeys Section
-        container_layout.addSpacing(10)
         hotkey_title = QLabel(tr('hotkeys.title'))
         hotkey_title.setObjectName("aboutHotkeyTitle")
         hotkey_title.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -127,6 +126,7 @@ class AboutDialog(QDialog):
             (".", tr('hotkeys.frame_step')),
             ("B", tr('hotkeys.add_marker')),
             ("G", tr('hotkeys.toggle_marker_gallery')),
+            ("T", tr('hotkeys.toggle_always_on_top')),
             ("L", tr('hotkeys.locate_video')),
             ("P", tr('hotkeys.toggle_pip')),
             (f"{tr('hotkeys.keys.shift')} + ←", tr('hotkeys.prev_video')),

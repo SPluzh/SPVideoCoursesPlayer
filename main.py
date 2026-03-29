@@ -423,6 +423,8 @@ class VideoCourseBrowser(QMainWindow):
             self.toggle_library()
         elif action == "locate_video":
             self.locate_active_video()
+        elif action == "toggle_always_on_top":
+            self.toggle_always_on_top()
 
     def locate_active_video(self):
         """Scroll the library to the currently playing video."""
@@ -452,6 +454,32 @@ class VideoCourseBrowser(QMainWindow):
             QTimer.singleShot(3000, lambda: self.info_label.setText(tr('status.ready')))
         else:
             logging.warning(f"Could not find video item in library for: {file_path}")
+
+    def toggle_always_on_top(self, checked=None):
+        """Toggle Always on Top window state."""
+        if checked is None:
+            # Toggle current state
+            is_on_top = bool(self.windowFlags() & Qt.WindowType.WindowStaysOnTopHint)
+            new_state = not is_on_top
+        else:
+            new_state = checked
+
+        if hasattr(self, 'always_on_top_action'):
+            self.always_on_top_action.setChecked(new_state)
+
+        flags = self.windowFlags()
+        if new_state:
+            self.setWindowFlags(flags | Qt.WindowType.WindowStaysOnTopHint)
+        else:
+            self.setWindowFlags(flags & ~Qt.WindowType.WindowStaysOnTopHint)
+        
+        # We must call show() after changing window flags to apply them
+        self.show()
+        
+        # Status message
+        msg = tr('hotkeys.toggle_always_on_top') + (": ON" if new_state else ": OFF")
+        self.info_label.setText(msg)
+        QTimer.singleShot(2000, lambda: self.info_label.setText(tr('status.ready')))
 
     def toggle_fullscreen(self):
         if getattr(self, 'is_pip_mode', False):
@@ -612,17 +640,21 @@ class VideoCourseBrowser(QMainWindow):
             if 'show_markers' in state:
                 try:
                     show = state['show_markers'] 
-                    # If it came from config_manager.get_window_state, it might be a bool already 
-                    # or a string if I messed up config_manager (but I used getboolean there).
-                    # Let's assume it's correct type or convertible.
                     if isinstance(show, str):
                         show = show.lower() == 'true'
-                    
                     self.marker_toggle_btn.setChecked(bool(show))
-                    # Force update delegate
                     self.toggle_markers(bool(show))
                 except Exception as e:
                     logging.error(f"Error restoring marker state: {e}")
+            
+            if 'always_on_top' in state:
+                try:
+                    on_top = state['always_on_top']
+                    if isinstance(on_top, str):
+                        on_top = on_top.lower() == 'true'
+                    self.toggle_always_on_top(bool(on_top))
+                except Exception as e:
+                    logging.error(f"Error restoring always_on_top state: {e}")
         else:
             self.resize(self.window_width, self.window_height)
         
@@ -661,6 +693,7 @@ class VideoCourseBrowser(QMainWindow):
 
         state['playback_speed'] = str(self.video_player.speed_slider.value())
         state['show_markers'] = str(self.marker_toggle_btn.isChecked())
+        state['always_on_top'] = str(bool(self.windowFlags() & Qt.WindowType.WindowStaysOnTopHint))
 
         self.config.save_window_state(state)
         self.config.save_filter_state(
@@ -758,12 +791,7 @@ class VideoCourseBrowser(QMainWindow):
         frame_back_action.triggered.connect(lambda: self.handle_player_action("frame_back"))
         tools_menu.addAction(frame_back_action)
 
-        tools_menu.addSeparator()
 
-        pip_action = QAction(self.icons.get('pip', QIcon()), tr('player.tooltip_pip'), self)
-        pip_action.setShortcut('P')
-        pip_action.triggered.connect(self.toggle_pip_mode)
-        tools_menu.addAction(pip_action)
 
         # [View] Menu
         view_menu = menubar.addMenu(tr('menu.view'))
@@ -795,6 +823,17 @@ class VideoCourseBrowser(QMainWindow):
         self.toggle_lib_action.setShortcut('Ctrl+L')
         self.toggle_lib_action.triggered.connect(self.toggle_library)
         view_menu.addAction(self.toggle_lib_action)
+
+        self.always_on_top_action = QAction(tr('menu.always_on_top'), self)
+        self.always_on_top_action.setCheckable(True)
+        self.always_on_top_action.setShortcut('T')
+        self.always_on_top_action.triggered.connect(self.toggle_always_on_top)
+        view_menu.addAction(self.always_on_top_action)
+
+        pip_action = QAction(self.icons.get('pip', QIcon()), tr('menu.pip_mode'), self)
+        pip_action.setShortcut('P')
+        pip_action.triggered.connect(self.toggle_pip_mode)
+        view_menu.addAction(pip_action)
 
         view_menu.addSeparator()
 
