@@ -483,6 +483,10 @@ class VideoPlayerWidget(QWidget):
             self.volume_btn.popup.slider.setValue(int(new_vol))
             self.volume_btn.popup.slider.blockSignals(False)
             self.volume_btn._update_icon(int(new_vol))
+
+            # Show OSD notification for volume change
+            if self.osd_manager:
+                self.osd_manager.show_volume(int(new_vol))
         except Exception as e:
             logging.error(f"Error adjusting volume: {e}")
 
