@@ -17,43 +17,67 @@ python main.py
 
 ### Running Tests
 ```bash
-# Check translation completeness
+# Check translation completeness (verifies all keys exist in en.json and ru.json)
 python tests/check_translations.py
 
 # Test taskbar buttons functionality
 python tests/test_taskbar_buttons.py
+
+# Run a single test file
+python tests/<test_name>.py
 ```
 
 ### Building Executable
 ```bash
+# Build standalone Windows executable with PyInstaller
 pyinstaller --name "SP Video Courses Player" --windowed --icon=resources/icons/app.ico main.py
+
+# Output will be in dist/ folder
 ```
 
 ### Installing Dependencies
 ```bash
 pip install -r requirements.txt
+
+# Required: PyQt6, python-mpv, comtypes, mutagen, pyinstaller
+```
+
+### Debugging & Utilities
+```bash
+# Debug scanner functionality
+python debug_scanner.py
+
+# Verify refactoring integrity
+python verify_refactoring.py
 ```
 
 ## Project Structure
 
 ```
 SPVideoCoursesPlayer/
-├── main.py                 # Application entry point, main window
+├── main.py                 # Application entry point, main window, PiP overlay
 ├── player.py               # Video player widget with MPV integration
 ├── library.py              # Video library tree widget and delegates
 ├── database.py             # DatabaseManager for SQLite operations
 ├── config_manager.py       # Settings.ini read/write operations
 ├── scanner.py              # Video scanning and thumbnail generation
 ├── mpv_handler.py          # MPV DLL setup and video widget
-├── translator.py           # i18n translation system
-├── constants.py            # Project-wide path constants
-├── utils.py                # Shared utility functions
+├── translator.py           # i18n translation system (Translator class, tr())
+├── constants.py            # Project-wide path constants (ROOT_DIR, RESOURCES_DIR, DATA_DIR)
+├── utils.py                # Shared utility functions (format_time, natural_sort_key, etc.)
 ├── hotkeys.py              # Keyboard shortcut management
-├── styles.py               # Qt stylesheet definitions
-├── *_dialog.py             # Various dialog windows
-├── *_popup.py              # Popup widgets (subtitles, volume, etc.)
-├── resources/              # Icons, translations, binaries
+├── styles.py               # Qt stylesheet definitions (StyleManager, DARK_STYLE)
+├── icon_manager.py         # Icon loading and caching
+├── video_item_data.py      # VideoItemData class for library items
+├── thumbnail_provider.py   # Thumbnail generation and caching
+├── search_utils.py         # Smart search functionality
+├── taskbar_progress.py     # Windows taskbar integration
+├── *_dialog.py             # Various dialog windows (settings, tags, markers, etc.)
+├── *_popup.py              # Popup widgets (subtitles, volume, preview, etc.)
+├── update_*.py             # Update utilities (app, ffmpeg, libmpv)
+├── resources/              # Icons, translations, binaries, styles
 │   ├── translations/       # en.json, ru.json
+│   ├── styles/             # dark.qss
 │   └── bin/                # ffmpeg.exe, ffprobe.exe, libmpv-2.dll
 ├── data/                   # SQLite DB, thumbnails (gitignored)
 └── tests/                  # Test scripts
@@ -182,6 +206,7 @@ except Exception as e:
 
 ## Important Notes
 
+- **Python Version:** Requires Python 3.10+ (tested with 3.14.2)
 - **Windows-only:** Uses comtypes for taskbar integration
 - **MPV required:** libmpv-2.dll must be in resources/bin/
 - **FFmpeg required:** For thumbnail generation and video analysis
@@ -189,6 +214,7 @@ except Exception as e:
 - **Locale:** `locale.setlocale(locale.LC_NUMERIC, 'C')` for MPV compatibility
 - **No linting:** Project doesn't use flake8/pylint/black - follow existing style
 - **No unit tests:** Only utility test scripts in tests/
+- **High DPI:** Application supports High DPI displays with Qt's PassThrough scaling policy
 
 ## Debugging Tips
 
@@ -206,6 +232,17 @@ except Exception as e:
 - **mutagen:** Audio metadata reading
 - **pyinstaller:** Building standalone executable
 
+## Development Agreements & Best Practices
+
+1. **Path Handling**: ALWAYS use `pathlib.Path` objects, never strings
+2. **Hotkey Centralization**: Route all keyboard events through `HotkeyManager` (uses physical scan codes for layout independence)
+3. **Focus Suppression**: Standardize `setFocusPolicy(Qt.FocusPolicy.NoFocus)` on buttons/sliders
+4. **MPV Safety**: Wrap all MPV calls in try/except blocks
+5. **Config & Settings**: Add new user-facing toggles to `settings.ini` with defaults in `ConfigManager.DEFAULTS`
+6. **Signal Management**: Use `blockSignals(True)` during filtering/batch operations to prevent accidental DB writes
+7. **Icon Loading**: In dialogs, call `load_icons()` BEFORE `setup_ui()` to avoid crashes
+8. **Window State**: When restoring QSplitter state, explicitly call `setCollapsible()` AFTER `restoreState()` to enforce desired behavior
+
 ## When Making Changes
 
 1. Maintain existing code style and patterns
@@ -215,3 +252,11 @@ except Exception as e:
 5. Verify database migrations if schema changes
 6. Update CHANGELOG.md for significant changes
 7. Don't commit data/, settings.ini, or binaries
+
+## Known Pitfalls
+
+- **MPV Threading**: Background threads must not touch the UI - use signals for thread-safe communication
+- **CSS Overrides**: Global styles (DARK_STYLE) can interfere with small UI elements - test thoroughly
+- **Menu Initialization**: Define `QAction` objects before usage to avoid crashes
+- **Preview Performance**: FFmpeg frame extraction via `QProcess` has unavoidable delay but is stable
+- **Splitter State**: `restoreState()` overwrites code-level settings - always re-apply `setCollapsible()` after restore

@@ -298,8 +298,12 @@ class MPVVideoWidget(QFrame):
             self.zoom_level = max(self.zoom_level - self.zoom_step, self.min_zoom)
             self._apply_zoom()
 
-    def reset_zoom_pan(self):
-        """Reset zoom and pan to default values."""
+    def reset_zoom_pan(self, show_osd=True):
+        """Reset zoom and pan to default values.
+
+        Args:
+            show_osd: If True, show OSD notification (default: True)
+        """
         self.zoom_level = 0.0
         self.pan_x = 0.0
         self.pan_y = 0.0
@@ -309,6 +313,14 @@ class MPVVideoWidget(QFrame):
                 self.player.video_pan_x = 0.0
                 self.player.video_pan_y = 0.0
                 self.zoom_changed.emit(0.0)
+
+                # Show OSD notification for zoom reset (if requested)
+                if show_osd:
+                    zoom_percent = self.get_zoom_percent()
+                    from translator import tr
+
+                    zoom_text = tr("player.zoom_level", percent=zoom_percent)
+                    self.player.show_text(zoom_text, 2500)  # Show for 2.5 seconds
             except Exception as e:
                 logging.error(f"Error resetting zoom/pan: {e}", exc_info=True)
 
