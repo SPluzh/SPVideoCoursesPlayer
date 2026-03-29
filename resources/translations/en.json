@@ -148,7 +148,11 @@
             "playing_next": "Playing Next: {name}",
             "playing_prev": "Playing Previous: {name}",
             "always_on_top_enabled": "Always on Top: Enabled",
-            "always_on_top_disabled": "Always on Top: Disabled"
+            "always_on_top_disabled": "Always on Top: Disabled",
+            "seek_forward": "Forward +{seconds}s",
+            "seek_backward": "Backward -{seconds}s",
+            "frame_forward": "Next Frame",
+            "frame_backward": "Previous Frame"
         },
         "audio_tools": {
             "noise": "Noise",

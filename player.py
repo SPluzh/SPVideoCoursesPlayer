@@ -716,16 +716,25 @@ class VideoPlayerWidget(QWidget):
             return
         try:
             self.player.seek(seconds, "relative")
+            # Show OSD notification for seek
+            if self.osd_manager:
+                self.osd_manager.show_seek(seconds)
         except Exception as e:
             logging.error(f"Error seeking: {e}")
 
     def frame_step(self):
         """Step forward one frame."""
         self.video_widget.frame_step()
+        # Show OSD notification for frame step
+        if self.osd_manager:
+            self.osd_manager.show_frame_step(forward=True)
 
     def frame_back_step(self):
         """Step backward one frame."""
         self.video_widget.frame_back_step()
+        # Show OSD notification for frame step
+        if self.osd_manager:
+            self.osd_manager.show_frame_step(forward=False)
 
     def screenshot_to_clipboard(self):
         """Screenshot to clipboard."""

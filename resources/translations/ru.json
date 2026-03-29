@@ -148,7 +148,11 @@
             "playing_next": "Воспроизводится следующее: {name}",
             "playing_prev": "Воспроизводится предыдущее: {name}",
             "always_on_top_enabled": "Поверх всех окон: Вкл",
-            "always_on_top_disabled": "Поверх всех окон: Выкл"
+            "always_on_top_disabled": "Поверх всех окон: Выкл",
+            "seek_forward": "Вперёд +{seconds} сек",
+            "seek_backward": "Назад -{seconds} сек",
+            "frame_forward": "Следующий кадр",
+            "frame_backward": "Предыдущий кадр"
         },
         "audio_tools": {
             "noise": "Шум",

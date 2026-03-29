@@ -454,9 +454,9 @@ class VideoCourseBrowser(QMainWindow):
             if self.video_player.player and not self.video_player.player.pause:
                 self.video_player.player.pause = True
         elif action == "seek_forward":
-            self.video_player.seek_relative(5)
+            self.video_player.seek_relative(10)
         elif action == "seek_backward":
-            self.video_player.seek_relative(-5)
+            self.video_player.seek_relative(-10)
         elif action == "volume_up":
             self.video_player.adjust_volume(5)
         elif action == "volume_down":
@@ -725,7 +725,9 @@ class VideoCourseBrowser(QMainWindow):
             if "playback_speed" in state:
                 try:
                     speed_value = int(state["playback_speed"])
+                    self.video_player.speed_slider.blockSignals(True)
                     self.video_player.speed_slider.setValue(speed_value)
+                    self.video_player.speed_slider.blockSignals(False)
                 except Exception as e:
                     logging.error(f"Error restoring playback speed: {e}")
 

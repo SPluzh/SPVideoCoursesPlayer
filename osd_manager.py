@@ -201,3 +201,29 @@ class OSDManager:
         else:
             message = tr("player.osd.always_on_top_disabled")
         self.show_osd(message)
+
+    def show_seek(self, seconds):
+        """
+        Show seek OSD.
+
+        Args:
+            seconds: Number of seconds (positive for forward, negative for backward)
+        """
+        if seconds > 0:
+            message = tr("player.osd.seek_forward", seconds=seconds)
+        else:
+            message = tr("player.osd.seek_backward", seconds=abs(seconds))
+        self.show_osd(message)
+
+    def show_frame_step(self, forward=True):
+        """
+        Show frame step OSD.
+
+        Args:
+            forward: True for next frame, False for previous frame
+        """
+        if forward:
+            message = tr("player.osd.frame_forward")
+        else:
+            message = tr("player.osd.frame_backward")
+        self.show_osd(message)

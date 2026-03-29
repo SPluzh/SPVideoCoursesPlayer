@@ -5,7 +5,15 @@ All notable changes to this project will be documented in this file.
 ## [1.4.7]
 - **OSD Toggle**: Added user control for on-screen display notifications:
     - **Menu Option**: Added "Show OSD Notifications" toggle in the View menu (before "Show Library").
+    - **Persistence**: Setting is saved to `settings.ini` and restored on application restart.
     - **Default**: OSD notifications are enabled by default.
+    - **Scope**: Controls all OSD messages (playback speed, volume, zoom, audio tracks, subtitles, markers, pause/play, seek, frame step, etc.).
+    - **Fix**: Resolved issue where zoom OSD was always displayed regardless of user preference by unifying OSD Manager instances.
+    - **Fix**: Prevented unwanted speed OSD notification on application startup when restoring saved playback speed.
+- **Seek Duration**: Changed seek duration from 5 seconds to 10 seconds for arrow key hotkeys (← / →) to match taskbar button behavior.
+- **OSD Enhancements**: Added OSD notifications for seek and frame step operations:
+    - **Seek**: Shows "Forward +10s" / "Backward -10s" when seeking with arrow keys or taskbar buttons.
+    - **Frame Step**: Shows "Next Frame" / "Previous Frame" when stepping through frames with , / . keys or menu.
 
 ## [1.4.6]
 - **OSD System**: Implemented a comprehensive, extensible on-screen display (OSD) notification system:
