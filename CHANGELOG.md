@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.4.8]
+- **Library UI**: Added horizontal separator lines below expanded folder items:
+    - **Visual Hierarchy**: Lines connect with vertical nesting indicators to improve folder structure readability.
+
 ## [1.4.7]
 - **OSD Toggle**: Added user control for on-screen display notifications:
     - **Menu Option**: Added "Show OSD Notifications" toggle in the View menu (before "Show Library").
