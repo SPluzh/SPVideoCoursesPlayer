@@ -382,6 +382,13 @@ class ConfigManager:
                 state["show_library"] = config.getboolean("Window", "show_library")
             except (ValueError, TypeError):
                 pass
+        if config.has_option("Window", "show_tree_lines"):
+            try:
+                state["show_tree_lines"] = config.getboolean(
+                    "Window", "show_tree_lines"
+                )
+            except (ValueError, TypeError):
+                pass
 
         return state
 
@@ -452,6 +459,17 @@ class ConfigManager:
         if not path.is_absolute():
             path = self.root_dir / path
         return path
+
+    def get_show_tree_lines(self) -> bool:
+        config = self._read_config()
+        return config.getboolean("Window", "show_tree_lines", fallback=True)
+
+    def set_show_tree_lines(self, value: bool):
+        config = self._read_config()
+        if "Window" not in config:
+            config["Window"] = {}
+        config["Window"]["show_tree_lines"] = str(value)
+        self._write_config(config)
 
     def get_raw_config(self) -> configparser.ConfigParser:
         """Get the raw ConfigParser for binary path resolution or other direct access."""

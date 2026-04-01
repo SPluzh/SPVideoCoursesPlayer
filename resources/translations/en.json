@@ -27,7 +27,8 @@
         "locate_video": "Locate Active Video",
         "expand_tree": "Expand Tree",
         "collapse_tree": "Collapse Tree",
-        "always_on_top": "Always on Top"
+        "always_on_top": "Always on Top",
+        "show_tree_lines": "Show Tree Lines"
     },
     "library": {
         "search_placeholder": "Search...",

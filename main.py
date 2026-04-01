@@ -323,6 +323,7 @@ class VideoCourseBrowser(QMainWindow):
             "display_height": self.display_height,
             "format_duration": format_duration,
             "format_size": format_size,
+            "show_tree_lines": True,
         }
         self.course_tree.setItemDelegate(
             VideoItemDelegate(delegate_config, self.course_tree)
@@ -784,6 +785,18 @@ class VideoCourseBrowser(QMainWindow):
                     self.toggle_always_on_top(bool(on_top))
                 except Exception as e:
                     logging.error(f"Error restoring always_on_top state: {e}")
+
+            if "show_tree_lines" in state:
+                try:
+                    show = state["show_tree_lines"]
+                    if isinstance(show, str):
+                        show = show.lower() == "true"
+                    self.show_tree_lines_action.setChecked(bool(show))
+                    delegate = self.course_tree.itemDelegate()
+                    if hasattr(delegate, "config"):
+                        delegate.config["show_tree_lines"] = bool(show)
+                except Exception as e:
+                    logging.error(f"Error restoring show_tree_lines state: {e}")
         else:
             self.resize(self.window_width, self.window_height)
 
@@ -1012,6 +1025,12 @@ class VideoCourseBrowser(QMainWindow):
         self.toggle_lib_action.setShortcut("Ctrl+L")
         self.toggle_lib_action.triggered.connect(self.toggle_library)
         view_menu.addAction(self.toggle_lib_action)
+
+        self.show_tree_lines_action = QAction(tr("menu.show_tree_lines"), self)
+        self.show_tree_lines_action.setCheckable(True)
+        self.show_tree_lines_action.setChecked(True)
+        self.show_tree_lines_action.triggered.connect(self.toggle_tree_lines)
+        view_menu.addAction(self.show_tree_lines_action)
 
         self.always_on_top_action = QAction(tr("menu.always_on_top"), self)
         self.always_on_top_action.setCheckable(True)
@@ -1613,6 +1632,15 @@ class VideoCourseBrowser(QMainWindow):
 
         if hasattr(self, "toggle_lib_action"):
             self.toggle_lib_action.setChecked(self.browser_widget.isVisible())
+
+    def toggle_tree_lines(self):
+        """Toggle tree lines visibility in the library."""
+        checked = self.show_tree_lines_action.isChecked()
+        delegate = self.course_tree.itemDelegate()
+        if hasattr(delegate, "config"):
+            delegate.config["show_tree_lines"] = checked
+        self.course_tree.viewport().update()
+        self.config.set_show_tree_lines(checked)
 
     def toggle_osd_display(self):
         """Toggle OSD notifications on/off."""

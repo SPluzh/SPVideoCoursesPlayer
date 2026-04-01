@@ -27,7 +27,8 @@
         "locate_video": "Найти активное видео",
         "expand_tree": "Развернуть дерево",
         "collapse_tree": "Свернуть дерево",
-        "always_on_top": "Поверх всех окон"
+        "always_on_top": "Поверх всех окон",
+        "show_tree_lines": "Показывать линии дерева"
     },
     "library": {
         "search_placeholder": "Поиск...",

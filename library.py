@@ -228,6 +228,10 @@ class VideoItemDelegate(QStyledItemDelegate):
 
     def _draw_nesting_lines(self, painter, rect, chain, index=None):
         """Draw colored vertical lines indicating nesting depth, colored uniquely by parent paths."""
+        # Check if tree lines should be shown
+        if not self.config.get("show_tree_lines", True):
+            return 0
+
         depth = len(chain)
         if depth <= 0:
             return 0
@@ -1152,7 +1156,12 @@ class VideoItemDelegate(QStyledItemDelegate):
         tree_widget = option.widget
         if isinstance(tree_widget, QTreeWidget):
             item = tree_widget.itemFromIndex(index)
-            if item and item.isExpanded() and item.childCount() > 0:
+            if (
+                item
+                and item.isExpanded()
+                and item.childCount() > 0
+                and self.config.get("show_tree_lines", True)
+            ):
                 # Calculate line color using same algorithm as nesting lines
                 folder_path = index.data(Qt.ItemDataRole.UserRole)
                 path_hash = zlib.adler32(
