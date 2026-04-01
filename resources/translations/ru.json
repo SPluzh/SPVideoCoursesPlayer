@@ -431,6 +431,14 @@
     },
     "hotkeys": {
         "title": "Горячие клавиши",
+        "category_playback": "Воспроизведение",
+        "category_audio": "Аудио",
+        "category_video": "Видео",
+        "category_bookmarks": "Закладки",
+        "category_library": "Библиотека",
+        "category_window": "Окно",
+        "category_system": "Система",
+        "category_mouse": "Мышь",
         "toggle_pause": "Воспроизведение/Пауза",
         "rescan": "Пересканировать библиотеку",
         "open_settings": "Открыть настройки",
@@ -460,6 +468,8 @@
         "audio_delay_down": "Задержка звука -",
         "speed_up": "Скорость +",
         "speed_down": "Скорость -",
+        "expand_tree": "Развернуть дерево",
+        "collapse_tree": "Свернуть дерево",
         "mouse_play_pause": "ЛКМ по видео — Плей/Пауза",
         "mouse_fullscreen": "Двойной ЛКМ — Полноэкранный режим",
         "mouse_pip_move": "ПКМ по видео (PIP) — Перемещение окна",
@@ -483,6 +493,8 @@
             "g": "G",
             "p": "P",
             "t": "T",
+            "e": "E",
+            "w": "W",
             "shift": "Shift"
         }
     },

@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.4.9]
+- **About Dialog**: Reorganized hotkeys into 8 logical categories (Playback, Audio, Video, Bookmarks, Library, Window, System, Mouse) with visual separators.
+- **Tree Navigation**: Added E (expand all) and W (collapse all) hotkeys and menu items.
+
 ## [1.4.8]
 - **Library UI**: Added horizontal separator lines below expanded folder items:
     - **Visual Hierarchy**: Lines connect with vertical nesting indicators to improve folder structure readability.

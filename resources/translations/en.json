@@ -431,6 +431,14 @@
     },
     "hotkeys": {
         "title": "Keyboard Shortcuts",
+        "category_playback": "Playback",
+        "category_audio": "Audio",
+        "category_video": "Video",
+        "category_bookmarks": "Bookmarks",
+        "category_library": "Library",
+        "category_window": "Window",
+        "category_system": "System",
+        "category_mouse": "Mouse",
         "toggle_pause": "Play/Pause",
         "rescan": "Rescan Library",
         "open_settings": "Open Settings",
@@ -460,6 +468,8 @@
         "audio_delay_down": "Audio Delay Down",
         "speed_up": "Speed Up",
         "speed_down": "Speed Down",
+        "expand_tree": "Expand Tree",
+        "collapse_tree": "Collapse Tree",
         "mouse_play_pause": "L-click on video — Play/Pause",
         "mouse_fullscreen": "Double L-click — Fullscreen Mode",
         "mouse_pip_move": "R-click on video (PIP) — Move window",
@@ -483,6 +493,8 @@
             "g": "G",
             "p": "P",
             "t": "T",
+            "e": "E",
+            "w": "W",
             "shift": "Shift"
         }
     },
