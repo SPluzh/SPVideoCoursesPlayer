@@ -25,6 +25,8 @@
         "show_osd": "Показывать OSD уведомления",
         "check_updates": "Проверить обновления...",
         "locate_video": "Найти активное видео",
+        "expand_tree": "Развернуть дерево",
+        "collapse_tree": "Свернуть дерево",
         "always_on_top": "Поверх всех окон"
     },
     "library": {
@@ -188,6 +190,8 @@
         "styles_reloaded": "Стили перезагружены",
         "db_not_found": "База данных не найдена",
         "located": "Видео найдено: {file}",
+        "tree_expanded": "Дерево развернуто",
+        "tree_collapsed": "Дерево свернуто",
         "loaded": "Загружено: {folders} папок, {videos} видео, {thumbs} миниатюр, {resumed} в процессе",
         "found": "Найдено: {folders} папок, {videos} видео",
         "scanner_not_found": "Ошибка: Сканер не найден",

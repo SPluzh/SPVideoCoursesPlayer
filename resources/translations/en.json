@@ -25,6 +25,8 @@
         "show_osd": "Show OSD Notifications",
         "check_updates": "Check for Updates...",
         "locate_video": "Locate Active Video",
+        "expand_tree": "Expand Tree",
+        "collapse_tree": "Collapse Tree",
         "always_on_top": "Always on Top"
     },
     "library": {
@@ -188,6 +190,8 @@
         "styles_reloaded": "Styles Reloaded",
         "db_not_found": "Database not found",
         "located": "Located: {file}",
+        "tree_expanded": "Tree expanded",
+        "tree_collapsed": "Tree collapsed",
         "loaded": "Loaded: {folders} folders, {videos} videos, {thumbs} thumbs, {resumed} resumed",
         "found": "Found: {folders} folders, {videos} videos",
         "scanner_not_found": "Error: Scanner not found",

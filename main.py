@@ -513,6 +513,10 @@ class VideoCourseBrowser(QMainWindow):
             self.toggle_library()
         elif action == "locate_video":
             self.locate_active_video()
+        elif action == "expand_tree":
+            self.expand_tree()
+        elif action == "collapse_tree":
+            self.collapse_tree()
         elif action == "toggle_always_on_top":
             self.toggle_always_on_top()
 
@@ -544,6 +548,26 @@ class VideoCourseBrowser(QMainWindow):
             QTimer.singleShot(3000, lambda: self.info_label.setText(tr("status.ready")))
         else:
             logging.warning(f"Could not find video item in library for: {file_path}")
+
+    def expand_tree(self):
+        """Expand all items in the library tree."""
+        iterator = QTreeWidgetItemIterator(self.course_tree)
+        while iterator.value():
+            item = iterator.value()
+            item.setExpanded(True)
+            iterator += 1
+        self.info_label.setText(tr("status.tree_expanded"))
+        QTimer.singleShot(2000, lambda: self.info_label.setText(tr("status.ready")))
+
+    def collapse_tree(self):
+        """Collapse all items in the library tree."""
+        iterator = QTreeWidgetItemIterator(self.course_tree)
+        while iterator.value():
+            item = iterator.value()
+            item.setExpanded(False)
+            iterator += 1
+        self.info_label.setText(tr("status.tree_collapsed"))
+        QTimer.singleShot(2000, lambda: self.info_label.setText(tr("status.ready")))
 
     def toggle_always_on_top(self, checked=None):
         """Toggle Always on Top window state."""
@@ -911,6 +935,24 @@ class VideoCourseBrowser(QMainWindow):
         locate_action.setShortcut("L")
         locate_action.triggered.connect(self.locate_active_video)
         tools_menu.addAction(locate_action)
+
+        expand_tree_action = QAction(
+            self.icons.get("menu_expand", QIcon()), tr("menu.expand_tree"), self
+        )
+        expand_tree_action.setShortcut("E")
+        expand_tree_action.triggered.connect(
+            lambda: self.handle_player_action("expand_tree")
+        )
+        tools_menu.addAction(expand_tree_action)
+
+        collapse_tree_action = QAction(
+            self.icons.get("menu_collapse", QIcon()), tr("menu.collapse_tree"), self
+        )
+        collapse_tree_action.setShortcut("W")
+        collapse_tree_action.triggered.connect(
+            lambda: self.handle_player_action("collapse_tree")
+        )
+        tools_menu.addAction(collapse_tree_action)
 
         tools_menu.addSeparator()
 
