@@ -83,6 +83,14 @@ SP Video Courses Player is a desktop application for watching and managing local
 
 </details>
 
+### 🔄 Manual Update
+
+1. **Close** SP Video Courses Player completely
+2. Download the latest `.zip` archive from the [Releases](https://github.com/SPluzh/SPVideoCoursesPlayer/releases/latest) page
+3. Extract the archive into the application folder **with file replacement**
+
+> **Note:** Your personal data is preserved during the update — `settings.ini` contains your application settings, and the `data/` folder stores the database, viewing progress, bookmarks, and cache. These files are not included in the release archive and will not be overwritten.
+
 
 ### 📋 Requirements
 
@@ -174,6 +182,14 @@ SP Video Courses Player — плеер для локальных видеоку�
    ```
 
 </details>
+
+### 🔄 Ручное обновление
+
+1. **Закройте** SP Video Courses Player полностью
+2. Скачайте последний `.zip` архив со страницы [Releases](https://github.com/SPluzh/SPVideoCoursesPlayer/releases/latest)
+3. Распакуйте архив в папку приложения **с заменой файлов**
+
+> **Примечание:** Ваши личные данные сохранятся при обновлении — `settings.ini` содержит настройки приложения, а папка `data/` хранит базу данных, прогресс просмотра, закладки и кеш. Эти файлы не входят в архив релиза и не будут перезаписаны.
 
 ### 📋 Требования
 
