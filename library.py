@@ -252,6 +252,22 @@ class VideoItemDelegate(QStyledItemDelegate):
             p_idx = index.parent()
             is_last_child = index.row() == p_idx.model().rowCount(p_idx) - 1
 
+        # Check if this is a video item (needs L-shaped branch connector)
+        is_video = False
+        if index is not None and index.isValid():
+            item_type = index.data(Qt.ItemDataRole.UserRole + 1)
+            is_video = item_type == "video"
+
+        # For video items, calculate the center Y position of the thumbnail (not the entire row)
+        # because markers below the video increase row height
+        branch_y = rect.top() + rect.height() / 2  # Default: middle of row
+        if is_video:
+            base_height = self.config["video_row_height"]
+            display_height = self.config["display_height"]
+            # Thumbnail is vertically centered within base_height
+            thumb_center_y = rect.top() + base_height / 2
+            branch_y = thumb_center_y
+
         painter.save()
         painter.setRenderHint(QPainter.RenderHint.Antialiasing, False)
 
@@ -276,7 +292,36 @@ class VideoItemDelegate(QStyledItemDelegate):
             # so they perfectly align with the parent's line.
             line_x = rect.left() - (depth - 1 - i) * indent
 
-            if i == depth - 1 and is_last_child:
+            # Special handling for video items: draw branch connector
+            if is_video and i == depth - 1:
+                # This is the immediate parent's line for a video item
+                if is_last_child:
+                    # Last child: L-shape (└) - vertical line from top to branch point only
+                    painter.drawRect(
+                        QRectF(
+                            line_x,
+                            rect.top(),
+                            line_width,
+                            branch_y - rect.top() + line_width / 2,
+                        )
+                    )
+                else:
+                    # Middle child: T-shape (├) - full vertical line through entire height
+                    painter.drawRect(
+                        QRectF(line_x, rect.top(), line_width, rect.height())
+                    )
+
+                # Horizontal branch line (pointing to thumbnail) - aligned with thumbnail center
+                painter.drawRect(
+                    QRectF(
+                        line_x,
+                        branch_y - line_width / 2,
+                        indent,
+                        line_width,
+                    )
+                )
+            elif i == depth - 1 and is_last_child and not is_video:
+                # Folder item that is last child
                 # Vertical segment (top to middle)
                 painter.drawRect(
                     QRectF(
@@ -287,7 +332,6 @@ class VideoItemDelegate(QStyledItemDelegate):
                     )
                 )
                 # Horizontal segment (middle to right, pointing at thumbnail)
-                # Length covers the indent plus half the line width so it connects nicely
                 painter.drawRect(
                     QRectF(
                         line_x,
@@ -297,8 +341,14 @@ class VideoItemDelegate(QStyledItemDelegate):
                     )
                 )
             else:
-                # Normal full vertical line
-                painter.drawRect(QRectF(line_x, rect.top(), line_width, rect.height()))
+                # Normal full vertical line for:
+                # - Ancestor lines (i < depth - 1)
+                # - Middle children that are folders
+                if not (is_video and i == depth - 1):
+                    # Normal case: draw full vertical line
+                    painter.drawRect(
+                        QRectF(line_x, rect.top(), line_width, rect.height())
+                    )
 
         painter.restore()
 
