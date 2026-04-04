@@ -1417,3 +1417,37 @@ class HoverTreeWidget(QTreeWidget):
         except Exception as e:
             logging.error(f"ERROR in _on_hover_timer: {e}", exc_info=True)
             self.stop_hover()
+
+    def wheelEvent(self, event):
+        """Override wheel event to scroll by single row instead of default 3 rows."""
+        try:
+            # Get wheel delta (positive = scroll up, negative = scroll down)
+            delta = event.angleDelta().y()
+
+            # Determine scroll direction (1 notch = 120 units typically)
+            if delta == 0:
+                super().wheelEvent(event)
+                return
+
+            # Get the index at current scroll position
+            index = self.indexAt(self.viewport().rect().topLeft())
+            if not index.isValid():
+                super().wheelEvent(event)
+                return
+
+            # Scroll by exactly 1 item
+            if delta > 0:
+                # Scroll up - move to previous item
+                new_index = self.indexAbove(index)
+                if new_index.isValid():
+                    self.scrollTo(new_index, QTreeWidget.ScrollHint.PositionAtTop)
+            else:
+                # Scroll down - move to next item
+                new_index = self.indexBelow(index)
+                if new_index.isValid():
+                    self.scrollTo(new_index, QTreeWidget.ScrollHint.PositionAtTop)
+
+            event.accept()
+        except Exception as e:
+            logging.error(f"ERROR in wheelEvent: {e}", exc_info=True)
+            super().wheelEvent(event)

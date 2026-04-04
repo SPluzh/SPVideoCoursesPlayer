@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.4.11]
+- **Library UI**: Enhanced tree navigation and visual hierarchy:
+    - **Tree Lines**: Added T-shaped branch connectors for videos and folders, improving visual structure clarity.
+    - **Scrolling**: Changed mouse wheel behavior to scroll by 1 row instead of 3 for precise navigation.
+
 ## [1.4.10]
 - **Library UI**: Added toggle for tree nesting lines visibility:
     - **Menu**: Added "Show Tree Lines" item in the View menu (after "Show Library").
