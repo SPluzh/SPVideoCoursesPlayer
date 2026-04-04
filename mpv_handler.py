@@ -183,7 +183,12 @@ class MPVVideoWidget(QFrame):
                 self.setCursor(Qt.CursorShape.ClosedHandCursor)
             event.accept()
         elif event.button() == Qt.MouseButton.LeftButton:
-            if not self.click_timer.isActive():
+            if self.click_timer.isActive():
+                # Second click arrived while timer is running — treat as double-click
+                self.click_timer.stop()
+                self.pending_single_click = False
+                self.toggle_fullscreen_requested.emit()
+            else:
                 self.pending_single_click = True
                 self.click_timer.start(250)
             event.accept()
