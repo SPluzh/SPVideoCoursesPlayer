@@ -444,6 +444,7 @@
         "rescan": "Rescan Library",
         "open_settings": "Open Settings",
         "toggle_fullscreen": "Fullscreen Mode",
+        "exit_fullscreen_or_pip": "Exit Fullscreen or PiP",
         "seek_backward": "Seek Backward 5s",
         "seek_forward": "Seek Forward 5s",
         "toggle_mute": "Mute",

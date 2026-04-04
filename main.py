@@ -500,6 +500,11 @@ class VideoCourseBrowser(QMainWindow):
             self.play_prev_video()
         elif action == "toggle_fullscreen":
             self.toggle_fullscreen()
+        elif action == "exit_fullscreen_or_pip":
+            if self.is_pip_mode:
+                self.exit_pip_mode()
+            elif self.isFullScreen():
+                self.toggle_fullscreen()
         elif action == "add_marker":
             self.video_player.add_marker()
         elif action == "toggle_marker_gallery":

@@ -146,7 +146,6 @@ class AboutDialog(QDialog):
             (
                 "category_video",
                 [
-                    ("F", tr("hotkeys.toggle_fullscreen")),
                     ("R", tr("hotkeys.reset_zoom")),
                     ("Z", tr("hotkeys.zoom_mode")),
                     ("[", tr("hotkeys.zoom_out")),
@@ -174,8 +173,10 @@ class AboutDialog(QDialog):
             (
                 "category_window",
                 [
-                    ("T", tr("hotkeys.toggle_always_on_top")),
+                    ("F", tr("hotkeys.toggle_fullscreen")),
                     ("P", tr("hotkeys.toggle_pip")),
+                    ("ESC", tr("hotkeys.exit_fullscreen_or_pip")),
+                    ("T", tr("hotkeys.toggle_always_on_top")),
                 ],
             ),
             (

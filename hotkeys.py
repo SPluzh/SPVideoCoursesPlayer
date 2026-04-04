@@ -101,6 +101,7 @@ class HotkeyManager(QObject):
         self.mappings = {
             Qt.Key.Key_Space: "toggle_pause",
             Qt.Key.Key_F: "toggle_fullscreen",
+            Qt.Key.Key_Escape: "exit_fullscreen_or_pip",
             Qt.Key.Key_Left: "seek_backward",
             Qt.Key.Key_Right: "seek_forward",
             Qt.Key.Key_M: "toggle_mute",
@@ -173,6 +174,7 @@ class HotkeyManager(QObject):
         # Windows-specific layout independent mappings (Virtual Keys)
         self.win_vk_mappings = {
             0x46: "toggle_fullscreen",  # F
+            0x1B: "exit_fullscreen_or_pip",  # ESC
             0x4D: "toggle_mute",  # M
             0x53: "take_screenshot",  # S
             0x43: "toggle_subtitles",  # C
