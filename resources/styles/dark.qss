@@ -1427,7 +1427,7 @@ QLabel#TagBadge {
 #aboutContainer {
     background-color: @bg-dark;
     border: 1px solid @border;
-    border-radius: 12px;
+    border-radius: 3px;
 }
 
 #aboutTitle { 
