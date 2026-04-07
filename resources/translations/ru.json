@@ -81,7 +81,15 @@
         "clear_error": "Ошибка при удалении данных",
         "db_not_available": "База данных недоступна",
         "data_cleared": "Данные успешно удалены",
-        "playback_group": "Воспроизведение"
+        "playback_group": "Воспроизведение",
+        "pureref_group": "PureRef",
+        "pureref_path_label": "Исполняемый файл PureRef:",
+        "pureref_browse": "Обзор...",
+        "pureref_filename_label": "Имя файла референсов:",
+        "pureref_path_valid": "PureRef найден: {path}",
+        "pureref_path_invalid": "PureRef не найден: {path}",
+        "pureref_not_found": "Не найден",
+        "pureref_select_exe": "Выберите PureRef.exe"
     },
     "player": {
         "play": "Воспроизвести",

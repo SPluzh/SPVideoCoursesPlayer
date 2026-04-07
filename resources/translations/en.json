@@ -81,7 +81,15 @@
         "clear_error": "Error clearing data",
         "db_not_available": "Database not available",
         "data_cleared": "Data successfully cleared",
-        "playback_group": "Playback"
+        "playback_group": "Playback",
+        "pureref_group": "PureRef",
+        "pureref_path_label": "PureRef Executable:",
+        "pureref_browse": "Browse...",
+        "pureref_filename_label": "Reference Filename:",
+        "pureref_path_valid": "PureRef found at: {path}",
+        "pureref_path_invalid": "PureRef not found at: {path}",
+        "pureref_not_found": "Not found",
+        "pureref_select_exe": "Select PureRef.exe"
     },
     "player": {
         "play": "Play",

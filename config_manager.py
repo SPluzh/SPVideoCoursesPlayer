@@ -345,6 +345,20 @@ class ConfigManager:
             fallback=self.DEFAULTS["General"]["pureref_filename"],
         )
 
+    def set_pureref_path(self, path: str):
+        config = self._read_config()
+        if "Paths" not in config:
+            config["Paths"] = {}
+        config["Paths"]["pureref_path"] = path
+        self._write_config(config)
+
+    def set_pureref_filename(self, filename: str):
+        config = self._read_config()
+        if "Paths" not in config:
+            config["Paths"] = {}
+        config["Paths"]["pureref_filename"] = filename
+        self._write_config(config)
+
     def get_subtitle_settings(self) -> tuple:
         """Returns (text_color, outline_color, font_scale)."""
         config = self._read_config()

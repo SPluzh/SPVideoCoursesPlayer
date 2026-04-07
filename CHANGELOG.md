@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.5.0]
+- **PureRef Integration**: Complete PureRef support for managing reference images alongside video courses:
+    - **Badge Button**: Each folder displays a "P" badge button in the top-right corner of its icon.
+    - **Status Indicator**: Color-coded dot shows file status (Red: missing, Yellow: exists, Green: running).
+    - **Quick Access**: Click the badge or folder icon to open the associated .pur file in PureRef.
+    - **Context Menu**: Added "Open PureRef" option to folder context menu.
+    - **View Menu**: Added "Show PureRef Badges" and "Show When Missing" toggles.
+    - **Settings Dialog**: Added PureRef configuration section with browse button for PureRef.exe path and customizable reference filename (default: "reference.pur").
+
 ## [1.4.11]
 - **Library UI**: Enhanced tree navigation and visual hierarchy:
     - **Tree Lines**: Added T-shaped branch connectors for videos and folders, improving visual structure clarity.

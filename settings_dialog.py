@@ -6,9 +6,24 @@ import io
 from pathlib import Path
 
 from PyQt6.QtWidgets import (
-    QDialog, QVBoxLayout, QGroupBox, QTreeWidget, QTreeWidgetItem, QPushButton,
-    QHBoxLayout, QFileDialog, QStyle, QMessageBox, QLabel, QProgressBar, QTextEdit,
-    QFrame, QCheckBox, QSplitter, QWidget
+    QDialog,
+    QVBoxLayout,
+    QGroupBox,
+    QTreeWidget,
+    QTreeWidgetItem,
+    QPushButton,
+    QHBoxLayout,
+    QFileDialog,
+    QStyle,
+    QMessageBox,
+    QLabel,
+    QProgressBar,
+    QTextEdit,
+    QFrame,
+    QCheckBox,
+    QSplitter,
+    QWidget,
+    QLineEdit,
 )
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal, QThread
 from PyQt6.QtGui import QTextCursor, QIcon, QColor
@@ -25,26 +40,36 @@ from constants import ROOT_DIR, DATA_DIR
 from utils import resolve_binary_path
 
 
-
 class SettingsDialog(QDialog):
     def __init__(self, parent=None, config_file=None):
         super().__init__(parent)
         self.config_file = config_file
         self.config = ConfigManager(self.config_file, ROOT_DIR, DATA_DIR)
-        self.setWindowTitle(tr('settings.title'))
+        self.setWindowTitle(tr("settings.title"))
         self.setMinimumWidth(650)
         self.load_icons()
         self.setup_ui()
         self.load_current_settings()
 
     def load_icons(self):
-        icon_names = ["menu_scan", "add", "edit", "delete", "save", "upload", "download", "check", "fail"]
+        icon_names = [
+            "menu_scan",
+            "add",
+            "edit",
+            "delete",
+            "save",
+            "upload",
+            "download",
+            "check",
+            "fail",
+            "folder",
+        ]
         self.icons = load_icons_dict(icon_names)
 
     def setup_ui(self):
         main_layout = QVBoxLayout(self)
 
-        library_group = QGroupBox(tr('settings.library_group'))
+        library_group = QGroupBox(tr("settings.library_group"))
         library_layout = QVBoxLayout()
 
         self.pathslist = QTreeWidget()
@@ -54,30 +79,30 @@ class SettingsDialog(QDialog):
         library_layout.addWidget(self.pathslist)
 
         buttons = QHBoxLayout()
-        add_btn = QPushButton(tr('settings.add'))
-        add_btn.setIcon(self.icons.get('add', QIcon()))
+        add_btn = QPushButton(tr("settings.add"))
+        add_btn.setIcon(self.icons.get("add", QIcon()))
         add_btn.clicked.connect(self.add_path)
         buttons.addWidget(add_btn)
 
-        edit_btn = QPushButton(tr('settings.edit'))
-        edit_btn.setIcon(self.icons.get('edit', QIcon()))
+        edit_btn = QPushButton(tr("settings.edit"))
+        edit_btn.setIcon(self.icons.get("edit", QIcon()))
         edit_btn.clicked.connect(self.edit_path)
         buttons.addWidget(edit_btn)
 
-        remove_btn = QPushButton(tr('settings.remove'))
-        remove_btn.setIcon(self.icons.get('delete', QIcon()))
+        remove_btn = QPushButton(tr("settings.remove"))
+        remove_btn.setIcon(self.icons.get("delete", QIcon()))
         remove_btn.clicked.connect(self.remove_path)
         buttons.addWidget(remove_btn)
 
         library_layout.addLayout(buttons)
 
-        self.scan_btn = QPushButton(tr('settings.scan'))
-        self.scan_btn.setIcon(self.icons.get('menu_scan', QIcon()))
+        self.scan_btn = QPushButton(tr("settings.scan"))
+        self.scan_btn.setIcon(self.icons.get("menu_scan", QIcon()))
         self.scan_btn.clicked.connect(self.start_scan)
         library_layout.addWidget(self.scan_btn)
 
         library_group.setLayout(library_layout)
-        
+
         # Create Splitter
         content_splitter = QSplitter(Qt.Orientation.Horizontal)
         content_splitter.setHandleWidth(12)
@@ -88,71 +113,100 @@ class SettingsDialog(QDialog):
         """)
         content_splitter.addWidget(library_group)
 
-        deps_group = QGroupBox(tr('settings.dependencies_group'))
+        deps_group = QGroupBox(tr("settings.dependencies_group"))
         deps_layout = QVBoxLayout()
-        
-        self.libmpv_btn = QPushButton(tr('settings.libmpv_checking'))
+
+        self.libmpv_btn = QPushButton(tr("settings.libmpv_checking"))
         self.libmpv_btn.clicked.connect(self.update_libmpv)
         deps_layout.addWidget(self.libmpv_btn)
 
-        self.ffmpeg_btn = QPushButton(tr('settings.ffmpeg_checking'))
+        self.ffmpeg_btn = QPushButton(tr("settings.ffmpeg_checking"))
         self.ffmpeg_btn.clicked.connect(self.update_ffmpeg)
         deps_layout.addWidget(self.ffmpeg_btn)
-        
+
         deps_layout.addStretch()
 
-        self.auto_update_chk = QCheckBox(tr('updater.check_updates_auto'))
+        self.auto_update_chk = QCheckBox(tr("updater.check_updates_auto"))
         self.auto_update_chk.setChecked(True)
         deps_layout.addWidget(self.auto_update_chk)
 
         deps_group.setLayout(deps_layout)
 
-        storage_group = QGroupBox(tr('settings.storage_group'))
+        storage_group = QGroupBox(tr("settings.storage_group"))
         storage_layout = QVBoxLayout()
-        
-        self.clear_data_btn = QPushButton(tr('settings.clear_data'))
+
+        self.clear_data_btn = QPushButton(tr("settings.clear_data"))
         self.clear_data_btn.setObjectName("clearDataBtn")
-        self.clear_data_btn.setIcon(self.icons.get('delete', QIcon()))
+        self.clear_data_btn.setIcon(self.icons.get("delete", QIcon()))
         self.clear_data_btn.clicked.connect(self.clear_metadata)
         storage_layout.addWidget(self.clear_data_btn)
-        
+
         storage_layout.addStretch()
         storage_group.setLayout(storage_layout)
 
-        playback_group = QGroupBox(tr('settings.playback_group'))
+        playback_group = QGroupBox(tr("settings.playback_group"))
         playback_layout = QVBoxLayout()
-        self.autoplay_next_chk = QCheckBox(tr('settings.autoplay_on_next'))
-        self.autoplay_prev_chk = QCheckBox(tr('settings.autoplay_on_prev'))
+        self.autoplay_next_chk = QCheckBox(tr("settings.autoplay_on_next"))
+        self.autoplay_prev_chk = QCheckBox(tr("settings.autoplay_on_prev"))
         playback_layout.addWidget(self.autoplay_next_chk)
         playback_layout.addWidget(self.autoplay_prev_chk)
         playback_group.setLayout(playback_layout)
-        
+
+        pureref_group = QGroupBox(tr("settings.pureref_group"))
+        pureref_layout = QVBoxLayout()
+
+        # PureRef path section
+        path_label = QLabel(tr("settings.pureref_path_label"))
+        pureref_layout.addWidget(path_label)
+
+        path_row = QHBoxLayout()
+        self.pureref_path_btn = QPushButton(tr("settings.pureref_browse"))
+        self.pureref_path_btn.setIcon(self.icons.get("folder", QIcon()))
+        self.pureref_path_btn.clicked.connect(self.browse_pureref_path)
+        path_row.addWidget(self.pureref_path_btn)
+
+        self.pureref_path_status = QLabel()
+        path_row.addWidget(self.pureref_path_status, 1)
+        pureref_layout.addLayout(path_row)
+
+        # PureRef filename section
+        filename_label = QLabel(tr("settings.pureref_filename_label"))
+        pureref_layout.addWidget(filename_label)
+
+        self.pureref_filename_edit = QLineEdit()
+        self.pureref_filename_edit.setPlaceholderText("reference.pur")
+        pureref_layout.addWidget(self.pureref_filename_edit)
+
+        pureref_group.setLayout(pureref_layout)
+
         right_widget = QWidget()
-        right_widget.setMinimumWidth(0) # Allow full collapse
+        right_widget.setMinimumWidth(0)  # Allow full collapse
         right_column = QVBoxLayout(right_widget)
         right_column.setContentsMargins(0, 0, 0, 0)
         right_column.addWidget(deps_group)
         right_column.addWidget(playback_group)
+        right_column.addWidget(pureref_group)
         right_column.addWidget(storage_group)
-        
+
         content_splitter.addWidget(right_widget)
-        content_splitter.setStretchFactor(0, 1) # Only left section expands
-        content_splitter.setStretchFactor(1, 0) # Right section stays fixed
-        content_splitter.setChildrenCollapsible(True) # Allow collapsing
-        
+        content_splitter.setStretchFactor(0, 1)  # Only left section expands
+        content_splitter.setStretchFactor(1, 0)  # Right section stays fixed
+        content_splitter.setChildrenCollapsible(True)  # Allow collapsing
+
         main_layout.addWidget(content_splitter)
-        
+
         QTimer.singleShot(100, self.check_libmpv_version)
         QTimer.singleShot(200, self.check_ffmpeg_version)
+        QTimer.singleShot(300, self.check_pureref_path)
 
-        save_btn = QPushButton(tr('settings.save'))
-        save_btn.setIcon(self.icons.get('save', QIcon()))
+        save_btn = QPushButton(tr("settings.save"))
+        save_btn.setIcon(self.icons.get("save", QIcon()))
         save_btn.clicked.connect(self.save_settings)
         main_layout.addWidget(save_btn)
 
     def add_path(self):
         directory = QFileDialog.getExistingDirectory(
-            self, tr('dialog.select_directory')
+            self, tr("dialog.select_directory")
         )
         if directory:
             # Check if path already exists
@@ -171,9 +225,7 @@ class SettingsDialog(QDialog):
         if not current:
             return
         directory = QFileDialog.getExistingDirectory(
-            self,
-            tr('dialog.select_directory'),
-            current.text(0)
+            self, tr("dialog.select_directory"), current.text(0)
         )
         if directory:
             current.setText(0, directory)
@@ -182,33 +234,48 @@ class SettingsDialog(QDialog):
     def clear_metadata(self):
         """Clear all metadata from DB via parent window."""
         reply = QMessageBox.question(
-            self, tr('settings.clear_title'),
-            tr('settings.clear_confirm_text'),
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+            self,
+            tr("settings.clear_title"),
+            tr("settings.clear_confirm_text"),
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
         )
-        
+
         if reply == QMessageBox.StandardButton.Yes:
             # Use parent method to clear data
-            if self.parent() and hasattr(self.parent(), 'clear_metadata_force'):
+            if self.parent() and hasattr(self.parent(), "clear_metadata_force"):
                 if self.parent().clear_metadata_force():
                     # Show status on parent
-                    if hasattr(self.parent(), 'info_label'):
-                        self.parent().info_label.setText(tr('settings.data_cleared'))
-                    QMessageBox.information(self, tr('settings.clear_title'), tr('settings.clear_success'))
+                    if hasattr(self.parent(), "info_label"):
+                        self.parent().info_label.setText(tr("settings.data_cleared"))
+                    QMessageBox.information(
+                        self, tr("settings.clear_title"), tr("settings.clear_success")
+                    )
                 else:
-                    QMessageBox.critical(self, tr('settings.clear_title'), tr('settings.clear_error'))
+                    QMessageBox.critical(
+                        self, tr("settings.clear_title"), tr("settings.clear_error")
+                    )
             else:
                 # If parent cannot, try directly (logic duplication)
-                if self.parent() and hasattr(self.parent(), 'db'):
+                if self.parent() and hasattr(self.parent(), "db"):
                     if self.parent().db.clear_all_metadata():
                         self.parent().db.vacuum()
-                        if hasattr(self.parent(), 'load_courses'):
+                        if hasattr(self.parent(), "load_courses"):
                             self.parent().load_courses()
-                        QMessageBox.information(self, tr('settings.clear_title'), tr('settings.clear_success'))
+                        QMessageBox.information(
+                            self,
+                            tr("settings.clear_title"),
+                            tr("settings.clear_success"),
+                        )
                     else:
-                        QMessageBox.critical(self, tr('settings.clear_title'), tr('settings.clear_error'))
+                        QMessageBox.critical(
+                            self, tr("settings.clear_title"), tr("settings.clear_error")
+                        )
                 else:
-                    QMessageBox.critical(self, tr('settings.clear_title'), tr('settings.db_not_available'))
+                    QMessageBox.critical(
+                        self,
+                        tr("settings.clear_title"),
+                        tr("settings.db_not_available"),
+                    )
 
     def remove_path(self):
         current = self.pathslist.currentItem()
@@ -216,17 +283,17 @@ class SettingsDialog(QDialog):
             return
 
         msg = QMessageBox(self)
-        msg.setWindowTitle(tr('settings.confirm'))
-        msg.setText(tr('settings.removeconfirm'))
+        msg.setWindowTitle(tr("settings.confirm"))
+        msg.setText(tr("settings.removeconfirm"))
         msg.setIcon(QMessageBox.Icon.Question)
-        yes_button = msg.addButton(tr('settings.yes'), QMessageBox.ButtonRole.YesRole)
-        no_button = msg.addButton(tr('settings.no'), QMessageBox.ButtonRole.NoRole)
+        yes_button = msg.addButton(tr("settings.yes"), QMessageBox.ButtonRole.YesRole)
+        no_button = msg.addButton(tr("settings.no"), QMessageBox.ButtonRole.NoRole)
         msg.exec()
 
         if msg.clickedButton() == yes_button:
             path_to_remove = current.text(0)
             norm = os.path.normpath(path_to_remove)
-            if not hasattr(self, '_deleted_paths'):
+            if not hasattr(self, "_deleted_paths"):
                 self._deleted_paths = []
             if norm not in self._deleted_paths:
                 self._deleted_paths.append(norm)
@@ -244,7 +311,7 @@ class SettingsDialog(QDialog):
         else:
             font.setStrikeOut(False)
             # item.setForeground(0, Qt.GlobalColor.black) # Restore color if needed
-            
+
         item.setFont(0, font)
 
     def get_paths_list(self):
@@ -256,17 +323,17 @@ class SettingsDialog(QDialog):
     def load_current_settings(self):
         self._deleted_paths = []  # сброс при каждой загрузке
         self.pathslist.clear()
-        
+
         paths_str = self.config.get_library_paths()
         excluded_paths = self.config.get_excluded_library_paths()
 
         if paths_str:
-            for path in paths_str.split(';'):
+            for path in paths_str.split(";"):
                 path = path.strip()
                 if path:
                     item = QTreeWidgetItem([path])
                     item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
-                    
+
                     if os.path.normpath(path) in excluded_paths:
                         item.setCheckState(0, Qt.CheckState.Unchecked)
                         font = item.font(0)
@@ -274,7 +341,7 @@ class SettingsDialog(QDialog):
                         item.setFont(0, font)
                     else:
                         item.setCheckState(0, Qt.CheckState.Checked)
-                        
+
                     self.pathslist.addTopLevelItem(item)
                     self._validate_path(item)
 
@@ -282,16 +349,26 @@ class SettingsDialog(QDialog):
         self.autoplay_next_chk.setChecked(self.config.get_autoplay_on_next())
         self.autoplay_prev_chk.setChecked(self.config.get_autoplay_on_prev())
 
+        # Load PureRef settings
+        pureref_filename = self.config.get_pureref_filename()
+        self.pureref_filename_edit.setText(pureref_filename)
+
     def _validate_path(self, item):
         path = item.text(0)
         if os.path.exists(path):
-            icon = self.icons.get('check', self.style().standardIcon(QStyle.StandardPixmap.SP_DialogApplyButton))
+            icon = self.icons.get(
+                "check",
+                self.style().standardIcon(QStyle.StandardPixmap.SP_DialogApplyButton),
+            )
             item.setIcon(0, icon)
-            item.setToolTip(0, tr('settings.path_valid', path=path))
+            item.setToolTip(0, tr("settings.path_valid", path=path))
         else:
-            icon = self.icons.get('fail', self.style().standardIcon(QStyle.StandardPixmap.SP_MessageBoxWarning))
+            icon = self.icons.get(
+                "fail",
+                self.style().standardIcon(QStyle.StandardPixmap.SP_MessageBoxWarning),
+            )
             item.setIcon(0, icon)
-            item.setToolTip(0, tr('settings.path_invalid', path=path))
+            item.setToolTip(0, tr("settings.path_invalid", path=path))
 
     def save_settings(self):
         paths = []
@@ -304,7 +381,7 @@ class SettingsDialog(QDialog):
                 excluded_paths.append(path)
 
         # также включаем пути, которые были удалены в этой сессии настроек
-        deleted = getattr(self, '_deleted_paths', [])
+        deleted = getattr(self, "_deleted_paths", [])
         for p in deleted:
             if p not in excluded_paths:
                 excluded_paths.append(p)
@@ -315,6 +392,23 @@ class SettingsDialog(QDialog):
         self.config.set_autoplay_on_next(self.autoplay_next_chk.isChecked())
         self.config.set_autoplay_on_prev(self.autoplay_prev_chk.isChecked())
 
+        # Save PureRef settings
+        pureref_filename = self.pureref_filename_edit.text().strip()
+        if pureref_filename:
+            self.config.set_pureref_filename(pureref_filename)
+
+        # Reinitialize PureRefManager if parent has it
+        if self.parent() and hasattr(self.parent(), "pureref_manager"):
+            from pureref_manager import PureRefManager
+
+            self.parent().pureref_manager = PureRefManager(self.config)
+            if hasattr(self.parent(), "library") and hasattr(
+                self.parent().library, "itemDelegate"
+            ):
+                delegate = self.parent().library.itemDelegate()
+                if hasattr(delegate, "pureref_manager"):
+                    delegate.pureref_manager = self.parent().pureref_manager
+
         self.accept()
 
     def start_scan(self):
@@ -324,12 +418,10 @@ class SettingsDialog(QDialog):
             item = self.pathslist.topLevelItem(i)
             if item.checkState(0) == Qt.CheckState.Checked:
                 paths.append(item.text(0))
-                
+
         if not paths:
             QMessageBox.warning(
-                self,
-                tr('settings.warning'),
-                tr('settings.specify_path')
+                self, tr("settings.warning"), tr("settings.specify_path")
             )
             return
 
@@ -340,13 +432,13 @@ class SettingsDialog(QDialog):
         dialog = ScanProgressDialog(self)
         ffmpeg_path = None
         ffprobe_path = None
-        if self.parent() and hasattr(self.parent(), 'ffmpeg_path'):
+        if self.parent() and hasattr(self.parent(), "ffmpeg_path"):
             ffmpeg_path = self.parent().ffmpeg_path
             ffprobe_path = self.parent().ffprobe_path
-            
+
         dialog.start_scan(self.config_file, paths, ffmpeg_path, ffprobe_path)
-        
-        if self.parent() and hasattr(self.parent(), 'load_courses'):
+
+        if self.parent() and hasattr(self.parent(), "load_courses"):
             dialog.scanner_thread.finished_scan.connect(
                 lambda v, f: self.parent().load_courses()
             )
@@ -363,7 +455,7 @@ class SettingsDialog(QDialog):
         # This _save_settings_only implementation in current file ONLY saves 'paths', not 'excluded_paths'!
         # That seems like a bug or simplification in original code.
         # We should probably fix it to be consistent.
-        
+
         paths = []
         excluded_paths = []
         for i in range(self.pathslist.topLevelItemCount()):
@@ -373,7 +465,7 @@ class SettingsDialog(QDialog):
             if item.checkState(0) == Qt.CheckState.Unchecked:
                 excluded_paths.append(path)
 
-        deleted = getattr(self, '_deleted_paths', [])
+        deleted = getattr(self, "_deleted_paths", [])
         for p in deleted:
             if p not in excluded_paths:
                 excluded_paths.append(p)
@@ -385,28 +477,28 @@ class SettingsDialog(QDialog):
         """Check if libmpv-2.dll is present in bin folder"""
         try:
             dll_path = self.config.get_libmpv_path()
-            
+
             if dll_path.exists():
                 self.libmpv_btn.setText(f" libmpv-2.dll")
-                self.libmpv_btn.setIcon(self.icons.get('check', QIcon()))
-                self.libmpv_btn.setToolTip(tr('settings.libmpv_up_to_date'))
+                self.libmpv_btn.setIcon(self.icons.get("check", QIcon()))
+                self.libmpv_btn.setToolTip(tr("settings.libmpv_up_to_date"))
             else:
                 self.libmpv_btn.setText(f" libmpv-2.dll")
-                self.libmpv_btn.setIcon(self.icons.get('download', QIcon()))
-                self.libmpv_btn.setToolTip(tr('settings.libmpv_not_installed'))
+                self.libmpv_btn.setIcon(self.icons.get("download", QIcon()))
+                self.libmpv_btn.setToolTip(tr("settings.libmpv_not_installed"))
         except Exception as e:
             self.libmpv_btn.setText(f" libmpv-2.dll")
-            self.libmpv_btn.setIcon(self.icons.get('fail', QIcon()))
+            self.libmpv_btn.setIcon(self.icons.get("fail", QIcon()))
             self.libmpv_btn.setToolTip(str(e))
 
     def update_libmpv(self):
         """Update libmpv-2.dll with progress dialog"""
         from update_libmpv import update_libmpv as do_update
-        
-        dialog = UpdateProgressDialog(self, tr('libmpv_updater.title'))
+
+        dialog = UpdateProgressDialog(self, tr("libmpv_updater.title"))
         dialog.start_update(do_update)
         dialog.exec()
-        
+
         self.check_libmpv_version()
 
     def check_ffmpeg_version(self):
@@ -414,31 +506,73 @@ class SettingsDialog(QDialog):
         try:
             ffmpeg_path = self.config.get_ffmpeg_path()
             ffprobe_path = self.config.get_ffprobe_path()
-            
+
             if ffmpeg_path.exists() and ffprobe_path.exists():
                 self.ffmpeg_btn.setText(f" FFmpeg & ffprobe")
-                self.ffmpeg_btn.setIcon(self.icons.get('check', QIcon()))
-                self.ffmpeg_btn.setToolTip(tr('settings.ffmpeg_found'))
+                self.ffmpeg_btn.setIcon(self.icons.get("check", QIcon()))
+                self.ffmpeg_btn.setToolTip(tr("settings.ffmpeg_found"))
             else:
                 self.ffmpeg_btn.setText(f" {tr('settings.ffmpeg_update')}")
-                self.ffmpeg_btn.setIcon(self.icons.get('download', QIcon()))
-                self.ffmpeg_btn.setToolTip(tr('settings.ffmpeg_not_found'))
+                self.ffmpeg_btn.setIcon(self.icons.get("download", QIcon()))
+                self.ffmpeg_btn.setToolTip(tr("settings.ffmpeg_not_found"))
         except Exception as e:
             self.ffmpeg_btn.setText(f" FFmpeg")
-            self.ffmpeg_btn.setIcon(self.icons.get('fail', QIcon()))
+            self.ffmpeg_btn.setIcon(self.icons.get("fail", QIcon()))
             self.ffmpeg_btn.setToolTip(str(e))
 
     def update_ffmpeg(self):
         """Download FFmpeg with progress dialog"""
         from update_ffmpeg import download_ffmpeg
-        
+
         # Wrap download_ffmpeg to match the expected signature (no args or default force=True)
         def do_update():
             return download_ffmpeg(force=True)
-            
-        dialog = UpdateProgressDialog(self, tr('ffmpeg_updater.title'))
+
+        dialog = UpdateProgressDialog(self, tr("ffmpeg_updater.title"))
         dialog.start_update(do_update)
         dialog.exec()
-        
+
         self.check_ffmpeg_version()
 
+    def browse_pureref_path(self):
+        """Open file dialog to select PureRef.exe"""
+        current_path = self.config.get_pureref_path()
+        start_dir = str(Path(current_path).parent) if current_path else ""
+
+        file_path, _ = QFileDialog.getOpenFileName(
+            self,
+            tr("settings.pureref_select_exe"),
+            start_dir,
+            "PureRef Executable (PureRef.exe);;All Files (*.*)",
+        )
+
+        if file_path:
+            self.config.set_pureref_path(file_path)
+            self.check_pureref_path()
+
+    def check_pureref_path(self):
+        """Check if PureRef.exe exists at configured path"""
+        try:
+            pureref_path = Path(self.config.get_pureref_path())
+
+            if pureref_path.exists():
+                self.pureref_path_status.setText(f"✓ {pureref_path.name}")
+                self.pureref_path_status.setStyleSheet("color: #4CAF50;")
+                self.pureref_path_btn.setIcon(self.icons.get("check", QIcon()))
+                self.pureref_path_status.setToolTip(
+                    tr("settings.pureref_path_valid", path=str(pureref_path))
+                )
+            else:
+                self.pureref_path_status.setText(
+                    f"✗ {tr('settings.pureref_not_found')}"
+                )
+                self.pureref_path_status.setStyleSheet("color: #F44336;")
+                self.pureref_path_btn.setIcon(self.icons.get("fail", QIcon()))
+                self.pureref_path_status.setToolTip(
+                    tr("settings.pureref_path_invalid", path=str(pureref_path))
+                )
+        except Exception as e:
+            self.pureref_path_status.setText(f"✗ Error")
+            self.pureref_path_status.setStyleSheet("color: #F44336;")
+            self.pureref_path_btn.setIcon(self.icons.get("fail", QIcon()))
+            self.pureref_path_status.setToolTip(str(e))
