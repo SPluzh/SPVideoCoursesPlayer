@@ -28,7 +28,9 @@
         "expand_tree": "Развернуть дерево",
         "collapse_tree": "Свернуть дерево",
         "always_on_top": "Поверх всех окон",
-        "show_tree_lines": "Показывать линии дерева"
+        "show_tree_lines": "Показывать линии дерева",
+        "show_pureref_badges": "Показывать иконки PureRef",
+        "show_pureref_badges_when_missing": "Показывать иконки PureRef при отсутствии файла"
     },
     "library": {
         "search_placeholder": "Поиск...",

@@ -51,6 +51,7 @@ class VideoItemDelegate(QStyledItemDelegate):
             QColor("#2980b9"),  # Strong blue
         ]
         self._init_style_widgets()
+        self.pureref_manager = None
 
     def _init_style_widgets(self):
         """Create widgets to retrieve styles from QSS."""
@@ -167,6 +168,32 @@ class VideoItemDelegate(QStyledItemDelegate):
             logging.error(f"Error in get_play_button_rect: {e}")
             return QRect()
 
+    def get_pureref_badge_rect(self, icon_rect: QRectF) -> QRectF:
+        """Return PureRef badge rect at top-right corner of folder icon."""
+        badge_size = 28  # Same as play button
+        margin = 3
+        return QRectF(
+            icon_rect.right() - badge_size - margin,
+            icon_rect.top() + margin,
+            badge_size,
+            badge_size,
+        )
+
+    def _get_folder_icon_rect(self, rect, index) -> QRectF:
+        """Calculate folder icon rectangle."""
+        chain = self._get_nesting_chain(index)
+        # Call _draw_nesting_lines with painter=None to get offset without drawing
+        nesting_offset = self._draw_nesting_lines(None, rect, chain, index)
+        icon_height = self.config.get("folder_row_height", 70) - 14
+        icon_width = int(icon_height * 16 / 9)
+        center_y = rect.center().y()
+        return QRectF(
+            rect.left() + nesting_offset + 5,
+            center_y - icon_height / 2 - 2,
+            icon_width,
+            icon_height,
+        )
+
     def sizeHint(self, option, index):
         try:
             # import sys; sys.stderr.write(f"[SIZEHINT] row={index.row()}\n"); sys.stderr.flush()
@@ -245,6 +272,10 @@ class VideoItemDelegate(QStyledItemDelegate):
             indent = tree.indentation()
 
         spacing = max(2, indent - line_width)
+
+        # If painter is None, we're only calculating offset, not drawing
+        if painter is None:
+            return line_width + spacing
 
         # Determine if this item is the last child of its immediate parent
         is_last_child = False
@@ -934,6 +965,25 @@ class VideoItemDelegate(QStyledItemDelegate):
     def editorEvent(self, event, model, option, index):
         try:
             if event.type() == QEvent.Type.MouseButtonRelease:
+                item_type = index.data(Qt.ItemDataRole.UserRole + 1)
+
+                # Handle PureRef badge click for folders
+                if item_type == "folder" and getattr(self, "pureref_manager", None):
+                    folder_path = index.data(Qt.ItemDataRole.UserRole)
+                    root_path = index.data(Qt.ItemDataRole.UserRole + 3)
+                    if folder_path and root_path:
+                        full_folder = Path(root_path) / folder_path
+                        icon_rect = self._get_folder_icon_rect(option.rect, index)
+                        badge_rect = self.get_pureref_badge_rect(icon_rect)
+                        if badge_rect.contains(QPointF(event.pos())):
+                            tree = self.parent()
+                            if tree:
+                                window = tree.window()
+                                if hasattr(window, "open_pureref_for_folder"):
+                                    window.open_pureref_for_folder(full_folder)
+                            return True
+
+                # Original marker logic
                 marker = self.get_marker_at_pos(option.rect, event.pos(), index)
                 if marker:
                     file_path = index.data(Qt.ItemDataRole.UserRole)
@@ -1024,9 +1074,9 @@ class VideoItemDelegate(QStyledItemDelegate):
             painter.setClipPath(clip_path)
 
             painter.drawPixmap(target_rect, scaled_pixmap, QRectF(scaled_pixmap.rect()))
+            painter.restore()
 
             # Draw border
-            painter.restore()
             painter.setClipping(False)
             painter.setPen(
                 self.thumbnail_border.palette().color(QPalette.ColorRole.Mid)
@@ -1097,6 +1147,8 @@ class VideoItemDelegate(QStyledItemDelegate):
                 self.empty_thumbnail_border.palette().color(QPalette.ColorRole.Mid)
             )
             painter.drawRoundedRect(icon_rect, 3, 3)
+
+        painter.restore()
 
         # Draw Folder Progress Bar
         progress = index.data(Qt.ItemDataRole.UserRole + 6)
@@ -1258,6 +1310,72 @@ class VideoItemDelegate(QStyledItemDelegate):
 
                 painter.drawLine(line_start_x, y_pos, option.rect.right(), y_pos)
 
+        # Draw PureRef button in top-right corner
+        if getattr(self, "pureref_manager", None):
+            folder_path = index.data(Qt.ItemDataRole.UserRole)
+            root_path = index.data(Qt.ItemDataRole.UserRole + 3)
+            if folder_path and root_path:
+                full_folder = Path(root_path) / folder_path
+                has_file = self.pureref_manager.has_pur_file(full_folder)
+
+                # Check settings: show badges and show when missing
+                show_badges = self.config.get("show_pureref_badges", True)
+                show_when_missing = self.config.get(
+                    "show_pureref_badges_when_missing", False
+                )
+
+                # Logic: if show_badges is False, don't show at all
+                # If show_badges is True, show only if file exists OR show_when_missing is True
+                should_show = show_badges and (has_file or show_when_missing)
+
+                if should_show:
+                    badge_rect = self.get_pureref_badge_rect(icon_rect)
+                    is_open = self.pureref_manager.is_running(full_folder)
+
+                    is_over_badge = False
+                    if self.mouse_pos and badge_rect.contains(QPointF(self.mouse_pos)):
+                        is_over_badge = True
+
+                    painter.save()
+                    painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+
+                    # Draw button background (Play button style, but always fully visible)
+                    bg_color = self.row_play_button_bg.palette().color(
+                        QPalette.ColorRole.Window
+                    )
+                    if is_over_badge:
+                        painter.setBrush(bg_color.lighter(110))
+                    else:
+                        painter.setBrush(bg_color)
+
+                    painter.setPen(Qt.PenStyle.NoPen)
+                    painter.drawRoundedRect(badge_rect, 3, 3)
+
+                    # Draw "P" letter
+                    painter.setPen(QColor("#ffffff"))
+                    font = painter.font()
+                    font.setPixelSize(14)
+                    font.setBold(True)
+                    painter.setFont(font)
+                    painter.drawText(badge_rect, Qt.AlignmentFlag.AlignCenter, "P")
+
+                    # Draw status dot
+                    if not has_file:
+                        status_color = QColor("#e74c3c")  # Red (Missing)
+                    elif is_open:
+                        status_color = QColor("#2ecc71")  # Green (Running)
+                    else:
+                        status_color = QColor("#f9ca24")  # Yellow (Exists)
+
+                    painter.setBrush(status_color)
+                    painter.setPen(Qt.PenStyle.NoPen)
+                    painter.drawEllipse(
+                        QRectF(badge_rect.right() - 8, badge_rect.top() + 2, 6, 6)
+                    )
+                    painter.restore()
+
+        painter.restore()
+
         painter.restore()
 
 
@@ -1330,6 +1448,38 @@ class HoverTreeWidget(QTreeWidget):
 
                         self._update_item_rect(index)
                         return
+                elif item_type == "folder":
+                    delegate = self.itemDelegate()
+                    if isinstance(delegate, VideoItemDelegate):
+                        if index != self.current_hover_index:
+                            prev_index = self.current_hover_index
+                            self.current_hover_index = index
+                            self.hover_timer.stop()
+                            delegate.set_hovered_index(index, 0, mouse_pos=event.pos())
+                            if prev_index is not None and prev_index.isValid():
+                                self._update_item_rect(prev_index)
+                        else:
+                            delegate.set_hovered_index(index, 0, mouse_pos=event.pos())
+
+                        visual_rect = self.visualRect(index)
+                        if not visual_rect.isNull():
+                            icon_rect = delegate._get_folder_icon_rect(
+                                visual_rect, index
+                            )
+                            badge_rect = delegate.get_pureref_badge_rect(icon_rect)
+
+                            # Check if mouse is over icon or badge
+                            if icon_rect.contains(
+                                QPointF(event.pos())
+                            ) or badge_rect.contains(QPointF(event.pos())):
+                                self.viewport().setCursor(
+                                    Qt.CursorShape.PointingHandCursor
+                                )
+                            else:
+                                self.viewport().setCursor(Qt.CursorShape.ArrowCursor)
+
+                        self._update_item_rect(index)
+                        return
                 else:
                     self.viewport().setCursor(Qt.CursorShape.ArrowCursor)
             else:
@@ -1346,24 +1496,65 @@ class HoverTreeWidget(QTreeWidget):
         if index.isValid():
             delegate = self.itemDelegate()
             if isinstance(delegate, VideoItemDelegate):
-                # Check hover over play button
-                play_rect = delegate.get_play_button_rect(self.visualRect(index), index)
+                item_type = index.data(Qt.ItemDataRole.UserRole + 1)
 
-                if play_rect.contains(event.pos()):
-                    item = self.itemFromIndex(index)
-                    if item:
-                        file_path = item.data(0, Qt.ItemDataRole.UserRole)
-                        # If already playing video - toggle pause
-                        main_window = self.window()
-                        delegate = self.itemDelegate()
-                        if delegate.playing_path == file_path:
-                            if hasattr(main_window, "video_player"):
-                                main_window.video_player.play_pause()
-                        else:
-                            # Otherwise start new
-                            if hasattr(main_window, "play_video_in_player"):
-                                main_window.play_video_in_player(item, resume=True)
-                        return  # Stop processing to avoid standard row selection
+                # Handle video play button clicks
+                if item_type == "video":
+                    play_rect = delegate.get_play_button_rect(
+                        self.visualRect(index), index
+                    )
+                    if play_rect.contains(event.pos()):
+                        item = self.itemFromIndex(index)
+                        if item:
+                            file_path = item.data(0, Qt.ItemDataRole.UserRole)
+                            # If already playing video - toggle pause
+                            main_window = self.window()
+                            delegate = self.itemDelegate()
+                            if delegate.playing_path == file_path:
+                                if hasattr(main_window, "video_player"):
+                                    main_window.video_player.play_pause()
+                            else:
+                                # Otherwise start new
+                                if hasattr(main_window, "play_video_in_player"):
+                                    main_window.play_video_in_player(item, resume=True)
+                            return  # Stop processing to avoid standard row selection
+
+                # Handle folder icon/badge clicks
+                elif item_type == "folder":
+                    visual_rect = self.visualRect(index)
+                    if not visual_rect.isNull():
+                        icon_rect = delegate._get_folder_icon_rect(visual_rect, index)
+
+                        # Check if PureRef badges should be shown
+                        show_badges = delegate.config.get("show_pureref_badges", True)
+                        show_when_missing = delegate.config.get(
+                            "show_pureref_badges_when_missing", False
+                        )
+
+                        if show_badges and getattr(delegate, "pureref_manager", None):
+                            folder_path = index.data(Qt.ItemDataRole.UserRole)
+                            root_path = index.data(Qt.ItemDataRole.UserRole + 3)
+                            if folder_path and root_path:
+                                full_folder = Path(root_path) / folder_path
+                                has_file = delegate.pureref_manager.has_pur_file(
+                                    full_folder
+                                )
+                                should_show_badge = has_file or show_when_missing
+
+                                if should_show_badge:
+                                    badge_rect = delegate.get_pureref_badge_rect(
+                                        icon_rect
+                                    )
+                                    # If click is on icon or badge, open PureRef
+                                    if icon_rect.contains(
+                                        QPointF(event.pos())
+                                    ) or badge_rect.contains(QPointF(event.pos())):
+                                        item = self.itemFromIndex(index)
+                                        if item:
+                                            main_window = self.window()
+                                            if hasattr(main_window, "open_pureref"):
+                                                main_window.open_pureref(item)
+                                        return  # Stop processing to avoid standard row selection
 
         super().mousePressEvent(event)
 

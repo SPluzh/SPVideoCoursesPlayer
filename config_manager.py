@@ -25,6 +25,8 @@ class ConfigManager:
             "show_osd": "True",
             "pureref_path": "C:/Program Files/PureRef/PureRef.exe",
             "pureref_filename": "reference.pur",
+            "show_pureref_badges": "True",
+            "show_pureref_badges_when_missing": "False",
         },
         "Paths": {
             "paths": "",
@@ -405,6 +407,20 @@ class ConfigManager:
                 )
             except (ValueError, TypeError):
                 pass
+        if config.has_option("General", "show_pureref_badges"):
+            try:
+                state["show_pureref_badges"] = config.getboolean(
+                    "General", "show_pureref_badges"
+                )
+            except (ValueError, TypeError):
+                pass
+        if config.has_option("General", "show_pureref_badges_when_missing"):
+            try:
+                state["show_pureref_badges_when_missing"] = config.getboolean(
+                    "General", "show_pureref_badges_when_missing"
+                )
+            except (ValueError, TypeError):
+                pass
 
         return state
 
@@ -485,6 +501,30 @@ class ConfigManager:
         if "Window" not in config:
             config["Window"] = {}
         config["Window"]["show_tree_lines"] = str(value)
+        self._write_config(config)
+
+    def get_show_pureref_badges(self) -> bool:
+        config = self._read_config()
+        return config.getboolean("General", "show_pureref_badges", fallback=True)
+
+    def set_show_pureref_badges(self, value: bool):
+        config = self._read_config()
+        if "General" not in config:
+            config["General"] = {}
+        config["General"]["show_pureref_badges"] = str(value)
+        self._write_config(config)
+
+    def get_show_pureref_badges_when_missing(self) -> bool:
+        config = self._read_config()
+        return config.getboolean(
+            "General", "show_pureref_badges_when_missing", fallback=False
+        )
+
+    def set_show_pureref_badges_when_missing(self, value: bool):
+        config = self._read_config()
+        if "General" not in config:
+            config["General"] = {}
+        config["General"]["show_pureref_badges_when_missing"] = str(value)
         self._write_config(config)
 
     def get_raw_config(self) -> configparser.ConfigParser:

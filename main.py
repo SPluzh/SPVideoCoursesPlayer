@@ -326,10 +326,12 @@ class VideoCourseBrowser(QMainWindow):
             "format_duration": format_duration,
             "format_size": format_size,
             "show_tree_lines": True,
+            "show_pureref_badges": True,
+            "show_pureref_badges_when_missing": False,
         }
-        self.course_tree.setItemDelegate(
-            VideoItemDelegate(delegate_config, self.course_tree)
-        )
+        delegate = VideoItemDelegate(delegate_config, self.course_tree)
+        delegate.pureref_manager = self.pureref_manager
+        self.course_tree.setItemDelegate(delegate)
 
         browser_layout.addWidget(self.course_tree)
 
@@ -389,6 +391,12 @@ class VideoCourseBrowser(QMainWindow):
         self.progress_save_timer = QTimer(self)
         self.progress_save_timer.timeout.connect(self.periodic_progress_save)
         self.progress_save_timer.start(1000)
+
+        self.pureref_status_timer = QTimer(self)
+        self.pureref_status_timer.timeout.connect(
+            lambda: self.course_tree.viewport().update()
+        )
+        self.pureref_status_timer.start(5000)
         self._last_stats_update = 0
 
         # Restore filter states AFTER all components (like course_tree) are initialized
@@ -687,6 +695,29 @@ class VideoCourseBrowser(QMainWindow):
 
         self.db.update_folder_expanded_state(path, False)
 
+    def open_pureref_for_folder(self, folder: Path):
+        """Open or focus PureRef for the given folder path."""
+        if not self.pureref_manager:
+            return
+
+        success, error = self.pureref_manager.open(folder)
+        if not success:
+            if error.startswith("pureref_not_found:"):
+                path = error.split(":", 1)[1]
+                msg = tr("pureref.exe_not_found") or f"PureRef.exe not found at: {path}"
+                if "{path}" in msg:
+                    msg = msg.format(path=path)
+                QMessageBox.warning(self, tr("error.title"), msg)
+            else:
+                err = error.split(":", 1)[1] if ":" in error else error
+                msg = tr("pureref.launch_error") or f"Error launching PureRef: {err}"
+                if "{error}" in msg:
+                    msg = msg.format(error=err)
+                QMessageBox.warning(self, tr("error.title"), msg)
+        else:
+            # Refresh tree immediately to update badge color (yellow -> green)
+            QTimer.singleShot(1000, lambda: self.course_tree.viewport().update())
+
     def update_window_title_for_item(self, item):
         course_item = item.parent()
         course_name = ""
@@ -804,6 +835,32 @@ class VideoCourseBrowser(QMainWindow):
                         delegate.config["show_tree_lines"] = bool(show)
                 except Exception as e:
                     logging.error(f"Error restoring show_tree_lines state: {e}")
+
+            if "show_pureref_badges" in state:
+                try:
+                    show = state["show_pureref_badges"]
+                    if isinstance(show, str):
+                        show = show.lower() == "true"
+                    self.show_pureref_badges_action.setChecked(bool(show))
+                    delegate = self.course_tree.itemDelegate()
+                    if hasattr(delegate, "config"):
+                        delegate.config["show_pureref_badges"] = bool(show)
+                except Exception as e:
+                    logging.error(f"Error restoring show_pureref_badges state: {e}")
+
+            if "show_pureref_badges_when_missing" in state:
+                try:
+                    show = state["show_pureref_badges_when_missing"]
+                    if isinstance(show, str):
+                        show = show.lower() == "true"
+                    self.show_pureref_badges_when_missing_action.setChecked(bool(show))
+                    delegate = self.course_tree.itemDelegate()
+                    if hasattr(delegate, "config"):
+                        delegate.config["show_pureref_badges_when_missing"] = bool(show)
+                except Exception as e:
+                    logging.error(
+                        f"Error restoring show_pureref_badges_when_missing state: {e}"
+                    )
         else:
             self.resize(self.window_width, self.window_height)
 
@@ -848,6 +905,10 @@ class VideoCourseBrowser(QMainWindow):
 
         state["playback_speed"] = str(self.video_player.speed_slider.value())
         state["show_markers"] = str(self.marker_toggle_btn.isChecked())
+        state["show_pureref_badges"] = str(self.show_pureref_badges_action.isChecked())
+        state["show_pureref_badges_when_missing"] = str(
+            self.show_pureref_badges_when_missing_action.isChecked()
+        )
         state["always_on_top"] = str(
             bool(self.windowFlags() & Qt.WindowType.WindowStaysOnTopHint)
         )
@@ -1038,6 +1099,22 @@ class VideoCourseBrowser(QMainWindow):
         self.show_tree_lines_action.setChecked(True)
         self.show_tree_lines_action.triggered.connect(self.toggle_tree_lines)
         view_menu.addAction(self.show_tree_lines_action)
+
+        self.show_pureref_badges_action = QAction(tr("menu.show_pureref_badges"), self)
+        self.show_pureref_badges_action.setCheckable(True)
+        self.show_pureref_badges_action.setChecked(True)
+        self.show_pureref_badges_action.triggered.connect(self.toggle_pureref_badges)
+        view_menu.addAction(self.show_pureref_badges_action)
+
+        self.show_pureref_badges_when_missing_action = QAction(
+            tr("menu.show_pureref_badges_when_missing"), self
+        )
+        self.show_pureref_badges_when_missing_action.setCheckable(True)
+        self.show_pureref_badges_when_missing_action.setChecked(False)
+        self.show_pureref_badges_when_missing_action.triggered.connect(
+            self.toggle_pureref_badges_when_missing
+        )
+        view_menu.addAction(self.show_pureref_badges_when_missing_action)
 
         self.always_on_top_action = QAction(tr("menu.always_on_top"), self)
         self.always_on_top_action.setCheckable(True)
@@ -1641,13 +1718,28 @@ class VideoCourseBrowser(QMainWindow):
             self.toggle_lib_action.setChecked(self.browser_widget.isVisible())
 
     def toggle_tree_lines(self):
-        """Toggle tree lines visibility in the library."""
         checked = self.show_tree_lines_action.isChecked()
         delegate = self.course_tree.itemDelegate()
         if hasattr(delegate, "config"):
             delegate.config["show_tree_lines"] = checked
         self.course_tree.viewport().update()
         self.config.set_show_tree_lines(checked)
+
+    def toggle_pureref_badges(self):
+        checked = self.show_pureref_badges_action.isChecked()
+        delegate = self.course_tree.itemDelegate()
+        if hasattr(delegate, "config"):
+            delegate.config["show_pureref_badges"] = checked
+        self.course_tree.viewport().update()
+        self.config.set_show_pureref_badges(checked)
+
+    def toggle_pureref_badges_when_missing(self):
+        checked = self.show_pureref_badges_when_missing_action.isChecked()
+        delegate = self.course_tree.itemDelegate()
+        if hasattr(delegate, "config"):
+            delegate.config["show_pureref_badges_when_missing"] = checked
+        self.course_tree.viewport().update()
+        self.config.set_show_pureref_badges_when_missing(checked)
 
     def toggle_osd_display(self):
         """Toggle OSD notifications on/off."""
@@ -2552,7 +2644,9 @@ class VideoCourseBrowser(QMainWindow):
         folder = Path(root_path) / path
         if not folder.exists():
             QMessageBox.warning(
-                self, tr("error.title"), tr("error.folder_not_found", folder=str(folder))
+                self,
+                tr("error.title"),
+                tr("error.folder_not_found", folder=str(folder)),
             )
             return
 

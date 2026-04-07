@@ -22,6 +22,17 @@ class PureRefManager:
         # {resolved_folder_path: subprocess.Popen}
         self._processes: dict[Path, subprocess.Popen] = {}
 
+    def has_pur_file(self, folder: Path) -> bool:
+        """Check if a .pur file exists in the folder."""
+        filename = self.config.get_pureref_filename()
+        return (folder / filename).exists()
+
+    def is_running(self, folder: Path) -> bool:
+        """Check if PureRef is currently running for this folder."""
+        key = folder.resolve()
+        proc = self._processes.get(key)
+        return proc is not None and proc.poll() is None
+
     def open(self, folder: Path) -> tuple[bool, str]:
         """Open or create a PureRef file for the given folder.
 
@@ -50,18 +61,28 @@ class PureRefManager:
         proc = self._processes.get(key)
         if proc is not None and proc.poll() is None:
             # Process is still alive — try to focus its window
+            logging.debug(
+                f"PureRef process already running for {folder}, attempting to focus window (PID: {proc.pid})"
+            )
             if self._focus_window_by_pid(proc.pid):
+                logging.debug(f"Successfully focused existing PureRef window")
                 return True, ""
             # Window not found (maybe minimized to tray) — still running,
             # don't launch duplicate
+            logging.debug(
+                f"Could not find window for PID {proc.pid}, but process is still alive - not launching duplicate"
+            )
+            return True, ""
 
         # Clean up dead process entry if any
         self._processes.pop(key, None)
 
         # Launch PureRef
         try:
+            logging.debug(f"Launching new PureRef instance for {folder}")
             proc = subprocess.Popen([str(pureref_exe), str(pur_file)])
             self._processes[key] = proc
+            logging.debug(f"PureRef launched successfully (PID: {proc.pid})")
             return True, ""
         except Exception as e:
             logging.error(f"Error launching PureRef: {e}")
