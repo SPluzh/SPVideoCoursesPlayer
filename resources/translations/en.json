@@ -381,7 +381,12 @@
         "remove_favorite": "Remove from Favorites",
         "edit_tags": "Edit Tags...",
         "tags": "Tags",
-        "folder_stats": "Course Statistics"
+        "folder_stats": "Course Statistics",
+        "open_pureref": "Open PureRef"
+    },
+    "pureref": {
+        "exe_not_found": "PureRef not found at: {path}",
+        "launch_error": "Failed to launch PureRef: {error}"
     },
     "tags": {
         "title": "Manage Tags",

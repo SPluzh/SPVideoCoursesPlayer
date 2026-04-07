@@ -106,6 +106,7 @@ from tags_dialog import TagsDialog
 from tag_filter_popup import TagFilterPopup
 from utils import natural_sort_key, format_time, format_duration, format_size
 from config_manager import ConfigManager
+from pureref_manager import PureRefManager
 from search_utils import smart_search
 
 
@@ -182,6 +183,7 @@ class VideoCourseBrowser(QMainWindow):
         self.db_file = DATA_DIR / "video_courses.db"
         self.db = DatabaseManager(self.db_file)
         self.config = ConfigManager(self.config_file, ROOT_DIR, DATA_DIR)
+        self.pureref_manager = PureRefManager(self.config)
 
         self.hotkey_manager = HotkeyManager(self)
         self.hotkey_manager.global_action_triggered.connect(self.handle_player_action)
@@ -2036,6 +2038,10 @@ class VideoCourseBrowser(QMainWindow):
             stats_action.triggered.connect(lambda: self.show_folder_stats(item))
 
             menu.addSeparator()
+            pureref_action = menu.addAction(tr("context_menu.open_pureref"))
+            pureref_action.triggered.connect(lambda: self.open_pureref(item))
+
+            menu.addSeparator()
 
             play_all_action = menu.addAction(
                 self.icons.get("context_play", QIcon()), tr("context_menu.play_all")
@@ -2534,10 +2540,31 @@ class VideoCourseBrowser(QMainWindow):
                 QMessageBox.warning(
                     self, tr("error.title"), tr("error.folder_not_found", folder=folder)
                 )
-        else:
+
+    def open_pureref(self, item):
+        """Open or create PureRef file for the folder."""
+        path = item.data(0, Qt.ItemDataRole.UserRole)
+        root_path = item.data(0, Qt.ItemDataRole.UserRole + 3)
+
+        if not path or not root_path:
+            return
+
+        folder = Path(root_path) / path
+        if not folder.exists():
             QMessageBox.warning(
-                self, tr("error.title"), tr("error.folder_path_unknown")
+                self, tr("error.title"), tr("error.folder_not_found", folder=str(folder))
             )
+            return
+
+        success, error = self.pureref_manager.open(folder)
+        if not success:
+            if error.startswith("pureref_not_found:"):
+                exe_path = error.split(":", 1)[1]
+                msg = tr("pureref.exe_not_found", path=exe_path)
+            else:
+                err_detail = error.split(":", 1)[1] if ":" in error else error
+                msg = tr("pureref.launch_error", error=err_detail)
+            QMessageBox.warning(self, tr("error.title"), msg)
 
     def open_video_directory(self, item):
         file_path = item.data(0, Qt.ItemDataRole.UserRole)

@@ -381,7 +381,12 @@
         "remove_favorite": "Убрать из избранного",
         "edit_tags": "Редактировать теги...",
         "tags": "Теги",
-        "folder_stats": "Статистика курса"
+        "folder_stats": "Статистика курса",
+        "open_pureref": "Открыть PureRef"
+    },
+    "pureref": {
+        "exe_not_found": "PureRef не найден: {path}",
+        "launch_error": "Не удалось запустить PureRef: {error}"
     },
     "tags": {
         "title": "Управление тегами",

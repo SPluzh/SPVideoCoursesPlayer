@@ -23,6 +23,8 @@ class ConfigManager:
             "autoplay_on_next": "True",
             "autoplay_on_prev": "True",
             "show_osd": "True",
+            "pureref_path": "C:/Program Files/PureRef/PureRef.exe",
+            "pureref_filename": "reference.pur",
         },
         "Paths": {
             "paths": "",
@@ -326,6 +328,20 @@ class ConfigManager:
         return {e.strip().lower() for e in exts.split(",")}
 
     # --- Subtitle settings ---
+
+    def get_pureref_path(self) -> str:
+        config = self._read_config()
+        return config.get(
+            "Paths", "pureref_path", fallback=self.DEFAULTS["General"]["pureref_path"]
+        )
+
+    def get_pureref_filename(self) -> str:
+        config = self._read_config()
+        return config.get(
+            "Paths",
+            "pureref_filename",
+            fallback=self.DEFAULTS["General"]["pureref_filename"],
+        )
 
     def get_subtitle_settings(self) -> tuple:
         """Returns (text_color, outline_color, font_scale)."""
