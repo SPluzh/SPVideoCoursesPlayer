@@ -107,17 +107,6 @@ The application will automatically download these components on first run. If th
 
 **Placement:** Place all components into the `bin` directory. The path depends on how you run the application:
 
-### 🖼️ PureRef Integration (Optional)
-
-To use the PureRef integration feature for managing reference images alongside your video courses:
-
-1. **Download and Install PureRef** from [https://www.pureref.com/download.php](https://www.pureref.com/download.php)
-2. **Default Path**: If installed to the default location (`C:\Program Files\PureRef\PureRef.exe`), the application will detect it automatically
-3. **Custom Path**: If installed elsewhere, go to `Library → Settings → PureRef` section and browse to your `PureRef.exe` location
-4. **Filename**: You can customize the reference filename (default: `reference.pur`) in the same settings section
-
-Once configured, you'll see PureRef badges on folder items in your library, allowing quick access to reference files.
-
 The folder structure should look like this (for EXE version):
 ```text
 SP Video Courses Player/
@@ -129,6 +118,17 @@ SP Video Courses Player/
             ├── ffmpeg.exe
             └── ffprobe.exe
 ```
+
+### 🖼️ PureRef Integration (Optional)
+
+To use the PureRef integration feature for managing reference images alongside your video courses:
+
+1. **Download and Install PureRef** from [https://www.pureref.com/download.php](https://www.pureref.com/download.php)
+2. **Default Path**: If installed to the default location (`C:\Program Files\PureRef\PureRef.exe`), the application will detect it automatically
+3. **Custom Path**: If installed elsewhere, go to `Library → Settings → PureRef` section and browse to your `PureRef.exe` location
+4. **Filename**: You can customize the reference filename (default: `reference.pur`) in the same settings section
+
+Once configured, you'll see PureRef badges on folder items in your library, allowing quick access to reference files.
 
 ---
 
@@ -217,17 +217,6 @@ SP Video Courses Player — плеер для локальных видеоку�
 
 **Путь:** Поместите все компоненты в папку `bin`. Путь зависит от способа запуска приложения:
 
-### 🖼️ Интеграция с PureRef (опционально)
-
-Для использования интеграции с PureRef для управления референсами рядом с видеокурсами:
-
-1. **Скачайте и установите PureRef** с [https://www.pureref.com/download.php](https://www.pureref.com/download.php)
-2. **Путь по умолчанию**: Если установлен в стандартное расположение (`C:\Program Files\PureRef\PureRef.exe`), приложение обнаружит его автоматически
-3. **Другой путь**: Если установлен в другое место, перейдите в `Библиотека → Настройки → PureRef` и укажите путь к `PureRef.exe`
-4. **Имя файла**: Вы можете настроить имя файла референсов (по умолчанию: `reference.pur`) в той же секции настроек
-
-После настройки вы увидите значки PureRef на папках в библиотеке, позволяющие быстро открывать файлы референсов.
-
 Структура папок должна выглядеть так (для EXE версии):
 ```text
 SP Video Courses Player/
@@ -240,6 +229,17 @@ SP Video Courses Player/
             └── ffprobe.exe
 ```
 
+
+### 🖼️ Интеграция с PureRef (опционально)
+
+Для использования интеграции с PureRef для управления референсами рядом с видеокурсами:
+
+1. **Скачайте и установите PureRef** с [https://www.pureref.com/download.php](https://www.pureref.com/download.php)
+2. **Путь по умолчанию**: Если установлен в стандартное расположение (`C:\Program Files\PureRef\PureRef.exe`), приложение обнаружит его автоматически
+3. **Другой путь**: Если установлен в другое место, перейдите в `Библиотека → Настройки → PureRef` и укажите путь к `PureRef.exe`
+4. **Имя файла**: Вы можете настроить имя файла референсов (по умолчанию: `reference.pur`) в той же секции настроек
+
+После настройки вы увидите значки PureRef на папках в библиотеке, позволяющие быстро открывать файлы референсов.
 
 ---
 
