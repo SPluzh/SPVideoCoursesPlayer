@@ -9,6 +9,7 @@ import sqlite3
 import configparser
 import hashlib
 import logging
+import unicodedata
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from translator import tr
@@ -19,92 +20,101 @@ from constants import ROOT_DIR, DATA_DIR
 
 from utils import setup_encoding
 
+
 class VideoScanner:
-    def __init__(self, config_file='settings.ini'):
+    def __init__(self, config_file="settings.ini"):
         print("\n" + "=" * 70)
-        print(tr('scanner.init_title'))
+        print(tr("scanner.init_title"))
         print("=" * 70)
 
         self.script_dir = ROOT_DIR
         self.data_dir = DATA_DIR
         self.data_dir.mkdir(exist_ok=True)
-        
+
         self.config_file = self.script_dir / config_file
-        self.db_file = self.data_dir / 'video_courses.db'
-        
+        self.db_file = self.data_dir / "video_courses.db"
+
         self.config = ConfigManager(self.config_file, self.script_dir, self.data_dir)
-        
+
         self.thumbnails_dir = self.config.get_thumbnails_dir()
         self.ffmpeg_path = self.config.get_ffmpeg_path()
         self.ffprobe_path = self.config.get_ffprobe_path()
-        
+
         self.has_ffprobe = self.ffprobe_path.exists()
         self.has_ffmpeg = self.ffmpeg_path.exists()
 
         print(f"\n{tr('scanner.paths_title')}")
-        print(tr('scanner.path_script', path=self.script_dir))
-        print(tr('scanner.path_db', path=self.db_file))
-        print(tr('scanner.path_thumbs', path=self.thumbnails_dir))
-        
+        print(tr("scanner.path_script", path=self.script_dir))
+        print(tr("scanner.path_db", path=self.db_file))
+        print(tr("scanner.path_thumbs", path=self.thumbnails_dir))
+
         if self.has_ffprobe:
-            print(tr('scanner.ffprobe_found'))
+            print(tr("scanner.ffprobe_found"))
         else:
-            print(tr('scanner.ffprobe_not_found'))
-            
+            print(tr("scanner.ffprobe_not_found"))
+
         if self.has_ffmpeg:
-            print(tr('scanner.ffmpeg_found'))
+            print(tr("scanner.ffmpeg_found"))
         else:
-            print(tr('scanner.ffmpeg_not_found'))
+            print(tr("scanner.ffmpeg_not_found"))
 
         self.thumbnails_dir.mkdir(exist_ok=True)
-        
+
         # Initialize Database Manager
         self.db = DatabaseManager(self.db_file)
-        
+
         self._print_lock = threading.Lock()
-        
+
         # Load settings via ConfigManager
         self.video_extensions = self.config.get_video_extensions()
         self.audio_extensions = self.config.get_audio_extensions()
         self.subtitle_extensions = self.config.get_subtitle_extensions()
-        
+
         self.render_width = self.config.get_render_width()
         self.render_height = self.config.get_render_height()
         self.thumbnail_count = self.config.get_thumbnail_count()
         self.thumbnail_quality = self.config.get_thumbnail_quality()
         self.regenerate_thumbnails = self.config.get_regenerate_thumbnails()
-        
+
         self.max_workers = self.config.get_max_workers()
         self.thumbnail_workers = self.config.get_thumbnail_workers()
         self.ffmpeg_timeout = self.config.get_ffmpeg_timeout()
-        
+
         # Statistics
         self.stats = {
-            'thumbnails_generated': 0,
-            'thumbnails_cached': 0,
-            'thumbnails_failed': 0,
-            'time_thumbnails': 0,
-            'time_ffprobe': 0,
-            'time_total': 0
+            "thumbnails_generated": 0,
+            "thumbnails_cached": 0,
+            "thumbnails_failed": 0,
+            "time_thumbnails": 0,
+            "time_ffprobe": 0,
+            "time_total": 0,
         }
 
         print(f"\n{'─' * 40}")
-        print(tr('scanner.settings_title'))
+        print(tr("scanner.settings_title"))
         print(f"{'─' * 40}")
-        print(tr('scanner.thumbs_title'))
-        print(tr('scanner.thumbs_size', width=self.render_width, height=self.render_height))
-        print(tr('scanner.thumbs_quality', quality=self.thumbnail_quality))
-        print(tr('scanner.thumbs_count', count=self.thumbnail_count))
-        regen_status = tr('scanner.yes') if self.regenerate_thumbnails else tr('scanner.no')
-        print(tr('scanner.thumbs_regen', status=regen_status))
+        print(tr("scanner.thumbs_title"))
+        print(
+            tr(
+                "scanner.thumbs_size",
+                width=self.render_width,
+                height=self.render_height,
+            )
+        )
+        print(tr("scanner.thumbs_quality", quality=self.thumbnail_quality))
+        print(tr("scanner.thumbs_count", count=self.thumbnail_count))
+        regen_status = (
+            tr("scanner.yes") if self.regenerate_thumbnails else tr("scanner.no")
+        )
+        print(tr("scanner.thumbs_regen", status=regen_status))
         print(f"\n{tr('scanner.perf_title')}")
-        print(tr('scanner.perf_video_workers', count=self.max_workers))
-        print(tr('scanner.perf_thumb_workers', count=self.thumbnail_workers))
-        print(tr('scanner.perf_timeout', seconds=self.ffmpeg_timeout))
+        print(tr("scanner.perf_video_workers", count=self.max_workers))
+        print(tr("scanner.perf_thumb_workers", count=self.thumbnail_workers))
+        print(tr("scanner.perf_timeout", seconds=self.ffmpeg_timeout))
         print(f"\n{tr('scanner.formats_title')}")
-        print(tr('scanner.formats_video', count=len(self.video_extensions)))
-        print(tr('scanner.formats_audio', count=len(self.audio_extensions)))
-        print(tr('scanner.formats_subtitle', count=len(self.subtitle_extensions)))
+        print(tr("scanner.formats_video", count=len(self.video_extensions)))
+        print(tr("scanner.formats_audio", count=len(self.audio_extensions)))
+        print(tr("scanner.formats_subtitle", count=len(self.subtitle_extensions)))
 
     def _get_existing_video_data(self, file_path):
         """Get existing video data from DB for caching."""
@@ -115,18 +125,21 @@ class VideoScanner:
         try:
             with self.db.get_connection() as conn:
                 c = conn.cursor()
-                c.execute("""
+                c.execute(
+                    """
                     SELECT track_type, stream_index, audio_file_path 
                     FROM audio_tracks WHERE id = (
                         SELECT selected_audio_id FROM video_files WHERE id = ?
                     )
-                """, (video_id,))
+                """,
+                    (video_id,),
+                )
                 row = c.fetchone()
                 if row:
                     return {
-                        'track_type': row[0],
-                        'stream_index': row[1],
-                        'audio_file_path': row[2]
+                        "track_type": row[0],
+                        "stream_index": row[1],
+                        "audio_file_path": row[2],
                     }
         except:
             pass
@@ -135,7 +148,7 @@ class VideoScanner:
     def _get_subprocess_startupinfo(self):
         """Get startupinfo to hide console windows on Windows."""
         startupinfo = None
-        if hasattr(subprocess, 'STARTUPINFO'):
+        if hasattr(subprocess, "STARTUPINFO"):
             startupinfo = subprocess.STARTUPINFO()
             startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
             startupinfo.wShowWindow = subprocess.SW_HIDE
@@ -148,30 +161,34 @@ class VideoScanner:
         """
         if not duration or duration < 1:
             duration = 60
-        
+
         # Calculate time points (5% - 95% of duration)
         start_time = duration * 0.05
         end_time = duration * 0.95
-        interval = (end_time - start_time) / (self.thumbnail_count - 1) if self.thumbnail_count > 1 else 0
-        
+        interval = (
+            (end_time - start_time) / (self.thumbnail_count - 1)
+            if self.thumbnail_count > 1
+            else 0
+        )
+
         timestamps = [start_time + interval * i for i in range(self.thumbnail_count)]
-        
+
         # Form select expression for ffmpeg
         # select='eq(n,frame1)+eq(n,frame2)+...' - but this requires knowing frame numbers
         # Better to use multiple -ss with -frames:v 1
-        
+
         thumbnail_paths = []
         startupinfo = self._get_subprocess_startupinfo()
-        
+
         for idx, time_sec in enumerate(timestamps):
             thumb_path = self.thumbnails_dir / f"{video_hash}_{idx}.jpg"
-            
+
             # Skip if already exists
             if thumb_path.exists() and not self.regenerate_thumbnails:
                 thumbnail_paths.append(str(thumb_path))
-                self.stats['thumbnails_cached'] += 1
+                self.stats["thumbnails_cached"] += 1
                 continue
-            
+
             try:
                 # OPTIMIZED ffmpeg command:
                 # -ss BEFORE -i = fast seek without decoding
@@ -181,35 +198,40 @@ class VideoScanner:
                 # -q:v = JPEG quality (2-31)
                 cmd = [
                     str(self.ffmpeg_path),
-                    '-ss', f'{time_sec:.2f}',           # Seek BEFORE input (fast!)
-                    '-i', str(video_path),
-                    '-vf', f'scale={self.render_width}:{self.render_height}:force_original_aspect_ratio=decrease,'
-                           f'pad={self.render_width}:{self.render_height}:(ow-iw)/2:(oh-ih)/2:color=black',
-                    '-frames:v', '1',                    # Only 1 frame
-                    '-q:v', str(self.thumbnail_quality), # JPEG quality
-                    '-an',                               # No audio
-                    '-y',                                # Overwrite
-                    str(thumb_path)
+                    "-ss",
+                    f"{time_sec:.2f}",  # Seek BEFORE input (fast!)
+                    "-i",
+                    str(video_path),
+                    "-vf",
+                    f"scale={self.render_width}:{self.render_height}:force_original_aspect_ratio=decrease,"
+                    f"pad={self.render_width}:{self.render_height}:(ow-iw)/2:(oh-ih)/2:color=black",
+                    "-frames:v",
+                    "1",  # Only 1 frame
+                    "-q:v",
+                    str(self.thumbnail_quality),  # JPEG quality
+                    "-an",  # No audio
+                    "-y",  # Overwrite
+                    str(thumb_path),
                 ]
-                
+
                 result = subprocess.run(
                     cmd,
                     capture_output=True,
                     timeout=self.ffmpeg_timeout,
-                    startupinfo=startupinfo
+                    startupinfo=startupinfo,
                 )
-                
+
                 if thumb_path.exists():
                     thumbnail_paths.append(str(thumb_path))
-                    self.stats['thumbnails_generated'] += 1
+                    self.stats["thumbnails_generated"] += 1
                 else:
-                    self.stats['thumbnails_failed'] += 1
-                    
+                    self.stats["thumbnails_failed"] += 1
+
             except subprocess.TimeoutExpired:
-                self.stats['thumbnails_failed'] += 1
+                self.stats["thumbnails_failed"] += 1
             except Exception:
-                self.stats['thumbnails_failed'] += 1
-        
+                self.stats["thumbnails_failed"] += 1
+
         return thumbnail_paths
 
     def _create_thumbnails_parallel(self, video_path, duration, video_hash):
@@ -219,75 +241,86 @@ class VideoScanner:
         """
         if not duration or duration < 1:
             duration = 60
-        
+
         start_time = duration * 0.05
         end_time = duration * 0.95
-        interval = (end_time - start_time) / (self.thumbnail_count - 1) if self.thumbnail_count > 1 else 0
-        
+        interval = (
+            (end_time - start_time) / (self.thumbnail_count - 1)
+            if self.thumbnail_count > 1
+            else 0
+        )
+
         def extract_single_frame(args):
             idx, time_sec = args
             thumb_path = self.thumbnails_dir / f"{video_hash}_{idx}.jpg"
-            
+
             if thumb_path.exists() and not self.regenerate_thumbnails:
-                return (idx, str(thumb_path), 'cached')
-            
+                return (idx, str(thumb_path), "cached")
+
             try:
                 startupinfo = self._get_subprocess_startupinfo()
-                
+
                 cmd = [
                     str(self.ffmpeg_path),
-                    '-ss', f'{time_sec:.2f}',
-                    '-i', str(video_path),
-                    '-vf', f'scale={self.render_width}:{self.render_height}:force_original_aspect_ratio=decrease,'
-                           f'pad={self.render_width}:{self.render_height}:(ow-iw)/2:(oh-ih)/2:color=black',
-                    '-frames:v', '1',
-                    '-q:v', str(self.thumbnail_quality),
-                    '-an',
-                    '-y',
-                    str(thumb_path)
+                    "-ss",
+                    f"{time_sec:.2f}",
+                    "-i",
+                    str(video_path),
+                    "-vf",
+                    f"scale={self.render_width}:{self.render_height}:force_original_aspect_ratio=decrease,"
+                    f"pad={self.render_width}:{self.render_height}:(ow-iw)/2:(oh-ih)/2:color=black",
+                    "-frames:v",
+                    "1",
+                    "-q:v",
+                    str(self.thumbnail_quality),
+                    "-an",
+                    "-y",
+                    str(thumb_path),
                 ]
-                
+
                 subprocess.run(
                     cmd,
                     capture_output=True,
                     timeout=self.ffmpeg_timeout,
-                    startupinfo=startupinfo
+                    startupinfo=startupinfo,
                 )
-                
+
                 if thumb_path.exists():
-                    return (idx, str(thumb_path), 'generated')
-                return (idx, None, 'failed')
-                
+                    return (idx, str(thumb_path), "generated")
+                return (idx, None, "failed")
+
             except:
-                return (idx, None, 'failed')
-        
+                return (idx, None, "failed")
+
         # Create tasks
         tasks = [(i, start_time + interval * i) for i in range(self.thumbnail_count)]
-        
+
         # Parallel execution
         results = [None] * self.thumbnail_count
-        
+
         with ThreadPoolExecutor(max_workers=self.thumbnail_workers) as executor:
-            futures = {executor.submit(extract_single_frame, task): task[0] for task in tasks}
-            
+            futures = {
+                executor.submit(extract_single_frame, task): task[0] for task in tasks
+            }
+
             for future in as_completed(futures):
                 idx, path, status = future.result()
                 results[idx] = path
-                
-                if status == 'cached':
-                    self.stats['thumbnails_cached'] += 1
-                elif status == 'generated':
-                    self.stats['thumbnails_generated'] += 1
+
+                if status == "cached":
+                    self.stats["thumbnails_cached"] += 1
+                elif status == "generated":
+                    self.stats["thumbnails_generated"] += 1
                 else:
-                    self.stats['thumbnails_failed'] += 1
-        
+                    self.stats["thumbnails_failed"] += 1
+
         # Filter None
         return [p for p in results if p]
 
     def _create_thumbnails_fast(self, video_path, duration, existing_data=None):
         """
         Main method for creating thumbnails with caching.
-        
+
         Logic:
         1. Check cache in DB
         2. Check files on disk
@@ -295,23 +328,23 @@ class VideoScanner:
         """
         if not self.has_ffmpeg:
             return None, []
-        
+
         video_hash = self._get_video_hash(video_path)
-        
+
         # STEP 1: Check cache in database
         if existing_data and not self.regenerate_thumbnails:
-            if existing_data.get('thumbnails_json'):
+            if existing_data.get("thumbnails_json"):
                 try:
-                    cached_list = json.loads(existing_data['thumbnails_json'])
+                    cached_list = json.loads(existing_data["thumbnails_json"])
                     if cached_list and len(cached_list) == self.thumbnail_count:
                         # Check existence of all files
                         all_exist = all(Path(p).exists() for p in cached_list)
                         if all_exist:
-                            self.stats['thumbnails_cached'] += len(cached_list)
+                            self.stats["thumbnails_cached"] += len(cached_list)
                             return cached_list[0], cached_list
                 except:
                     pass
-        
+
         # STEP 2: Check files on disk
         if not self.regenerate_thumbnails:
             existing_files = []
@@ -319,32 +352,37 @@ class VideoScanner:
                 p = self.thumbnails_dir / f"{video_hash}_{i}.jpg"
                 if p.exists():
                     existing_files.append(str(p))
-            
+
             if len(existing_files) == self.thumbnail_count:
-                self.stats['thumbnails_cached'] += len(existing_files)
+                self.stats["thumbnails_cached"] += len(existing_files)
                 return existing_files[0], existing_files
-        
+
         # STEP 3: Generate thumbnails in parallel
         start_time = time.time()
-        
+
         # Remove ALL old files for this hash to avoid index conflicts
         for old_file in self.thumbnails_dir.glob(f"{video_hash}_*.jpg"):
             try:
                 old_file.unlink()
             except:
                 pass
-        
-        thumbnail_paths = self._create_thumbnails_parallel(video_path, duration, video_hash)
-        
+
+        thumbnail_paths = self._create_thumbnails_parallel(
+            video_path, duration, video_hash
+        )
+
         elapsed = time.time() - start_time
-        self.stats['time_thumbnails'] += elapsed
-        
+        self.stats["time_thumbnails"] += elapsed
+
         return thumbnail_paths[0] if thumbnail_paths else None, thumbnail_paths
 
     def _has_video_files(self, directory):
         """Fast check for video files in directory."""
         try:
-            return any(f.is_file() and f.suffix.lower() in self.video_extensions for f in directory.iterdir())
+            return any(
+                f.is_file() and f.suffix.lower() in self.video_extensions
+                for f in directory.iterdir()
+            )
         except (PermissionError, OSError):
             return False
 
@@ -357,13 +395,13 @@ class VideoScanner:
             key = f"{path_str}_{size}_{mtime}"
         except:
             key = path_str
-            
-        return hashlib.md5(key.encode('utf-8')).hexdigest()
+
+        return hashlib.md5(key.encode("utf-8")).hexdigest()
 
     def _get_video_info_with_audio_subs(self, path):
         """
         Get full information about video file via ffprobe.
-        
+
         Returns:
         - duration: duration in seconds
         - resolution: resolution (e.g. "1920x1080")
@@ -373,281 +411,316 @@ class VideoScanner:
         - embedded_subtitle_tracks: list of embedded subtitle tracks
         """
         start_time = time.time()
-        
+
         duration = 0
         resolution = None
         codec = None
         embedded_audio_tracks = []
         embedded_subtitle_tracks = []
-        
+
         try:
             file_size = path.stat().st_size
         except:
             file_size = 0
-        
+
         if self.has_ffprobe:
             try:
                 startupinfo = self._get_subprocess_startupinfo()
-                
+
                 result = subprocess.run(
                     [
                         str(self.ffprobe_path),
-                        '-v', 'quiet',
-                        '-print_format', 'json',
-                        '-show_format',
-                        '-show_streams',
-                        str(path)
+                        "-v",
+                        "quiet",
+                        "-print_format",
+                        "json",
+                        "-show_format",
+                        "-show_streams",
+                        str(path),
                     ],
                     capture_output=True,
-                    encoding='utf-8',
-                    errors='ignore',
+                    encoding="utf-8",
+                    errors="ignore",
                     timeout=10,
-                    startupinfo=startupinfo
+                    startupinfo=startupinfo,
                 )
-                
+
                 if result.returncode == 0 and result.stdout:
                     data = json.loads(result.stdout)
-                    
+
                     # Duration from format
-                    if 'format' in data and 'duration' in data['format']:
+                    if "format" in data and "duration" in data["format"]:
                         try:
-                            duration = float(data['format']['duration'])
+                            duration = float(data["format"]["duration"])
                         except:
                             duration = 0
-                    
+
                     # If not in format, get from video stream
-                    if duration == 0 and 'streams' in data:
-                        for s in data['streams']:
-                            if s.get('codec_type') == 'video' and 'duration' in s:
+                    if duration == 0 and "streams" in data:
+                        for s in data["streams"]:
+                            if s.get("codec_type") == "video" and "duration" in s:
                                 try:
-                                    duration = float(s['duration'])
+                                    duration = float(s["duration"])
                                     break
                                 except:
                                     continue
-                    
-                    if 'streams' in data:
-                        for stream in data['streams']:
-                            codec_type = stream.get('codec_type', '')
-                            
+
+                    if "streams" in data:
+                        for stream in data["streams"]:
+                            codec_type = stream.get("codec_type", "")
+
                             # Video stream
-                            if codec_type == 'video' and not resolution:
-                                width = stream.get('width', 0)
-                                height = stream.get('height', 0)
+                            if codec_type == "video" and not resolution:
+                                width = stream.get("width", 0)
+                                height = stream.get("height", 0)
                                 if width and height:
                                     resolution = f"{width}x{height}"
-                                codec = stream.get('codec_name', '')
-                            
+                                codec = stream.get("codec_name", "")
+
                             # Audio stream
-                            elif codec_type == 'audio':
-                                tags = stream.get('tags', {})
-                                
+                            elif codec_type == "audio":
+                                tags = stream.get("tags", {})
+
                                 language = (
-                                    tags.get('language') or 
-                                    tags.get('LANGUAGE') or
-                                    tags.get('lang')
+                                    tags.get("language")
+                                    or tags.get("LANGUAGE")
+                                    or tags.get("lang")
                                 )
-                                
+
                                 title = (
-                                    tags.get('title') or 
-                                    tags.get('TITLE') or
-                                    tags.get('handler_name')
+                                    tags.get("title")
+                                    or tags.get("TITLE")
+                                    or tags.get("handler_name")
                                 )
-                                
+
                                 bitrate = None
-                                if 'bit_rate' in stream:
+                                if "bit_rate" in stream:
                                     try:
-                                        bitrate = int(stream['bit_rate'])
+                                        bitrate = int(stream["bit_rate"])
                                     except:
                                         pass
-                                
+
                                 sample_rate = None
-                                if 'sample_rate' in stream:
+                                if "sample_rate" in stream:
                                     try:
-                                        sample_rate = int(stream['sample_rate'])
+                                        sample_rate = int(stream["sample_rate"])
                                     except:
                                         pass
-                                
+
                                 audio_duration = duration
-                                if 'duration' in stream:
+                                if "duration" in stream:
                                     try:
-                                        audio_duration = float(stream['duration'])
+                                        audio_duration = float(stream["duration"])
                                     except:
                                         pass
-                                
+
                                 audio_track = {
-                                    'track_type': 'embedded',
-                                    'stream_index': stream.get('index', 0),
-                                    'audio_file_path': None,
-                                    'audio_file_name': None,
-                                    'language': language,
-                                    'title': title,
-                                    'codec': stream.get('codec_name'),
-                                    'bitrate': bitrate,
-                                    'sample_rate': sample_rate,
-                                    'channels': stream.get('channels'),
-                                    'channel_layout': stream.get('channel_layout'),
-                                    'duration': audio_duration,
-                                    'file_size': 0,
-                                    'is_default': 1 if stream.get('disposition', {}).get('default', 0) else 0,
-                                    'match_score': 100
+                                    "track_type": "embedded",
+                                    "stream_index": stream.get("index", 0),
+                                    "audio_file_path": None,
+                                    "audio_file_name": None,
+                                    "language": language,
+                                    "title": title,
+                                    "codec": stream.get("codec_name"),
+                                    "bitrate": bitrate,
+                                    "sample_rate": sample_rate,
+                                    "channels": stream.get("channels"),
+                                    "channel_layout": stream.get("channel_layout"),
+                                    "duration": audio_duration,
+                                    "file_size": 0,
+                                    "is_default": 1
+                                    if stream.get("disposition", {}).get("default", 0)
+                                    else 0,
+                                    "match_score": 100,
                                 }
-                                
+
                                 embedded_audio_tracks.append(audio_track)
-                            
+
                             # Subtitles
-                            elif codec_type == 'subtitle':
-                                tags = stream.get('tags', {})
-                                disposition = stream.get('disposition', {})
-                                
+                            elif codec_type == "subtitle":
+                                tags = stream.get("tags", {})
+                                disposition = stream.get("disposition", {})
+
                                 language = (
-                                    tags.get('language') or 
-                                    tags.get('LANGUAGE') or
-                                    tags.get('lang')
+                                    tags.get("language")
+                                    or tags.get("LANGUAGE")
+                                    or tags.get("lang")
                                 )
-                                
+
                                 title = (
-                                    tags.get('title') or 
-                                    tags.get('TITLE') or
-                                    tags.get('handler_name')
+                                    tags.get("title")
+                                    or tags.get("TITLE")
+                                    or tags.get("handler_name")
                                 )
-                                
+
                                 subtitle_track = {
-                                    'track_type': 'embedded',
-                                    'stream_index': stream.get('index', 0),
-                                    'subtitle_file_path': None,
-                                    'subtitle_file_name': None,
-                                    'language': language,
-                                    'title': title,
-                                    'codec': stream.get('codec_name'),
-                                    'format': stream.get('codec_long_name'),
-                                    'is_default': 1 if disposition.get('default', 0) else 0,
-                                    'is_forced': 1 if disposition.get('forced', 0) else 0,
-                                    'match_score': 100
+                                    "track_type": "embedded",
+                                    "stream_index": stream.get("index", 0),
+                                    "subtitle_file_path": None,
+                                    "subtitle_file_name": None,
+                                    "language": language,
+                                    "title": title,
+                                    "codec": stream.get("codec_name"),
+                                    "format": stream.get("codec_long_name"),
+                                    "is_default": 1
+                                    if disposition.get("default", 0)
+                                    else 0,
+                                    "is_forced": 1
+                                    if disposition.get("forced", 0)
+                                    else 0,
+                                    "match_score": 100,
                                 }
-                                
+
                                 embedded_subtitle_tracks.append(subtitle_track)
-                        
+
             except Exception as e:
                 pass
-        
+
         elapsed = time.time() - start_time
-        self.stats['time_ffprobe'] += elapsed
-        
-        return duration, resolution, codec, file_size, embedded_audio_tracks, embedded_subtitle_tracks
+        self.stats["time_ffprobe"] += elapsed
+
+        return (
+            duration,
+            resolution,
+            codec,
+            file_size,
+            embedded_audio_tracks,
+            embedded_subtitle_tracks,
+        )
 
     def _get_external_audio_info(self, audio_path):
         """Get information about external audio file."""
         info = {
-            'duration': 0,
-            'codec': None,
-            'bitrate': None,
-            'sample_rate': None,
-            'channels': None,
-            'channel_layout': None,
-            'language': None,
-            'title': None,
-            'file_size': 0
+            "duration": 0,
+            "codec": None,
+            "bitrate": None,
+            "sample_rate": None,
+            "channels": None,
+            "channel_layout": None,
+            "language": None,
+            "title": None,
+            "file_size": 0,
         }
-        
+
         try:
-            info['file_size'] = audio_path.stat().st_size
+            info["file_size"] = audio_path.stat().st_size
         except:
             pass
-        
+
         if self.has_ffprobe:
             try:
                 startupinfo = self._get_subprocess_startupinfo()
-                
+
                 result = subprocess.run(
                     [
                         str(self.ffprobe_path),
-                        '-v', 'quiet',
-                        '-print_format', 'json',
-                        '-show_format',
-                        '-show_streams',
-                        '-select_streams', 'a:0',
-                        str(audio_path)
+                        "-v",
+                        "quiet",
+                        "-print_format",
+                        "json",
+                        "-show_format",
+                        "-show_streams",
+                        "-select_streams",
+                        "a:0",
+                        str(audio_path),
                     ],
                     capture_output=True,
-                    encoding='utf-8',
-                    errors='ignore',
+                    encoding="utf-8",
+                    errors="ignore",
                     timeout=5,
-                    startupinfo=startupinfo
+                    startupinfo=startupinfo,
                 )
-                
+
                 if result.returncode == 0 and result.stdout:
                     data = json.loads(result.stdout)
-                    
-                    if 'format' in data:
-                        fmt = data['format']
-                        if 'duration' in fmt:
-                            info['duration'] = float(fmt['duration'])
-                        if 'bit_rate' in fmt:
+
+                    if "format" in data:
+                        fmt = data["format"]
+                        if "duration" in fmt:
+                            info["duration"] = float(fmt["duration"])
+                        if "bit_rate" in fmt:
                             try:
-                                info['bitrate'] = int(fmt['bit_rate'])
+                                info["bitrate"] = int(fmt["bit_rate"])
                             except:
                                 pass
-                        
-                        tags = fmt.get('tags', {})
-                        info['language'] = tags.get('language') or tags.get('LANGUAGE')
-                        info['title'] = tags.get('title') or tags.get('TITLE')
-                    
-                    if 'streams' in data and data['streams']:
-                        stream = data['streams'][0]
-                        info['codec'] = stream.get('codec_name')
-                        if 'sample_rate' in stream:
+
+                        tags = fmt.get("tags", {})
+                        info["language"] = tags.get("language") or tags.get("LANGUAGE")
+                        info["title"] = tags.get("title") or tags.get("TITLE")
+
+                    if "streams" in data and data["streams"]:
+                        stream = data["streams"][0]
+                        info["codec"] = stream.get("codec_name")
+                        if "sample_rate" in stream:
                             try:
-                                info['sample_rate'] = int(stream['sample_rate'])
+                                info["sample_rate"] = int(stream["sample_rate"])
                             except:
                                 pass
-                        info['channels'] = stream.get('channels')
-                        info['channel_layout'] = stream.get('channel_layout')
-                        
-                        stream_tags = stream.get('tags', {})
-                        if not info['language']:
-                            info['language'] = stream_tags.get('language') or stream_tags.get('LANGUAGE')
-                        if not info['title']:
-                            info['title'] = stream_tags.get('title') or stream_tags.get('TITLE')
-                        
+                        info["channels"] = stream.get("channels")
+                        info["channel_layout"] = stream.get("channel_layout")
+
+                        stream_tags = stream.get("tags", {})
+                        if not info["language"]:
+                            info["language"] = stream_tags.get(
+                                "language"
+                            ) or stream_tags.get("LANGUAGE")
+                        if not info["title"]:
+                            info["title"] = stream_tags.get("title") or stream_tags.get(
+                                "TITLE"
+                            )
+
             except:
                 pass
-        
+
         return info
 
     def _normalize_name(self, name):
-        """Normalize filename for comparison."""
+        """Normalize filename for comparison with Unicode normalization."""
         name = Path(name).stem
+
+        # Unicode normalization NFD - decompose characters (e.g., ê -> e + ^)
+        name = unicodedata.normalize("NFD", name)
+
+        # Remove combining characters (accents, diacritics) - category 'Mn' (Mark, nonspacing)
+        name = "".join(char for char in name if unicodedata.category(char) != "Mn")
+
+        # Convert to lowercase
         name = name.lower()
-        name = re.sub(r'[_\-\.\[\]\(\)\{\}]', ' ', name)
-        name = re.sub(r'\s+', ' ', name).strip()
+
+        # Replace special characters with spaces
+        name = re.sub(r"[_\-\.\[\]\(\)\{\}]", " ", name)
+
+        # Collapse multiple spaces
+        name = re.sub(r"\s+", " ", name).strip()
+
         return name
 
     def _extract_episode_number(self, name):
         """Extract episode/lesson number from filename."""
         name = Path(name).stem
-        
+
         patterns = [
-            r'(?:episode|ep|e|урок|lesson|part|часть|глава|chapter|ch)[\s\.\-_]*(\d+)',
-            r'^(\d+)[\s\.\-_]',
-            r'[\s\.\-_](\d+)[\s\.\-_]',
-            r'[\s\.\-_](\d+)$',
-            r's\d+e(\d+)',
+            r"(?:episode|ep|e|урок|lesson|part|часть|глава|chapter|ch)[\s\.\-_]*(\d+)",
+            r"^(\d+)[\s\.\-_]",
+            r"[\s\.\-_](\d+)[\s\.\-_]",
+            r"[\s\.\-_](\d+)$",
+            r"s\d+e(\d+)",
         ]
-        
+
         for pattern in patterns:
             match = re.search(pattern, name, re.IGNORECASE)
             if match:
                 return int(match.group(1))
-        
+
         return None
 
     def _calculate_match_score(self, video_name, audio_name):
         """Calculate match score of external audio to video."""
         score = 0
-        
+
         video_norm = self._normalize_name(video_name)
         audio_norm = self._normalize_name(audio_name)
-        
+
         # Exact name match
         if video_norm == audio_norm:
             score += 100
@@ -655,7 +728,7 @@ class VideoScanner:
             # One name contains the other
             if video_norm in audio_norm or audio_norm in video_norm:
                 score += 50
-            
+
             # Common prefix
             min_len = min(len(video_norm), len(audio_norm))
             if min_len > 0:
@@ -666,7 +739,7 @@ class VideoScanner:
                     else:
                         break
                 score += int(common_prefix / min_len * 30)
-        
+
         # Episode number match
         video_ep = self._extract_episode_number(video_name)
         audio_ep = self._extract_episode_number(audio_name)
@@ -675,173 +748,210 @@ class VideoScanner:
                 score += 40
             else:
                 score -= 100  # Strong penalty for episode mismatch
-        
+
         # Language tags
         lang_patterns = [
-            r'[\[\(]?(rus|russian|ru|рус|русский)[\]\)]?',
-            r'[\[\(]?(eng|english|en|англ|английский)[\]\)]?',
-            r'[\[\(]?(ukr|ukrainian|ua|укр|украинский)[\]\)]?',
+            r"[\[\(]?(rus|russian|ru|рус|русский)[\]\)]?",
+            r"[\[\(]?(eng|english|en|англ|английский)[\]\)]?",
+            r"[\[\(]?(ukr|ukrainian|ua|укр|украинский)[\]\)]?",
         ]
-        
+
         for pattern in lang_patterns:
             if re.search(pattern, audio_name, re.IGNORECASE):
                 score += 5
                 break
-        
+
         return score
 
     def _find_external_audio(self, video_file, folder):
         """Find external audio tracks matching video file."""
         external_audio = []
-        
+
         try:
             audio_files = [
-                f for f in folder.iterdir()
+                f
+                for f in folder.iterdir()
                 if f.is_file() and f.suffix.lower() in self.audio_extensions
             ]
-            
+
             if not audio_files:
                 return []
-            
+
             video_name = video_file.name
-            
+
+            # DEBUG: Log search process
+            logging.debug(f"🔍 Searching audio for video: {video_name}")
+            logging.debug(f"   Found {len(audio_files)} audio files in folder")
+
             for audio_file in audio_files:
                 audio_name = audio_file.name
                 audio_stem = audio_file.stem.lower()
-                
+
                 audio_info = self._get_external_audio_info(audio_file)
                 match_score = self._calculate_match_score(video_name, audio_name)
-                
+
+                # DEBUG: Log each match attempt
+                logging.debug(f"   Audio: {audio_name}")
+                logging.debug(f"   Score: {match_score} (threshold: 60)")
+
                 # Minimum match threshold
                 if match_score >= 60:
-                    language = audio_info['language']
+                    logging.debug(f"   ✅ MATCHED!")
+                    language = audio_info["language"]
                     if not language:
                         lang_patterns = [
-                            (r'[\[\(]?(rus|russian|ru|рус)[\]\)]?', 'ru'),
-                            (r'[\[\(]?(eng|english|en|англ)[\]\)]?', 'en'),
-                            (r'[\[\(]?(ukr|ukrainian|ua|укр)[\]\)]?', 'uk'),
+                            (r"[\[\(]?(rus|russian|ru|рус)[\]\)]?", "ru"),
+                            (r"[\[\(]?(eng|english|en|англ)[\]\)]?", "en"),
+                            (r"[\[\(]?(ukr|ukrainian|ua|укр)[\]\)]?", "uk"),
                         ]
                         for pattern, lang in lang_patterns:
                             if re.search(pattern, audio_name, re.IGNORECASE):
                                 language = lang
                                 break
-                    
-                    external_audio.append({
-                        'track_type': 'external',
-                        'stream_index': None,
-                        'audio_file_path': str(audio_file),
-                        'audio_file_name': audio_name,
-                        'language': language,
-                        'title': audio_info['title'] or audio_stem,
-                        'codec': audio_info['codec'],
-                        'bitrate': audio_info['bitrate'],
-                        'sample_rate': audio_info['sample_rate'],
-                        'channels': audio_info['channels'],
-                        'channel_layout': audio_info['channel_layout'],
-                        'duration': audio_info['duration'],
-                        'file_size': audio_info['file_size'],
-                        'is_default': 0,
-                        'match_score': match_score
-                    })
-            
+
+                    external_audio.append(
+                        {
+                            "track_type": "external",
+                            "stream_index": None,
+                            "audio_file_path": str(audio_file),
+                            "audio_file_name": audio_name,
+                            "language": language,
+                            "title": audio_info["title"] or audio_stem,
+                            "codec": audio_info["codec"],
+                            "bitrate": audio_info["bitrate"],
+                            "sample_rate": audio_info["sample_rate"],
+                            "channels": audio_info["channels"],
+                            "channel_layout": audio_info["channel_layout"],
+                            "duration": audio_info["duration"],
+                            "file_size": audio_info["file_size"],
+                            "is_default": 0,
+                            "match_score": match_score,
+                        }
+                    )
+                else:
+                    logging.debug(f"   ❌ Below threshold")
+
             # Sort by relevance
-            external_audio.sort(key=lambda x: x['match_score'], reverse=True)
-            
+            external_audio.sort(key=lambda x: x["match_score"], reverse=True)
+
         except Exception as e:
             pass
-        
+
         return external_audio
 
     def _find_external_subtitles(self, video_file, folder):
         """Find external subtitle files matching video file."""
         external_subtitles = []
-        
+
         try:
             subtitle_files = [
-                f for f in folder.iterdir()
+                f
+                for f in folder.iterdir()
                 if f.is_file() and f.suffix.lower() in self.subtitle_extensions
             ]
-            
+
             if not subtitle_files:
                 return []
-            
+
             video_name = video_file.name
             video_stem = video_file.stem.lower()
-            
+
             for sub_file in subtitle_files:
                 sub_name = sub_file.name
                 sub_stem = sub_file.stem.lower()
-                
+
                 match_score = self._calculate_match_score(video_name, sub_name)
-                
+
                 # Also check exact name match (video.ru.srt -> video.mp4)
                 if sub_stem.startswith(video_stem):
                     match_score = max(match_score, 80)
-                
+
                 # Minimum match threshold
                 if match_score >= 60:
                     # Determine language from filename
                     language = None
                     lang_patterns = [
-                        (r'(?:^|[\[\(._\-])(rus|russian|ru|рус)(?:$|[\]\)._\-])', 'ru'),
-                        (r'(?:^|[\[\(._\-])(eng|english|en|англ)(?:$|[\]\)._\-])', 'en'),
-                        (r'(?:^|[\[\(._\-])(ukr|ukrainian|ua|укр)(?:$|[\]\)._\-])', 'uk'),
-                        (r'(?:^|[\[\(._\-])(jpn|japanese|ja|jp|яп)(?:$|[\]\)._\-])', 'ja'),
-                        (r'(?:^|[\[\(._\-])(ger|german|de|deu|нем)(?:$|[\]\)._\-])', 'de'),
-                        (r'(?:^|[\[\(._\-])(fra|french|fr|фр)(?:$|[\]\)._\-])', 'fr'),
-                        (r'(?:^|[\[\(._\-])(spa|spanish|es|исп)(?:$|[\]\)._\-])', 'es'),
-                        (r'(?:^|[\[\(._\-])(chi|chinese|zh|кит)(?:$|[\]\)._\-])', 'zh'),
+                        (r"(?:^|[\[\(._\-])(rus|russian|ru|рус)(?:$|[\]\)._\-])", "ru"),
+                        (
+                            r"(?:^|[\[\(._\-])(eng|english|en|англ)(?:$|[\]\)._\-])",
+                            "en",
+                        ),
+                        (
+                            r"(?:^|[\[\(._\-])(ukr|ukrainian|ua|укр)(?:$|[\]\)._\-])",
+                            "uk",
+                        ),
+                        (
+                            r"(?:^|[\[\(._\-])(jpn|japanese|ja|jp|яп)(?:$|[\]\)._\-])",
+                            "ja",
+                        ),
+                        (
+                            r"(?:^|[\[\(._\-])(ger|german|de|deu|нем)(?:$|[\]\)._\-])",
+                            "de",
+                        ),
+                        (r"(?:^|[\[\(._\-])(fra|french|fr|фр)(?:$|[\]\)._\-])", "fr"),
+                        (r"(?:^|[\[\(._\-])(spa|spanish|es|исп)(?:$|[\]\)._\-])", "es"),
+                        (r"(?:^|[\[\(._\-])(chi|chinese|zh|кит)(?:$|[\]\)._\-])", "zh"),
                     ]
                     for pattern, lang in lang_patterns:
                         if re.search(pattern, sub_name, re.IGNORECASE):
                             language = lang
-                            logging.debug(f"Found subtitle language {lang} for {sub_name}")
+                            logging.debug(
+                                f"Found subtitle language {lang} for {sub_name}"
+                            )
                             break
-                    
+
                     # Determine if subtitles are forced
                     is_forced = 0
-                    if re.search(r'(?:^|[\[\(._\-])forced(?:$|[\]\)._\-])', sub_name, re.IGNORECASE):
+                    if re.search(
+                        r"(?:^|[\[\(._\-])forced(?:$|[\]\)._\-])",
+                        sub_name,
+                        re.IGNORECASE,
+                    ):
                         is_forced = 1
-                    
+
                     # Codec by extension
                     ext_to_codec = {
-                        '.srt': 'subrip',
-                        '.ass': 'ass',
-                        '.ssa': 'ass',
-                        '.sub': 'subviewer',
-                        '.vtt': 'webvtt',
-                        '.sup': 'hdmv_pgs_subtitle',
-                        '.stl': 'stl',
-                        '.smi': 'sami',
+                        ".srt": "subrip",
+                        ".ass": "ass",
+                        ".ssa": "ass",
+                        ".sub": "subviewer",
+                        ".vtt": "webvtt",
+                        ".sup": "hdmv_pgs_subtitle",
+                        ".stl": "stl",
+                        ".smi": "sami",
                     }
-                    codec = ext_to_codec.get(sub_file.suffix.lower(), sub_file.suffix[1:])
-                    
-                    external_subtitles.append({
-                        'track_type': 'external',
-                        'stream_index': None,
-                        'subtitle_file_path': str(sub_file),
-                        'subtitle_file_name': sub_name,
-                        'language': language,
-                        'title': sub_stem,
-                        'codec': codec,
-                        'format': sub_file.suffix[1:].upper(),
-                        'is_default': 0,
-                        'is_forced': is_forced,
-                        'match_score': match_score
-                    })
-            
+                    codec = ext_to_codec.get(
+                        sub_file.suffix.lower(), sub_file.suffix[1:]
+                    )
+
+                    external_subtitles.append(
+                        {
+                            "track_type": "external",
+                            "stream_index": None,
+                            "subtitle_file_path": str(sub_file),
+                            "subtitle_file_name": sub_name,
+                            "language": language,
+                            "title": sub_stem,
+                            "codec": codec,
+                            "format": sub_file.suffix[1:].upper(),
+                            "is_default": 0,
+                            "is_forced": is_forced,
+                            "match_score": match_score,
+                        }
+                    )
+
             # Sort by relevance
-            external_subtitles.sort(key=lambda x: x['match_score'], reverse=True)
-            
+            external_subtitles.sort(key=lambda x: x["match_score"], reverse=True)
+
         except Exception as e:
             pass
-        
+
         return external_subtitles
 
     def _process_video_file(self, video_file, folder, rel_path, track_number):
         """
         Process a single video file.
-        
+
         Stages:
         1. Check cache in DB
         2. Get metadata via ffprobe
@@ -850,130 +960,147 @@ class VideoScanner:
         """
         try:
             file_path_str = str(video_file)
-            
+
             # Get existing data from DB
             existing_data = self._get_existing_video_data(file_path_str)
             saved_audio_selection = None
-            
+
             if existing_data:
-                saved_audio_selection = self._get_existing_audio_selection(existing_data['id'])
-            
+                saved_audio_selection = self._get_existing_audio_selection(
+                    existing_data["id"]
+                )
+
             # Check if file has changed
             try:
                 current_file_size = video_file.stat().st_size
             except:
                 current_file_size = 0
-            
+
             file_changed = True
-            if existing_data and existing_data.get('file_size') == current_file_size:
+            if existing_data and existing_data.get("file_size") == current_file_size:
                 file_changed = False
-            
+
             # CACHING: if file has not changed
             if not file_changed and existing_data:
-                duration = existing_data.get('duration', 0)
-                
+                duration = existing_data.get("duration", 0)
+
                 # Check thumbnails
-                thumbnail_path_str = existing_data.get('thumbnail_path')
-                thumbnails_json = existing_data.get('thumbnails_json')
+                thumbnail_path_str = existing_data.get("thumbnail_path")
+                thumbnails_json = existing_data.get("thumbnails_json")
                 thumb_list = []
-                
+
                 if thumbnails_json:
                     try:
                         thumb_list = json.loads(thumbnails_json)
-                        if not all(Path(p).exists() for p in thumb_list) or len(thumb_list) != self.thumbnail_count:
+                        if (
+                            not all(Path(p).exists() for p in thumb_list)
+                            or len(thumb_list) != self.thumbnail_count
+                        ):
                             # Thumbnails damaged or count mismatch - regenerate
                             # Pass None instead of existing_data to force regenerate all thumbnails
-                            thumbnail_path_str, thumb_list = self._create_thumbnails_fast(
-                                video_file, duration, None
+                            thumbnail_path_str, thumb_list = (
+                                self._create_thumbnails_fast(video_file, duration, None)
                             )
-                            thumbnails_json = json.dumps(thumb_list) if thumb_list else None
+                            thumbnails_json = (
+                                json.dumps(thumb_list) if thumb_list else None
+                            )
                         else:
-                            self.stats['thumbnails_cached'] += len(thumb_list)
+                            self.stats["thumbnails_cached"] += len(thumb_list)
                     except:
                         thumbnail_path_str, thumb_list = self._create_thumbnails_fast(
                             video_file, duration, None
                         )
                         thumbnails_json = json.dumps(thumb_list) if thumb_list else None
-                
+
                 # Scan audio tracks and subtitles anyway (external ones might have changed)
-                _, resolution, codec, file_size, embedded_audio, embedded_subs = self._get_video_info_with_audio_subs(video_file)
+                _, resolution, codec, file_size, embedded_audio, embedded_subs = (
+                    self._get_video_info_with_audio_subs(video_file)
+                )
                 external_audio = self._find_external_audio(video_file, folder)
                 external_subs = self._find_external_subtitles(video_file, folder)
                 all_audio_tracks = embedded_audio + external_audio
                 all_subtitle_tracks = embedded_subs + external_subs
-                
+
                 return {
-                    'folder_path': str(folder),
-                    'file_path': file_path_str,
-                    'file_name': video_file.name,
-                    'track_number': track_number,
-                    'duration': duration,
-                    'resolution': resolution,
-                    'file_size': file_size,
-                    'codec': codec,
-                    'thumbnail_path': thumbnail_path_str,
-                    'thumbnails_json': thumbnails_json,
-                    'watched_percent': existing_data.get('watched_percent', 0),
-                    'last_position': existing_data.get('last_position', 0),
-                    'thumb_count': len(thumb_list),
-                    'audio_tracks': all_audio_tracks,
-                    'audio_track_count': len(all_audio_tracks),
-                    'embedded_audio_count': len(embedded_audio),
-                    'external_audio_count': len(external_audio),
-                    'subtitle_tracks': all_subtitle_tracks,
-                    'subtitle_track_count': len(all_subtitle_tracks),
-                    'embedded_subtitle_count': len(embedded_subs),
-                    'external_subtitle_count': len(external_subs),
-                    'saved_audio_selection': saved_audio_selection,
-                    'from_cache': True
+                    "folder_path": str(folder),
+                    "file_path": file_path_str,
+                    "file_name": video_file.name,
+                    "track_number": track_number,
+                    "duration": duration,
+                    "resolution": resolution,
+                    "file_size": file_size,
+                    "codec": codec,
+                    "thumbnail_path": thumbnail_path_str,
+                    "thumbnails_json": thumbnails_json,
+                    "watched_percent": existing_data.get("watched_percent", 0),
+                    "last_position": existing_data.get("last_position", 0),
+                    "thumb_count": len(thumb_list),
+                    "audio_tracks": all_audio_tracks,
+                    "audio_track_count": len(all_audio_tracks),
+                    "embedded_audio_count": len(embedded_audio),
+                    "external_audio_count": len(external_audio),
+                    "subtitle_tracks": all_subtitle_tracks,
+                    "subtitle_track_count": len(all_subtitle_tracks),
+                    "embedded_subtitle_count": len(embedded_subs),
+                    "external_subtitle_count": len(external_subs),
+                    "saved_audio_selection": saved_audio_selection,
+                    "from_cache": True,
                 }
-            
+
             # FULL SCAN
-            duration, resolution, codec, file_size, embedded_audio, embedded_subs = self._get_video_info_with_audio_subs(video_file)
-            
+            duration, resolution, codec, file_size, embedded_audio, embedded_subs = (
+                self._get_video_info_with_audio_subs(video_file)
+            )
+
             thumbnail_path_str = None
             thumbnails_json = None
             thumb_list = []
-            
+
             if self.has_ffmpeg:
-                main_thumb, thumb_list = self._create_thumbnails_fast(video_file, duration, existing_data)
+                main_thumb, thumb_list = self._create_thumbnails_fast(
+                    video_file, duration, existing_data
+                )
                 if main_thumb:
                     thumbnail_path_str = main_thumb
                 if thumb_list:
                     thumbnails_json = json.dumps(thumb_list)
-            
+
             external_audio = self._find_external_audio(video_file, folder)
             external_subs = self._find_external_subtitles(video_file, folder)
             all_audio_tracks = embedded_audio + external_audio
             all_subtitle_tracks = embedded_subs + external_subs
-            
-            watched_percent = existing_data.get('watched_percent', 0) if existing_data else 0
-            last_position = existing_data.get('last_position', 0) if existing_data else 0
-            
+
+            watched_percent = (
+                existing_data.get("watched_percent", 0) if existing_data else 0
+            )
+            last_position = (
+                existing_data.get("last_position", 0) if existing_data else 0
+            )
+
             return {
-                'folder_path': str(folder),
-                'file_path': file_path_str,
-                'file_name': video_file.name,
-                'track_number': track_number,
-                'duration': duration,
-                'resolution': resolution,
-                'file_size': file_size,
-                'codec': codec,
-                'thumbnail_path': thumbnail_path_str,
-                'thumbnails_json': thumbnails_json,
-                'watched_percent': watched_percent,
-                'last_position': last_position,
-                'thumb_count': len(thumb_list),
-                'audio_tracks': all_audio_tracks,
-                'audio_track_count': len(all_audio_tracks),
-                'embedded_audio_count': len(embedded_audio),
-                'external_audio_count': len(external_audio),
-                'subtitle_tracks': all_subtitle_tracks,
-                'subtitle_track_count': len(all_subtitle_tracks),
-                'embedded_subtitle_count': len(embedded_subs),
-                'external_subtitle_count': len(external_subs),
-                'saved_audio_selection': saved_audio_selection,
-                'from_cache': False
+                "folder_path": str(folder),
+                "file_path": file_path_str,
+                "file_name": video_file.name,
+                "track_number": track_number,
+                "duration": duration,
+                "resolution": resolution,
+                "file_size": file_size,
+                "codec": codec,
+                "thumbnail_path": thumbnail_path_str,
+                "thumbnails_json": thumbnails_json,
+                "watched_percent": watched_percent,
+                "last_position": last_position,
+                "thumb_count": len(thumb_list),
+                "audio_tracks": all_audio_tracks,
+                "audio_track_count": len(all_audio_tracks),
+                "embedded_audio_count": len(embedded_audio),
+                "external_audio_count": len(external_audio),
+                "subtitle_tracks": all_subtitle_tracks,
+                "subtitle_track_count": len(all_subtitle_tracks),
+                "embedded_subtitle_count": len(embedded_subs),
+                "external_subtitle_count": len(external_subs),
+                "saved_audio_selection": saved_audio_selection,
+                "from_cache": False,
             }
         except Exception as e:
             return None
@@ -981,7 +1108,7 @@ class VideoScanner:
     def scan_directory(self, root_path):
         """
         Main directory scanning method.
-        
+
         Features:
         - Incremental addition (does not remove existing data)
         - Parallel video file processing
@@ -989,9 +1116,9 @@ class VideoScanner:
         - Save user data (progress, audio selection)
         """
         total_start_time = time.time()
-        
+
         print("\n" + "=" * 70)
-        print(tr('scanner.scan_title'))
+        print(tr("scanner.scan_title"))
         print("=" * 70)
 
         root = Path(root_path)
@@ -999,27 +1126,30 @@ class VideoScanner:
         print(f"\n{tr('scanner.scan_path', path=root)}")
 
         if not root.exists():
-            logging.error(tr('scanner.scan_error_not_exists'))
+            logging.error(tr("scanner.scan_error_not_exists"))
             return 0, 0
 
         # Initial stats check - short transaction
         with self.db.get_connection() as conn:
             c = conn.cursor()
-            
+
             # Statistics of existing data
             c.execute("SELECT COUNT(*) FROM folders WHERE root_path = ?", (root_str,))
             existing_folders = c.fetchone()[0]
-            
-            c.execute("""
+
+            c.execute(
+                """
                 SELECT COUNT(*) FROM video_files 
                 WHERE folder_path IN (SELECT path FROM folders WHERE root_path = ?)
-            """, (root_str,))
+            """,
+                (root_str,),
+            )
             existing_videos = c.fetchone()[0]
-            
+
         if existing_folders > 0:
             print(f"\n{tr('scanner.scan_existing_data')}")
-            print(tr('scanner.scan_existing_folders', count=existing_folders))
-            print(tr('scanner.scan_existing_videos', count=existing_videos))
+            print(tr("scanner.scan_existing_folders", count=existing_folders))
+            print(tr("scanner.scan_existing_videos", count=existing_videos))
 
         total_video_count = 0
         total_folder_count = 0
@@ -1036,43 +1166,55 @@ class VideoScanner:
 
         # Search for folders with video
         print(f"\n{tr('scanner.scan_searching')}")
-        
+
         video_folders = []
-        for item in root.rglob('*'):
+        for item in root.rglob("*"):
             if item.is_dir():
                 # Check if there are videos in the folder itself
                 try:
-                    if any(f.suffix.lower() in self.video_extensions for f in item.iterdir() if f.is_file()):
+                    if any(
+                        f.suffix.lower() in self.video_extensions
+                        for f in item.iterdir()
+                        if f.is_file()
+                    ):
                         video_folders.append(item)
                 except:
                     continue
-        
+
         # Also check root
         try:
-            if any(f.suffix.lower() in self.video_extensions for f in root.iterdir() if f.is_file()):
+            if any(
+                f.suffix.lower() in self.video_extensions
+                for f in root.iterdir()
+                if f.is_file()
+            ):
                 if root not in video_folders:
                     video_folders.append(root)
         except:
             pass
-        
+
         video_folders.sort(key=natural_sort_key)
-        
+
         for folder in video_folders:
             # Process one folder at a time, holding DB lock only when writing results
             try:
                 rel_path = folder.relative_to(root)
-                parent = rel_path.parent if str(rel_path.parent) != '.' else ''
-                
+                parent = rel_path.parent if str(rel_path.parent) != "." else ""
+
                 print(f"\n📁 {rel_path if str(rel_path) != '.' else folder.name}")
-                
+
                 # List of video files
                 video_files = sorted(
-                    [f for f in folder.iterdir() if f.is_file() and f.suffix.lower() in self.video_extensions],
-                    key=natural_sort_key
+                    [
+                        f
+                        for f in folder.iterdir()
+                        if f.is_file() and f.suffix.lower() in self.video_extensions
+                    ],
+                    key=natural_sort_key,
                 )
-                
+
                 video_count = len(video_files)
-                
+
                 # HEAVY LIFTING - Reading metadata (Parallel) - NO WRITE LOCK YET
                 folder_start = time.time()
                 folder_duration = 0
@@ -1084,16 +1226,21 @@ class VideoScanner:
                 folder_external_subs = 0
                 folder_cached = 0
                 folder_new = 0
-                
-                tasks = [(video_files[i], folder, rel_path, i + 1) 
-                         for i in range(len(video_files))]
-                
+
+                tasks = [
+                    (video_files[i], folder, rel_path, i + 1)
+                    for i in range(len(video_files))
+                ]
+
                 results = []
-                
+
                 # Parallel processing for large folders
                 if len(video_files) > 2:
                     with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
-                        futures = [executor.submit(self._process_video_file, *task) for task in tasks]
+                        futures = [
+                            executor.submit(self._process_video_file, *task)
+                            for task in tasks
+                        ]
                         for future in as_completed(futures):
                             result = future.result()
                             if result:
@@ -1103,15 +1250,15 @@ class VideoScanner:
                         result = self._process_video_file(*task)
                         if result:
                             results.append(result)
-                
+
                 # WRITE RESULTS - Open Transaction
                 with self.db.get_connection() as conn:
                     c = conn.cursor()
-                    
+
                     # Insert/update folder record
                     # USE ABSOLUTE PATHS to avoid collisions between multiple library roots
                     folder_abs_path = str(folder)
-                    
+
                     # Logic for parent path:
                     # If folder is the root, parent is empty string (to mark it as top-level in our tree logic)
                     # Otherwise, parent is the absolute path of the parent folder
@@ -1120,7 +1267,8 @@ class VideoScanner:
                     else:
                         parent_abs_path = str(folder.parent)
 
-                    c.execute("""
+                    c.execute(
+                        """
                         INSERT INTO folders (path, parent_path, name, video_count, root_path, total_duration, total_size, is_available)
                         VALUES (?, ?, ?, ?, ?, 0, 0, 1)
                         ON CONFLICT(path) DO UPDATE SET
@@ -1130,27 +1278,36 @@ class VideoScanner:
                             root_path = excluded.root_path,
                             last_updated = CURRENT_TIMESTAMP,
                             is_available = 1
-                    """, (folder_abs_path, parent_abs_path, folder.name, video_count, root_str))
+                    """,
+                        (
+                            folder_abs_path,
+                            parent_abs_path,
+                            folder.name,
+                            video_count,
+                            root_str,
+                        ),
+                    )
 
                     processed_folder_paths.add(folder_abs_path)
 
                     # Save video results to DB
                     for result in results:
-                        folder_duration += result['duration'] or 0
-                        folder_size += result['file_size'] or 0
-                        folder_thumbs += result['thumb_count']
-                        folder_embedded_audio += result['embedded_audio_count']
-                        folder_external_audio += result['external_audio_count']
-                        folder_embedded_subs += result.get('embedded_subtitle_count', 0)
-                        folder_external_subs += result.get('external_subtitle_count', 0)
-                        
-                        if result.get('from_cache'):
+                        folder_duration += result["duration"] or 0
+                        folder_size += result["file_size"] or 0
+                        folder_thumbs += result["thumb_count"]
+                        folder_embedded_audio += result["embedded_audio_count"]
+                        folder_external_audio += result["external_audio_count"]
+                        folder_embedded_subs += result.get("embedded_subtitle_count", 0)
+                        folder_external_subs += result.get("external_subtitle_count", 0)
+
+                        if result.get("from_cache"):
                             folder_cached += 1
                         else:
                             folder_new += 1
-                        
+
                         # Upsert video
-                        c.execute("""
+                        c.execute(
+                            """
                             INSERT INTO video_files
                             (folder_path, file_path, file_name, track_number,
                              duration, resolution, file_size, codec,
@@ -1170,94 +1327,151 @@ class VideoScanner:
                                 is_available = 1,
                                 audio_track_count = excluded.audio_track_count,
                                 subtitle_track_count = excluded.subtitle_track_count
-                        """, (
-                            result['folder_path'], result['file_path'], result['file_name'],
-                            result['track_number'], result['duration'], result['resolution'],
-                            result['file_size'], result['codec'], result['thumbnail_path'],
-                            result['thumbnails_json'], result['watched_percent'], result['last_position'],
-                            result['audio_track_count'], result['subtitle_track_count']
-                        ))
+                        """,
+                            (
+                                result["folder_path"],
+                                result["file_path"],
+                                result["file_name"],
+                                result["track_number"],
+                                result["duration"],
+                                result["resolution"],
+                                result["file_size"],
+                                result["codec"],
+                                result["thumbnail_path"],
+                                result["thumbnails_json"],
+                                result["watched_percent"],
+                                result["last_position"],
+                                result["audio_track_count"],
+                                result["subtitle_track_count"],
+                            ),
+                        )
 
-                        processed_video_paths.add(result['file_path'])
-                        
+                        processed_video_paths.add(result["file_path"])
+
                         # Video ID
-                        c.execute("SELECT id FROM video_files WHERE file_path = ?", (result['file_path'],))
+                        c.execute(
+                            "SELECT id FROM video_files WHERE file_path = ?",
+                            (result["file_path"],),
+                        )
                         video_row = c.fetchone()
                         if not video_row:
-                             logging.error(f"Could not find video id for {result['file_path']} after insert")
-                             continue
+                            logging.error(
+                                f"Could not find video id for {result['file_path']} after insert"
+                            )
+                            continue
                         video_id = video_row[0]
-                        
+
                         # Update audio tracks
-                        c.execute("DELETE FROM audio_tracks WHERE video_id = ?", (video_id,))
-                        
+                        c.execute(
+                            "DELETE FROM audio_tracks WHERE video_id = ?", (video_id,)
+                        )
+
                         selected_audio_id = None
-                        saved_selection = result.get('saved_audio_selection')
-                        
-                        for audio in result['audio_tracks']:
-                            c.execute("""
+                        saved_selection = result.get("saved_audio_selection")
+
+                        for audio in result["audio_tracks"]:
+                            c.execute(
+                                """
                                 INSERT INTO audio_tracks
                                 (video_id, video_file_path, track_type, stream_index,
                                  audio_file_path, audio_file_name, language, title,
                                  codec, bitrate, sample_rate, channels, channel_layout,
                                  duration, file_size, is_default, match_score)
                                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                            """, (
-                                video_id, result['file_path'], audio['track_type'],
-                                audio['stream_index'], audio['audio_file_path'],
-                                audio['audio_file_name'], audio['language'], audio['title'],
-                                audio['codec'], audio['bitrate'], audio['sample_rate'],
-                                audio['channels'], audio['channel_layout'], audio['duration'],
-                                audio['file_size'], audio['is_default'], audio['match_score']
-                            ))
-                            
+                            """,
+                                (
+                                    video_id,
+                                    result["file_path"],
+                                    audio["track_type"],
+                                    audio["stream_index"],
+                                    audio["audio_file_path"],
+                                    audio["audio_file_name"],
+                                    audio["language"],
+                                    audio["title"],
+                                    audio["codec"],
+                                    audio["bitrate"],
+                                    audio["sample_rate"],
+                                    audio["channels"],
+                                    audio["channel_layout"],
+                                    audio["duration"],
+                                    audio["file_size"],
+                                    audio["is_default"],
+                                    audio["match_score"],
+                                ),
+                            )
+
                             audio_track_id = c.lastrowid
-                            
+
                             # Restore selection
                             if saved_selection:
-                                if audio['track_type'] == saved_selection['track_type']:
-                                    if audio['track_type'] == 'embedded':
-                                        if audio['stream_index'] == saved_selection['stream_index']:
+                                if audio["track_type"] == saved_selection["track_type"]:
+                                    if audio["track_type"] == "embedded":
+                                        if (
+                                            audio["stream_index"]
+                                            == saved_selection["stream_index"]
+                                        ):
                                             selected_audio_id = audio_track_id
                                     else:
-                                        if audio['audio_file_path'] == saved_selection['audio_file_path']:
+                                        if (
+                                            audio["audio_file_path"]
+                                            == saved_selection["audio_file_path"]
+                                        ):
                                             selected_audio_id = audio_track_id
-                        
+
                         if selected_audio_id:
-                            c.execute("UPDATE video_files SET selected_audio_id = ? WHERE id = ?",
-                                      (selected_audio_id, video_id))
+                            c.execute(
+                                "UPDATE video_files SET selected_audio_id = ? WHERE id = ?",
+                                (selected_audio_id, video_id),
+                            )
                             restored_audio_selections += 1
-                        
+
                         # Add subtitles
-                        c.execute("DELETE FROM subtitle_tracks WHERE video_id = ?", (video_id,))
-                        
-                        for subtitle in result.get('subtitle_tracks', []):
-                            c.execute("""
+                        c.execute(
+                            "DELETE FROM subtitle_tracks WHERE video_id = ?",
+                            (video_id,),
+                        )
+
+                        for subtitle in result.get("subtitle_tracks", []):
+                            c.execute(
+                                """
                                 INSERT INTO subtitle_tracks
                                 (video_id, video_file_path, track_type, stream_index,
                                  subtitle_file_path, subtitle_file_name, language, title,
                                  codec, format, is_default, is_forced, match_score)
                                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                            """, (
-                                video_id, result['file_path'], subtitle['track_type'],
-                                subtitle['stream_index'], subtitle['subtitle_file_path'],
-                                subtitle['subtitle_file_name'], subtitle['language'], subtitle['title'],
-                                subtitle['codec'], subtitle['format'], subtitle['is_default'],
-                                subtitle['is_forced'], subtitle['match_score']
-                            ))
-                        
+                            """,
+                                (
+                                    video_id,
+                                    result["file_path"],
+                                    subtitle["track_type"],
+                                    subtitle["stream_index"],
+                                    subtitle["subtitle_file_path"],
+                                    subtitle["subtitle_file_name"],
+                                    subtitle["language"],
+                                    subtitle["title"],
+                                    subtitle["codec"],
+                                    subtitle["format"],
+                                    subtitle["is_default"],
+                                    subtitle["is_forced"],
+                                    subtitle["match_score"],
+                                ),
+                            )
+
                         total_video_count += 1
-                    
+
                     total_embedded_audio += folder_embedded_audio
                     total_external_audio += folder_external_audio
                     cached_videos += folder_cached
                     new_videos += folder_new
 
                     # Update folder statistics
-                    c.execute("""
+                    c.execute(
+                        """
                         UPDATE folders SET total_duration = ?, total_size = ? WHERE path = ?
-                    """, (folder_duration, folder_size, folder_abs_path))
-                    
+                    """,
+                        (folder_duration, folder_size, folder_abs_path),
+                    )
+
                     conn.commit()
 
                 # Output folder info (Outside DB lock)
@@ -1265,44 +1479,64 @@ class VideoScanner:
                 hours = int(folder_duration // 3600)
                 minutes = int((folder_duration % 3600) // 60)
                 size_gb = folder_size / (1024**3)
-                
+
                 info_parts = [
-                    tr('scanner.scanner_units.videos', count=video_count),
+                    tr("scanner.scanner_units.videos", count=video_count),
                     f"⏱ {tr('scanner.scanner_units.hours_short', hours=hours)}{tr('scanner.scanner_units.minutes_short', minutes=minutes)}",
-                    f"💾 {size_gb:.1f}GB"
+                    f"💾 {size_gb:.1f}GB",
                 ]
-                
+
                 if folder_cached:
-                    info_parts.append(tr('scanner.process_cached', count=folder_cached))
-                
+                    info_parts.append(tr("scanner.process_cached", count=folder_cached))
+
                 if folder_embedded_audio + folder_external_audio > 0:
-                    info_parts.append(tr('scanner.process_audio', embedded=folder_embedded_audio, external=folder_external_audio))
-                
+                    info_parts.append(
+                        tr(
+                            "scanner.process_audio",
+                            embedded=folder_embedded_audio,
+                            external=folder_external_audio,
+                        )
+                    )
+
                 if folder_embedded_subs + folder_external_subs > 0:
-                    info_parts.append(tr('scanner.process_subs', embedded=folder_embedded_subs, external=folder_external_subs))
-                
+                    info_parts.append(
+                        tr(
+                            "scanner.process_subs",
+                            embedded=folder_embedded_subs,
+                            external=folder_external_subs,
+                        )
+                    )
+
                 # Add thumbnail info only if generated
-                thumbs_generated = self.stats['thumbnails_generated'] - (getattr(self, '_last_thumbs_count', 0))
-                self._last_thumbs_count = self.stats['thumbnails_generated']
+                thumbs_generated = self.stats["thumbnails_generated"] - (
+                    getattr(self, "_last_thumbs_count", 0)
+                )
+                self._last_thumbs_count = self.stats["thumbnails_generated"]
                 if thumbs_generated > 0:
                     info_parts.append(f"🖼 {thumbs_generated}")
-                
-                info_parts.append(tr('scanner.process_time', time=f"{folder_time:.1f}"))
-                
-                print(tr('scanner.process_info', info=' | '.join(info_parts)))
+
+                info_parts.append(tr("scanner.process_time", time=f"{folder_time:.1f}"))
+
+                print(tr("scanner.process_info", info=" | ".join(info_parts)))
 
             except Exception as e:
-                logging.error(tr('scanner.process_error', error=f"{type(e).__name__}: {e}"), exc_info=True)
+                logging.error(
+                    tr("scanner.process_error", error=f"{type(e).__name__}: {e}"),
+                    exc_info=True,
+                )
                 continue
-        
+
         # Create folder hierarchy - Short transaction
         print(f"\n{tr('scanner.hierarchy_building')}")
         with self.db.get_connection() as conn:
             c = conn.cursor()
             # Select absolute paths from DB
-            c.execute("SELECT DISTINCT parent_path FROM folders WHERE parent_path != '' AND root_path = ?", (root_str,))
+            c.execute(
+                "SELECT DISTINCT parent_path FROM folders WHERE parent_path != '' AND root_path = ?",
+                (root_str,),
+            )
             parent_paths = [row[0] for row in c.fetchall()]
-            
+
             added = set()
             for parent_path in parent_paths:
                 # Log the parent path being processed for debugging
@@ -1314,15 +1548,24 @@ class VideoScanner:
                         p = Path(parent_path)
                         # Ensure we are inside root
                         if not p.is_relative_to(root):
-                             # Should generally not happen if DB integrity matches logic, but safe check
-                             # Check if it IS the root (unlikely if parent_path != '')
-                             continue
-                    except ValueError:
+                            # Should generally not happen if DB integrity matches logic, but safe check
+                            # Check if it IS the root (unlikely if parent_path != '')
+                            continue
+                    except ValueError as e:
                         # is_relative_to raises ValueError if not relative on strict versions or different drives
+                        logging.debug(
+                            f"ValueError checking path relativity for '{parent_path}': {e}"
+                        )
+                        continue
+                    except Exception as e:
+                        # Catch any other path-related errors (e.g., invalid characters, UNC issues)
+                        logging.debug(
+                            f"Error creating Path object for '{parent_path}': {e}"
+                        )
                         continue
 
                     current_p = p
-                    
+
                     # Hierarchy walk up
                     while True:
                         # Stop if we reached root or gone above it (should happen at root check)
@@ -1332,96 +1575,117 @@ class VideoScanner:
                         current_str = str(current_p)
                         if current_str in added:
                             break
-                        
+
                         # Process current_p
                         parent_of_current = current_p.parent
-                        
+
                         # If parent is root, set empty string to mark top-level
                         if parent_of_current == root:
-                             parent_db_str = str(root) 
-                             # Wait, if we said "folder == root -> parent=''", 
-                             # then if current_p is IN root, its parent is root.
-                             # But in database we store parent_path.
-                             # If we have C:\Root\A. Parent is C:\Root.
-                             # If C:\Root is the root, we want C:\Root to be stored?
-                             # Or do we want C:\Root\A to store parent C:\Root?
-                             # In scan_directory loop:
-                             # C:\Root\A -> parent C:\Root.
-                             # NOW we need to ensure C:\Root exists in DB?
-                             # main.py treats item as root if parent not in DB.
-                             # If we insert C:\Root (path) -> parent '' (empty),
-                             # then C:\Root\A -> parent C:\Root.
-                             # Then main.py sees C:\Root as root item.
-                             # C:\Root\A as child.
-                             # This means the TOP LEVEL item is the root folder itself.
-                             
-                             parent_db_str = "" # To be consistent with scanning logic for root folder
-                             
-                             # Wait, loop logic above:
-                             # if folder == root: parent_abs_path = ""
-                             # So current_p (C:\Root) parent should be "".
+                            parent_db_str = str(root)
+                            # Wait, if we said "folder == root -> parent=''",
+                            # then if current_p is IN root, its parent is root.
+                            # But in database we store parent_path.
+                            # If we have C:\Root\A. Parent is C:\Root.
+                            # If C:\Root is the root, we want C:\Root to be stored?
+                            # Or do we want C:\Root\A to store parent C:\Root?
+                            # In scan_directory loop:
+                            # C:\Root\A -> parent C:\Root.
+                            # NOW we need to ensure C:\Root exists in DB?
+                            # main.py treats item as root if parent not in DB.
+                            # If we insert C:\Root (path) -> parent '' (empty),
+                            # then C:\Root\A -> parent C:\Root.
+                            # Then main.py sees C:\Root as root item.
+                            # C:\Root\A as child.
+                            # This means the TOP LEVEL item is the root folder itself.
+
+                            parent_db_str = ""  # To be consistent with scanning logic for root folder
+
+                            # Wait, loop logic above:
+                            # if folder == root: parent_abs_path = ""
+                            # So current_p (C:\Root) parent should be "".
                         else:
-                             # Check if parent_of_current is still inside root
-                             try:
-                                 if not parent_of_current.is_relative_to(root):
-                                     # We went above root? e.g. C:\ vs C:\Root
-                                     # Should not happen because we break at root
-                                     break
-                             except:
-                                 break
-                             parent_db_str = str(parent_of_current)
+                            # Check if parent_of_current is still inside root
+                            try:
+                                if not parent_of_current.is_relative_to(root):
+                                    # We went above root? e.g. C:\ vs C:\Root
+                                    # Should not happen because we break at root
+                                    break
+                            except:
+                                break
+                            parent_db_str = str(parent_of_current)
 
                         # We are effectively inserting intermediate folders between scanned folders and root
-                        # But wait, we are walking UP. 
+                        # But wait, we are walking UP.
                         # If we are at C:\Root\A\B.
                         # We insert C:\Root\A\B. Parent C:\Root\A.
                         # Then p becomes C:\Root\A.
-                        
-                        # If current_p is C:\Root\A. Parent C:\Root. 
+
+                        # If current_p is C:\Root\A. Parent C:\Root.
                         # We insert C:\Root\A. Parent C:\Root.
-                        
+
                         # Wait, what if current_p is the Root itself?
-                        # If loop starts with p != root. 
+                        # If loop starts with p != root.
                         # If p becomes root?
-                        
+
                         # Let's adjust loop:
                         # We want to ensure everything from p UP TO (but not including?) root exists.
                         # The root folder ITSELF is inserted by the main scan loop if it contained videos.
                         # BUT if root folder had NO videos directly (only in subfolders), it might not be in folders table yet!
                         # So we MUST insert root folder too if missing.
-                        
-                        pass 
-                        
+
+                        pass
+
                         # Actually easier: Just check if we need to insert current_p.
-                        
+
                         # Determine parent for DB
                         if current_p == root:
-                             parent_for_db = ""
+                            parent_for_db = ""
                         else:
-                             parent_for_db = str(current_p.parent)
-                        
-                        c.execute("""
+                            parent_for_db = str(current_p.parent)
+
+                        # Get folder name safely
+                        try:
+                            folder_name = current_p.name
+                        except Exception as e:
+                            logging.debug(
+                                f"Error getting name for path '{current_str}': {e}"
+                            )
+                            folder_name = (
+                                current_str.split("\\")[-1]
+                                if "\\" in current_str
+                                else current_str.split("/")[-1]
+                            )
+
+                        c.execute(
+                            """
                             INSERT INTO folders (path, parent_path, name, is_folder, video_count, root_path, is_available)
                             VALUES (?, ?, ?, 1, 0, ?, 1)
                             ON CONFLICT(path) DO UPDATE SET is_available = 1
-                        """, (current_str, parent_for_db, current_p.name, root_str))
-                        
+                        """,
+                            (current_str, parent_for_db, folder_name, root_str),
+                        )
+
                         processed_folder_paths.add(current_str)
                         added.add(current_str)
-                        
+
                         if current_p == root:
                             break
-                            
+
                         current_p = current_p.parent
 
                 except OSError as e:
-                     # Specific error handling for path construction/manipulation issues
-                    logging.error(f"OSError building hierarchy for path '{parent_path}': {e}")
+                    # Specific error handling for path construction/manipulation issues
+                    logging.error(
+                        f"OSError building hierarchy for path '{parent_path}': {e}"
+                    )
                     continue
 
                 except Exception as e:
                     # Catch-all for other errors to prevent scanner crash
-                    logging.error(f"Unexpected error building hierarchy for path '{parent_path}': {e}", exc_info=True)
+                    logging.error(
+                        f"Unexpected error building hierarchy for path '{parent_path}': {e}",
+                        exc_info=True,
+                    )
                     continue
 
             conn.commit()
@@ -1432,38 +1696,51 @@ class VideoScanner:
 
         # Final statistics
         total_time = time.time() - total_start_time
-        self.stats['time_total'] = total_time
-        
+        self.stats["time_total"] = total_time
+
         print("\n" + "=" * 70)
-        print(tr('scanner.scan_complete_title'))
+        print(tr("scanner.scan_complete_title"))
         print("=" * 70)
-        
+
         print(f"\n{tr('scanner.stats_title')}")
         print(f"   {'─' * 40}")
-        print(tr('scanner.stats_courses', count=len(video_folders)))
-        print(tr('scanner.stats_videos', count=total_video_count))
-        print(tr('scanner.stats_cached', count=cached_videos))
-        print(tr('scanner.stats_new', count=new_videos))
+        print(tr("scanner.stats_courses", count=len(video_folders)))
+        print(tr("scanner.stats_videos", count=total_video_count))
+        print(tr("scanner.stats_cached", count=cached_videos))
+        print(tr("scanner.stats_new", count=new_videos))
         print(f"   {'─' * 40}")
-        print(tr('scanner.stats_thumbs_title'))
-        print(tr('scanner.stats_thumbs_generated', count=self.stats['thumbnails_generated']))
-        print(tr('scanner.stats_thumbs_cached', count=self.stats['thumbnails_cached']))
-        print(tr('scanner.stats_thumbs_failed', count=self.stats['thumbnails_failed']))
+        print(tr("scanner.stats_thumbs_title"))
+        print(
+            tr(
+                "scanner.stats_thumbs_generated",
+                count=self.stats["thumbnails_generated"],
+            )
+        )
+        print(tr("scanner.stats_thumbs_cached", count=self.stats["thumbnails_cached"]))
+        print(tr("scanner.stats_thumbs_failed", count=self.stats["thumbnails_failed"]))
         print(f"   {'─' * 40}")
-        print(tr('scanner.stats_audio_title'))
-        print(tr('scanner.stats_audio_embedded', count=total_embedded_audio))
-        print(tr('scanner.stats_audio_external', count=total_external_audio))
-        print(tr('scanner.stats_audio_restored', count=restored_audio_selections))
+        print(tr("scanner.stats_audio_title"))
+        print(tr("scanner.stats_audio_embedded", count=total_embedded_audio))
+        print(tr("scanner.stats_audio_external", count=total_external_audio))
+        print(tr("scanner.stats_audio_restored", count=restored_audio_selections))
         print(f"   {'─' * 40}")
-        print(tr('scanner.stats_time_title'))
-        print(tr('scanner.stats_time_ffprobe', time=f"{self.stats['time_ffprobe']:.1f}"))
-        print(tr('scanner.stats_time_thumbs', time=f"{self.stats['time_thumbnails']:.1f}"))
-        print(tr('scanner.stats_time_total', time=f"{total_time:.1f}"))
-        
-        if self.stats['thumbnails_generated'] > 0:
-            avg_thumb_time = self.stats['time_thumbnails'] / self.stats['thumbnails_generated'] * 1000
-            print(tr('scanner.stats_time_avg', time=f"{avg_thumb_time:.0f}"))
-        
+        print(tr("scanner.stats_time_title"))
+        print(
+            tr("scanner.stats_time_ffprobe", time=f"{self.stats['time_ffprobe']:.1f}")
+        )
+        print(
+            tr("scanner.stats_time_thumbs", time=f"{self.stats['time_thumbnails']:.1f}")
+        )
+        print(tr("scanner.stats_time_total", time=f"{total_time:.1f}"))
+
+        if self.stats["thumbnails_generated"] > 0:
+            avg_thumb_time = (
+                self.stats["time_thumbnails"]
+                / self.stats["thumbnails_generated"]
+                * 1000
+            )
+            print(tr("scanner.stats_time_avg", time=f"{avg_thumb_time:.0f}"))
+
         print()
 
         return total_video_count, len(video_folders)
@@ -1474,15 +1751,22 @@ def main():
     scanner = VideoScanner()
 
     config = scanner.config.get_raw_config()
-    default_path = config.get('Paths', 'default_path', fallback=r'D:\Courses')
+    default_path = config.get("Paths", "default_path", fallback=r"D:\Courses")
 
     import sys
+
     path = sys.argv[1] if len(sys.argv) > 1 else default_path
 
     video_count, folder_count = scanner.scan_directory(path)
-    
-    print(tr('scanner.scanner_units.done', folder_count=folder_count, video_count=video_count))
+
+    print(
+        tr(
+            "scanner.scanner_units.done",
+            folder_count=folder_count,
+            video_count=video_count,
+        )
+    )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

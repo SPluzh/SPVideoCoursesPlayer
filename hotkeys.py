@@ -36,9 +36,6 @@ class GlobalHotkeyThread(QThread):
                 self.VK_MEDIA_STOP: "pause",
                 self.VK_MEDIA_NEXT_TRACK: "next_video",
                 self.VK_MEDIA_PREV_TRACK: "prev_video",
-                self.VK_VOLUME_UP: "volume_up",
-                self.VK_VOLUME_DOWN: "volume_down",
-                self.VK_VOLUME_MUTE: "toggle_mute",
             }
 
             # Map VK codes to state actions (Hold items)
@@ -146,9 +143,6 @@ class HotkeyManager(QObject):
             Qt.Key.Key_MediaStop: "pause",
             Qt.Key.Key_MediaNext: "next_video",
             Qt.Key.Key_MediaPrevious: "prev_video",
-            Qt.Key.Key_VolumeUp: "volume_up",
-            Qt.Key.Key_VolumeDown: "volume_down",
-            Qt.Key.Key_VolumeMute: "toggle_mute",
         }
         # Actions strictly requiring Ctrl modifier
         self.ctrl_mappings = {
