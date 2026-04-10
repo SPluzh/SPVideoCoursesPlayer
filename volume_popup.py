@@ -366,6 +366,15 @@ class VolumePopup(QWidget):
 
     def _on_secondary_enabled_toggled(self, checked):
         self.secondary_container.setVisible(checked)
+
+        # Auto-select next track after primary when enabling secondary audio
+        if checked and len(self.secondary_items_data) > 0:
+            # Select next track after primary (cyclically)
+            next_index = (self.selected_index + 1) % len(self.secondary_items_data)
+            self.setSecondaryAudioIndex(next_index)
+            track_id = self.secondary_items_data[next_index][0]
+            self.secondaryAudioTrackChanged.emit(track_id)
+
         self.secondaryAudioToggled.emit(checked)
 
     def _on_secondary_volume_changed(self, value):
