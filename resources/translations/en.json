@@ -188,6 +188,9 @@
             "mono": "Mono",
             "mono_tooltip": "Mono Mode"
         },
+        "enable_secondary_audio": "Enable Secondary Audio",
+        "secondary_track": "Secondary Track",
+        "secondary_volume": "Secondary Volume",
         "filter_tags": "Filter by tags",
         "file_not_found": "File not found"
     },

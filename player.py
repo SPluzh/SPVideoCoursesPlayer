@@ -223,6 +223,14 @@ class VideoPlayerWidget(QWidget):
         }
         self.audio_track_ids = []
 
+        # Secondary Audio State
+        self.secondary_audio_enabled = False
+        self.secondary_audio_track_id = None
+        self.secondary_audio_volume = 10
+        self.secondary_volume_debounce_timer = QTimer()
+        self.secondary_volume_debounce_timer.setSingleShot(True)
+        self.secondary_volume_debounce_timer.timeout.connect(self._apply_dual_audio)
+
         self.marker_gallery = None  # Created in setup_ui
         logging.debug("Calling setup_ui")
         self.setup_ui()
@@ -343,6 +351,16 @@ class VideoPlayerWidget(QWidget):
         self.volume_btn.deesserToggled.connect(self._on_deesser_toggled)
         self.volume_btn.channelModeChanged.connect(self._on_channel_mode_changed)
         self.volume_btn.delayChanged.connect(self._on_audio_delay_changed)
+
+        # Secondary Audio connections
+        self.volume_btn.secondaryAudioToggled.connect(self.toggle_secondary_audio)
+        self.volume_btn.secondaryAudioTrackChanged.connect(
+            self.set_secondary_audio_track
+        )
+        self.volume_btn.secondaryAudioVolumeChanged.connect(
+            self.set_secondary_audio_volume
+        )
+
         panel_layout.addWidget(self.volume_btn)
 
         self.speed_slider = QSlider(Qt.Orientation.Horizontal)
@@ -578,10 +596,24 @@ class VideoPlayerWidget(QWidget):
         s = s.replace(":", "\\\\:")  # double backslash + colon
         return s
 
-    def _update_audio_filters(self):
+    def _update_audio_filters(self, force_normal=False):
         """Rebuild and apply audio filter chain."""
         if not self.player:
             return
+
+        if (
+            self.secondary_audio_enabled
+            and self.secondary_audio_track_id
+            and not force_normal
+        ):
+            self._apply_dual_audio()
+            return
+
+        # Disable lavfi-complex when falling back to regular af chain
+        try:
+            self.player["lavfi-complex"] = ""
+        except Exception:
+            pass
 
         filters = []
         logging.debug(
@@ -708,6 +740,406 @@ class VideoPlayerWidget(QWidget):
 
     def has_ai_model(self):
         return (RESOURCES_DIR / "bin" / "bd.rnn").exists()
+
+    # ==========================
+    # Secondary Audio Methods
+    # ==========================
+
+    def toggle_secondary_audio(self, enabled):
+        """Enable/disable secondary audio."""
+        logging.info(f"🔊 toggle_secondary_audio({enabled}) called")
+        self.secondary_audio_enabled = enabled
+
+        if self.current_file and self.db:
+            self.db.save_secondary_audio(
+                self.current_file,
+                self.secondary_audio_track_id,
+                self.secondary_audio_volume,
+                enabled,
+            )
+            logging.info(f"💾 Saved secondary audio state to DB")
+
+        # Stop any pending debounce timer
+        if hasattr(self, "secondary_volume_debounce_timer"):
+            self.secondary_volume_debounce_timer.stop()
+            logging.info(f"⏱️ Stopped debounce timer")
+
+        # When disabling secondary audio, first clear lavfi-complex, then switch to primary track
+        if not enabled:
+            logging.info(
+                f"🔄 Secondary audio disabled - clearing filters and switching to primary track"
+            )
+
+            # First, clear lavfi-complex and apply normal filters
+            logging.info(f"🎵 Calling _apply_dual_audio() to clear lavfi-complex")
+            self._apply_dual_audio()
+
+            # Then, with a delay, switch to primary audio track
+            try:
+                # Get the selected primary audio track
+                tracks, selected_audio_id = self.db.load_audio_tracks(self.current_file)
+                if selected_audio_id:
+                    # Find the index of the selected track in the popup
+                    for i in range(self.volume_btn.popup.audioCount()):
+                        if self.volume_btn.popup.audioItemData(i) == selected_audio_id:
+                            logging.info(
+                                f"🔄 Scheduling switch to primary track index {i}, id {selected_audio_id}"
+                            )
+                            # Delay the track switch to allow lavfi-complex to clear first
+                            QTimer.singleShot(
+                                100, lambda idx=i: self.change_audio_track(idx)
+                            )
+                            break
+            except Exception as e:
+                logging.error(
+                    f"❌ Error switching to primary track: {e}", exc_info=True
+                )
+        else:
+            # When enabling, apply dual audio immediately
+            logging.info(f"🎵 Calling _apply_dual_audio() immediately")
+            self._apply_dual_audio()
+
+    def set_secondary_audio_track(self, track_id):
+        """Set secondary audio track."""
+        logging.info(f"🔊 set_secondary_audio_track({track_id}) called")
+        self.secondary_audio_track_id = track_id
+
+        if self.current_file and self.db:
+            self.db.save_secondary_audio(
+                self.current_file,
+                track_id,
+                self.secondary_audio_volume,
+                self.secondary_audio_enabled,
+            )
+            logging.info(f"💾 Saved secondary audio track to DB")
+
+        if self.secondary_audio_enabled:
+            # Stop any pending debounce timer
+            if hasattr(self, "secondary_volume_debounce_timer"):
+                self.secondary_volume_debounce_timer.stop()
+                logging.info(f"⏱️ Stopped debounce timer")
+
+            # Apply immediately when changing tracks
+            logging.info(f"🎵 Calling _apply_dual_audio() immediately")
+            self._apply_dual_audio()
+        else:
+            logging.info(f"⚠️ Secondary audio disabled, not applying filter")
+
+    def set_secondary_audio_volume(self, volume):
+        """Set secondary audio volume (0-100)."""
+        logging.info(f"🔊 set_secondary_audio_volume({volume}) called")
+        self.secondary_audio_volume = volume
+
+        if self.current_file and self.db:
+            self.db.save_secondary_audio(
+                self.current_file,
+                self.secondary_audio_track_id,
+                volume,
+                self.secondary_audio_enabled,
+            )
+            logging.info(f"💾 Saved secondary audio volume to DB")
+
+        if self.secondary_audio_enabled:
+            logging.info(f"⏱️ Starting debounce timer (300ms)")
+            # Debounce: only apply filter after user stops adjusting (300ms delay)
+            self.secondary_volume_debounce_timer.stop()
+            self.secondary_volume_debounce_timer.start(300)
+        else:
+            logging.info(f"⚠️ Secondary audio disabled, not applying filter")
+
+    def _get_mpv_track_id(self, track):
+        """Get MPV track ID for a given track."""
+        logging.info(f"🔍 _get_mpv_track_id() called with track: {track}")
+
+        try:
+            track_type = track["track_type"]
+            logging.info(f"🔍 Track type: {track_type}")
+
+            if track_type == "embedded":
+                # For embedded tracks, use aid directly
+                stream_index = track["stream_index"]
+                logging.info(f"🔍 Embedded track stream_index: {stream_index}")
+
+                if stream_index is None:
+                    logging.error("❌ Embedded track has no stream_index")
+                    return None
+
+                mpv_id = int(stream_index)
+                logging.info(
+                    f"✅ Embedded track resolved: stream_index={stream_index}, mpv_id={mpv_id}"
+                )
+                return mpv_id
+
+            elif track_type == "external":
+                audio_file_path = track["audio_file_path"]
+                logging.info(f"🔍 External track path: {audio_file_path}")
+
+                if not audio_file_path:
+                    logging.error("❌ External track has no audio_file_path")
+                    return None
+
+                if not Path(audio_file_path).exists():
+                    logging.error(
+                        f"❌ External audio file not found: {audio_file_path}"
+                    )
+                    return None
+
+                logging.info(f"✅ External file exists: {audio_file_path}")
+
+                # Check if already loaded
+                logging.info("🔍 Checking if track already loaded in MPV...")
+                track_list = self.player.track_list
+                logging.info(f"🔍 Current MPV track list has {len(track_list)} tracks")
+
+                for t in track_list:
+                    if t.get("type") == "audio":
+                        ext_filename = t.get("external-filename")
+                        logging.info(
+                            f"   - Audio track ID={t.get('id')}, external-filename={ext_filename}"
+                        )
+                        if ext_filename == audio_file_path:
+                            logging.info(
+                                f"✅ External track already loaded: {audio_file_path}, mpv_id={t['id']}"
+                            )
+                            return t["id"]
+
+                # Load external track
+                logging.info(f"📂 Loading external audio track: {audio_file_path}")
+                try:
+                    self.player.command("audio-add", audio_file_path, "auto")
+                    logging.info(f"✅ audio-add command executed")
+                except Exception as e:
+                    if "-12" in str(e):
+                        logging.warning(
+                            f"⚠️ audio-add failed with -12. MPV may still be loading. Retrying in 1s..."
+                        )
+                        QTimer.singleShot(1000, self._apply_dual_audio)
+                    else:
+                        logging.error(
+                            f"❌ Error executing audio-add command: {e}", exc_info=True
+                        )
+                    return None
+
+                # Get the newly added track ID
+                logging.info("🔍 Searching for newly added track...")
+                track_list = self.player.track_list
+                logging.info(f"🔍 Updated track list has {len(track_list)} tracks")
+
+                for t in track_list:
+                    if t.get("type") == "audio":
+                        ext_filename = t.get("external-filename")
+                        logging.info(
+                            f"   - Audio track ID={t.get('id')}, external-filename={ext_filename}"
+                        )
+                        if ext_filename == audio_file_path:
+                            logging.info(
+                                f"✅ External track loaded: {audio_file_path}, mpv_id={t['id']}"
+                            )
+                            return t["id"]
+
+                logging.error(
+                    f"❌ Could not find MPV track ID for external file: {audio_file_path}"
+                )
+                return None
+            else:
+                logging.error(f"❌ Unknown track type: {track_type}")
+                return None
+
+        except Exception as e:
+            logging.error(f"❌ Error getting MPV track ID: {e}", exc_info=True)
+            return None
+
+    def _apply_dual_audio(self):
+        """Apply dual audio mixing with MPV."""
+        logging.info("=" * 80)
+        logging.info("🔊 _apply_dual_audio() CALLED")
+        logging.info("=" * 80)
+
+        if not self.player or not self.current_file:
+            logging.error("❌ No player or current_file")
+            return
+
+        try:
+            logging.info(f"📋 Secondary audio enabled: {self.secondary_audio_enabled}")
+            logging.info(
+                f"📋 Secondary audio track ID: {self.secondary_audio_track_id}"
+            )
+            logging.info(f"📋 Secondary audio volume: {self.secondary_audio_volume}")
+
+            # If secondary audio is disabled, just apply normal filters
+            if not self.secondary_audio_enabled or not self.secondary_audio_track_id:
+                logging.info(
+                    "⚠️ Secondary audio disabled or no track selected - applying normal filters"
+                )
+                self._update_audio_filters()
+                return
+
+            # Get track info from DB
+            logging.info("📂 Loading audio tracks from DB...")
+            primary_tracks, primary_id = self.db.load_audio_tracks(self.current_file)
+            logging.info(f"📂 Primary track ID: {primary_id}")
+            logging.info(
+                f"📂 Available tracks: {len(primary_tracks) if primary_tracks else 0}"
+            )
+
+            if not primary_id:
+                logging.warning("❌ No primary audio track selected")
+                self._update_audio_filters()
+                return
+
+            logging.info("📂 Getting track info from DB...")
+            primary_track = self.db.get_track_info("audio_tracks", primary_id)
+            secondary_track = self.db.get_track_info(
+                "audio_tracks", self.secondary_audio_track_id
+            )
+
+            logging.info(f"📂 Primary track: {primary_track}")
+            logging.info(f"📂 Secondary track: {secondary_track}")
+
+            if not primary_track or not secondary_track:
+                logging.warning("❌ Could not load track info for dual audio")
+                self._update_audio_filters()
+                return
+
+            # Validate tracks are different
+            if primary_id == self.secondary_audio_track_id:
+                logging.error(
+                    "❌ Primary and secondary tracks are the same - cannot mix"
+                )
+                if self.osd_manager:
+                    self.osd_manager.show_osd("Cannot mix same audio track")
+                self._update_audio_filters(force_normal=True)
+                return
+
+            # Get current MPV track list for debugging
+            try:
+                track_list = self.player.track_list
+                logging.info(f"🎵 MPV track list ({len(track_list)} tracks):")
+                for t in track_list:
+                    if t.get("type") == "audio":
+                        logging.info(
+                            f"   - Track ID={t.get('id')}, type={t.get('type')}, "
+                            f"external={t.get('external', False)}, "
+                            f"selected={t.get('selected', False)}, "
+                            f"filename={t.get('external-filename', 'N/A')}"
+                        )
+            except Exception as e:
+                logging.error(f"❌ Error getting track list: {e}")
+
+            # Get MPV track IDs
+            logging.info("🔍 Resolving MPV track IDs...")
+            primary_mpv_id = self._get_mpv_track_id(primary_track)
+            secondary_mpv_id = self._get_mpv_track_id(secondary_track)
+
+            logging.info(f"🔍 Primary MPV ID: {primary_mpv_id}")
+            logging.info(f"🔍 Secondary MPV ID: {secondary_mpv_id}")
+
+            if primary_mpv_id is None or secondary_mpv_id is None:
+                logging.error("❌ Could not resolve MPV track IDs")
+                if self.osd_manager:
+                    self.osd_manager.show_osd("Secondary audio track not found")
+                self._update_audio_filters(force_normal=True)
+                return
+
+            # Validate MPV track IDs are different
+            if primary_mpv_id == secondary_mpv_id:
+                logging.error(
+                    "❌ Primary and secondary MPV IDs are identical - cannot mix"
+                )
+                if self.osd_manager:
+                    self.osd_manager.show_osd("Cannot mix same audio track")
+                self._update_audio_filters(force_normal=True)
+                return
+
+            # Build mixing filter
+            sec_vol = self.secondary_audio_volume / 100.0
+            logging.info(f"🔊 Secondary volume (normalized): {sec_vol}")
+
+            # Simplified mixing filter using lavfi-complex pad names
+            # Normalize formats before mixing to prevent compatibility issues
+            mix_filters = [
+                f"[aid{primary_mpv_id}]aformat=sample_fmts=fltp:sample_rates=48000:channel_layouts=stereo[a1]",
+                f"[aid{secondary_mpv_id}]volume={sec_vol},aformat=sample_fmts=fltp:sample_rates=48000:channel_layouts=stereo[a2]",
+                "[a1][a2]amix=inputs=2:duration=longest:dropout_transition=0,volume=1.0[amixed]",
+            ]
+
+            logging.info("🎛️ Base mixing filters:")
+            for f in mix_filters:
+                logging.info(f"   {f}")
+
+            # Add DSP filters after mixing
+            dsp_filters = []
+
+            # Noise reduction
+            mode = self.audio_opts.get("noise_mode", "off")
+            if mode == "standard":
+                dsp_filters.append("afftdn=nf=-25")
+            elif mode == "ai":
+                if self.has_ai_model():
+                    rnn_path = RESOURCES_DIR / "bin" / "bd.rnn"
+                    escaped = self._escape_lavfi_path(rnn_path.absolute())
+                    dsp_filters.append(f"arnndn=m={escaped}")
+
+            # De-esser
+            if self.audio_opts.get("deesser", False):
+                dsp_filters.append("deesser=i=0.4:f=0.5:m=0.5")
+
+            # Compressor
+            if self.audio_opts.get("compressor", False):
+                dsp_filters.append("dynaudnorm=f=75:g=25:p=0.55")
+
+            # Channel mode
+            ch_mode = self.audio_opts.get("channel_mode", "normal")
+            if ch_mode == "mono":
+                dsp_filters.append("pan=stereo|c0=c0+c1|c1=c0+c1")
+            elif ch_mode == "swap":
+                dsp_filters.append("pan=stereo|c0=c1|c1=c0")
+
+            if dsp_filters:
+                logging.info(f"🎛️ DSP filters: {dsp_filters}")
+
+            # Combine all filters
+            if dsp_filters:
+                all_filters = mix_filters + [f"[amixed]{dsp_filters[0]}[adsp0]"]
+                for i, f in enumerate(dsp_filters[1:], 1):
+                    all_filters.append(f"[adsp{i - 1}]{f}[adsp{i}]")
+                all_filters.append(
+                    f"[adsp{len(dsp_filters) - 1}]aformat=sample_fmts=s16:channel_layouts=stereo[ao]"
+                )
+            else:
+                all_filters = mix_filters + [
+                    "[amixed]aformat=sample_fmts=s16:channel_layouts=stereo[ao]"
+                ]
+
+            af_cmd = ";".join(all_filters)
+            logging.info("=" * 80)
+            logging.info(f"🎵 FINAL LAVFI-COMPLEX COMMAND:")
+            logging.info(f"   {af_cmd}")
+            logging.info("=" * 80)
+
+            # Apply lavfi-complex
+            try:
+                self.player.af = ""  # Clear normal af
+            except Exception:
+                pass
+
+            self.player["lavfi-complex"] = af_cmd
+
+            logging.info(f"✅ Dual audio lavfi-complex applied successfully")
+
+            # Verify filter was applied
+            try:
+                current_config = self.player["lavfi-complex"]
+                logging.info(f"🔍 Current lavfi-complex property: {current_config}")
+            except Exception as e:
+                logging.error(f"❌ Error reading lavfi-complex property: {e}")
+
+        except Exception as e:
+            logging.error(f"❌ Error applying dual audio: {e}", exc_info=True)
+            # Graceful fallback: show OSD notification and use single audio
+            if self.osd_manager:
+                self.osd_manager.show_osd("Secondary audio failed, using primary only")
+            self._update_audio_filters(force_normal=True)
 
     def seek_relative(self, seconds):
         """Seek relative to current position."""
@@ -965,6 +1397,14 @@ class VideoPlayerWidget(QWidget):
                 self.volume_btn.popup.slider.blockSignals(False)
                 self.volume_btn._update_icon(int(volume))
 
+            # Reset audio filters to prevent issues if dual audio was enabled on the previous video
+            try:
+                self.player["lavfi-complex"] = ""
+                self.player.af = ""
+                logging.debug("DEBUG: Audio filters cleared before loading new video")
+            except Exception as e:
+                logging.error(f"Error clearing audio filters before load: {e}")
+
             logging.debug(f"DEBUG: Calling self.player.loadfile('{file_path}')")
             self.player.sid = "no"
             self.player.loadfile(file_path)
@@ -1024,6 +1464,15 @@ class VideoPlayerWidget(QWidget):
             )
             logging.debug(f"Scheduled restore_subtitle_track (750ms)")
 
+            # 5. Restore secondary audio (800ms)
+            QTimer.singleShot(
+                800,
+                lambda: self._timer_wrapper(
+                    "restore_secondary_audio", self._restore_secondary_audio, file_path
+                ),
+            )
+            logging.debug(f"Scheduled restore_secondary_audio (800ms)")
+
             # Load markers
             logging.debug(f"Calling load_markers")
             self.load_markers(file_path)
@@ -1053,6 +1502,8 @@ class VideoPlayerWidget(QWidget):
             # Use 'stop' command only if we actually had a file
             if file_to_unload:
                 try:
+                    self.player["lavfi-complex"] = ""
+                    self.player.af = ""
                     self.player.command("stop")
                 except:
                     pass
@@ -1101,6 +1552,7 @@ class VideoPlayerWidget(QWidget):
         """Load list of audio tracks from DB."""
         logging.debug(f"load_audio_tracks called")
         self.volume_btn.popup.clearAudio()
+        self.volume_btn.popup.clearSecondaryAudio()
         self.audio_track_ids = []
 
         if not self.db:
@@ -1133,12 +1585,37 @@ class VideoPlayerWidget(QWidget):
                 if track.get("is_default"):
                     label += f" [{tr('player.default')}]"
 
+                # Add to primary list
                 self.volume_btn.popup.addAudioItem(label, track_id)
+
+                # Add to secondary list
+                self.volume_btn.popup.addSecondaryAudioItem(label, track_id)
+
                 self.audio_track_ids.append(track_id)
                 if track_id == selected_audio_id:
                     selected_index = i
 
             self.volume_btn.popup.setAudioIndex(selected_index)
+
+            # Load secondary audio settings
+            sec_track_id, sec_volume, sec_enabled = self.db.load_secondary_audio(
+                filepath
+            )
+
+            self.secondary_audio_track_id = sec_track_id
+            self.secondary_audio_volume = sec_volume
+            self.secondary_audio_enabled = sec_enabled
+
+            # Update UI
+            self.volume_btn.popup.setSecondaryEnabled(sec_enabled)
+            self.volume_btn.popup.setSecondaryVolume(sec_volume)
+
+            if sec_track_id:
+                for i, track in enumerate(tracks):
+                    if track.get("id") == sec_track_id:
+                        self.volume_btn.popup.setSecondaryAudioIndex(i)
+                        break
+
             logging.debug(
                 f"DEBUG: load_audio_tracks finished, selected {selected_index} for video {filepath}"
             )
@@ -1237,6 +1714,11 @@ class VideoPlayerWidget(QWidget):
             logging.debug(f"restore_audio_track aborted (no db or player)")
             return
 
+        # Check if we're still loading the same file
+        if self.current_file != filepath:
+            logging.debug(f"restore_audio_track aborted (file changed)")
+            return
+
         try:
             tracks, selected_audio_id = self.db.load_audio_tracks(filepath)
 
@@ -1257,10 +1739,18 @@ class VideoPlayerWidget(QWidget):
 
                     if track_type == "embedded":
                         aid = int(stream_index) if stream_index is not None else 1
-                        self.player.aid = aid
+                        try:
+                            self.player.aid = aid
+                        except Exception as e:
+                            logging.error(f"❌ Error setting aid: {e}")
                     elif track_type == "external" and audio_file_path:
                         if Path(audio_file_path).exists():
-                            self.player.command("audio-add", audio_file_path, "select")
+                            try:
+                                self.player.command(
+                                    "audio-add", audio_file_path, "select"
+                                )
+                            except Exception as e:
+                                logging.error(f"❌ Error adding external audio: {e}")
 
                     for i in range(self.volume_btn.popup.audioCount()):
                         if self.volume_btn.popup.audioItemData(i) == track_id:
@@ -1283,13 +1773,27 @@ class VideoPlayerWidget(QWidget):
 
             if track_type == "embedded":
                 aid = int(stream_index) if stream_index is not None else 1
-                self.player.aid = aid
-                logging.info(f"✅ Restored embedded aid={aid}")
+                try:
+                    self.player.aid = aid
+                    logging.info(f"✅ Restored embedded aid={aid}")
+                except Exception as e:
+                    logging.error(f"❌ Error setting aid: {e}")
 
             elif track_type == "external" and audio_file_path:
                 if Path(audio_file_path).exists():
-                    self.player.command("audio-add", audio_file_path, "select")
-                    logging.info(f"✅ Restored external: {audio_file_path}")
+                    try:
+                        self.player.command("audio-add", audio_file_path, "select")
+                        logging.info(f"✅ Restored external: {audio_file_path}")
+                    except Exception as e:
+                        if "-12" in str(e):
+                            logging.warning(
+                                f"⚠️ audio-add failed with -12 (MPV loading). Retrying restore_audio_track in 1s..."
+                            )
+                            QTimer.singleShot(
+                                1000, lambda: self.restore_audio_track(filepath)
+                            )
+                        else:
+                            logging.error(f"❌ Error adding external audio: {e}", exc_info=True)
                 else:
                     logging.error(f"❌ External file not found: {audio_file_path}")
 
@@ -1297,6 +1801,12 @@ class VideoPlayerWidget(QWidget):
 
         except Exception as e:
             logging.error(f"❌ Restore error: {e}", exc_info=True)
+
+    def _restore_secondary_audio(self, filepath):
+        """Restore secondary audio after loading."""
+        logging.debug("_restore_secondary_audio called")
+        if self.secondary_audio_enabled:
+            self._apply_dual_audio()
 
     def detach_video_widget(self):
         """Detach video widget for PiP mode."""
@@ -1877,8 +2387,12 @@ class VideoPlayerWidget(QWidget):
             self.position_restore_attempted = True
             logging.debug(f"DEBUG: restore_position command successfully sent")
         except Exception as e:
-            # -12 Error is often "Invalid Parameter". Logging it more clearly.
-            logging.error(f"❌ Error in restore_position: {e}", exc_info=True)
+            if "-12" in str(e):
+                logging.warning(
+                    f"⚠️ Error in restore_position: {e} (MPV may not be ready)"
+                )
+            else:
+                logging.error(f"❌ Error in restore_position: {e}", exc_info=True)
 
     def restart_video(self):
         try:

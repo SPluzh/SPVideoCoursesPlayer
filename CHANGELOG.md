@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.5.1]
+- **Audio**: Added the ability to play a secondary audio track simultaneously and adjust its independent volume.
+
 ## [1.5.0]
 - **PureRef Integration**: Complete PureRef support for managing reference images alongside video courses:
     - **Badge Button**: Each folder displays a "P" badge button in the top-right corner of its icon.

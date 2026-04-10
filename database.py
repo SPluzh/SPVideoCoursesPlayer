@@ -5,11 +5,13 @@ import logging
 from pathlib import Path
 from translator import tr
 
+
 class DatabaseManager:
     """
     Manages all database operations for the Video Courses Player.
     Centralizes logic from main.py and scanner.py.
     """
+
     def __init__(self, db_path):
         self.db_path = Path(db_path)
         self.db_path.parent.mkdir(exist_ok=True)
@@ -25,7 +27,7 @@ class DatabaseManager:
             # Enable WAL mode for better concurrency
             conn.execute("PRAGMA journal_mode=WAL;")
             c = conn.cursor()
-            
+
             # Folders table
             c.execute("""
                 CREATE TABLE IF NOT EXISTS folders (
@@ -155,53 +157,98 @@ class DatabaseManager:
             """)
 
             # Indices
-            c.execute("CREATE INDEX IF NOT EXISTS idx_parent_path ON folders(parent_path)")
-            c.execute("CREATE INDEX IF NOT EXISTS idx_folder_path ON video_files(folder_path)")
-            c.execute("CREATE INDEX IF NOT EXISTS idx_audio_video_id ON audio_tracks(video_id)")
-            c.execute("CREATE INDEX IF NOT EXISTS idx_audio_video_path ON audio_tracks(video_file_path)")
-            c.execute("CREATE INDEX IF NOT EXISTS idx_subtitle_video_id ON subtitle_tracks(video_id)")
-            c.execute("CREATE INDEX IF NOT EXISTS idx_subtitle_video_path ON subtitle_tracks(video_file_path)")
-            c.execute("CREATE INDEX IF NOT EXISTS idx_markers_video_id ON video_markers(video_id)")
-            
+            c.execute(
+                "CREATE INDEX IF NOT EXISTS idx_parent_path ON folders(parent_path)"
+            )
+            c.execute(
+                "CREATE INDEX IF NOT EXISTS idx_folder_path ON video_files(folder_path)"
+            )
+            c.execute(
+                "CREATE INDEX IF NOT EXISTS idx_audio_video_id ON audio_tracks(video_id)"
+            )
+            c.execute(
+                "CREATE INDEX IF NOT EXISTS idx_audio_video_path ON audio_tracks(video_file_path)"
+            )
+            c.execute(
+                "CREATE INDEX IF NOT EXISTS idx_subtitle_video_id ON subtitle_tracks(video_id)"
+            )
+            c.execute(
+                "CREATE INDEX IF NOT EXISTS idx_subtitle_video_path ON subtitle_tracks(video_file_path)"
+            )
+            c.execute(
+                "CREATE INDEX IF NOT EXISTS idx_markers_video_id ON video_markers(video_id)"
+            )
+
             # Migrations (ensure columns exist)
             c.execute("PRAGMA table_info(video_files)")
             columns = [col[1] for col in c.fetchall()]
-            if 'volume' not in columns:
-                c.execute("ALTER TABLE video_files ADD COLUMN volume INTEGER DEFAULT 100")
-            if 'subtitles_enabled' not in columns:
-                c.execute("ALTER TABLE video_files ADD COLUMN subtitles_enabled INTEGER DEFAULT 0")
-            if 'thumbnails_json' not in columns:
+            if "volume" not in columns:
+                c.execute(
+                    "ALTER TABLE video_files ADD COLUMN volume INTEGER DEFAULT 100"
+                )
+            if "subtitles_enabled" not in columns:
+                c.execute(
+                    "ALTER TABLE video_files ADD COLUMN subtitles_enabled INTEGER DEFAULT 0"
+                )
+            if "thumbnails_json" not in columns:
                 c.execute("ALTER TABLE video_files ADD COLUMN thumbnails_json TEXT")
-            if 'audio_track_count' not in columns:
-                c.execute("ALTER TABLE video_files ADD COLUMN audio_track_count INTEGER DEFAULT 0")
-            if 'selected_audio_id' not in columns:
-                c.execute("ALTER TABLE video_files ADD COLUMN selected_audio_id INTEGER DEFAULT NULL")
-            if 'subtitle_track_count' not in columns:
-                c.execute("ALTER TABLE video_files ADD COLUMN subtitle_track_count INTEGER DEFAULT 0")
-            if 'is_favorite' not in columns:
-                c.execute("ALTER TABLE video_files ADD COLUMN is_favorite INTEGER DEFAULT 0")
-            if 'selected_subtitle_id' not in columns:
-                c.execute("ALTER TABLE video_files ADD COLUMN selected_subtitle_id INTEGER DEFAULT NULL")
-            if 'is_available' not in columns:
-                c.execute("ALTER TABLE video_files ADD COLUMN is_available INTEGER DEFAULT 1")
-
+            if "audio_track_count" not in columns:
+                c.execute(
+                    "ALTER TABLE video_files ADD COLUMN audio_track_count INTEGER DEFAULT 0"
+                )
+            if "selected_audio_id" not in columns:
+                c.execute(
+                    "ALTER TABLE video_files ADD COLUMN selected_audio_id INTEGER DEFAULT NULL"
+                )
+            if "subtitle_track_count" not in columns:
+                c.execute(
+                    "ALTER TABLE video_files ADD COLUMN subtitle_track_count INTEGER DEFAULT 0"
+                )
+            if "is_favorite" not in columns:
+                c.execute(
+                    "ALTER TABLE video_files ADD COLUMN is_favorite INTEGER DEFAULT 0"
+                )
+            if "selected_subtitle_id" not in columns:
+                c.execute(
+                    "ALTER TABLE video_files ADD COLUMN selected_subtitle_id INTEGER DEFAULT NULL"
+                )
+            if "is_available" not in columns:
+                c.execute(
+                    "ALTER TABLE video_files ADD COLUMN is_available INTEGER DEFAULT 1"
+                )
+            if "secondary_audio_id" not in columns:
+                c.execute(
+                    "ALTER TABLE video_files ADD COLUMN secondary_audio_id INTEGER DEFAULT NULL"
+                )
+            if "secondary_audio_volume" not in columns:
+                c.execute(
+                    "ALTER TABLE video_files ADD COLUMN secondary_audio_volume INTEGER DEFAULT 10"
+                )
+            if "secondary_audio_enabled" not in columns:
+                c.execute(
+                    "ALTER TABLE video_files ADD COLUMN secondary_audio_enabled INTEGER DEFAULT 0"
+                )
 
             # Migration for video_markers
             c.execute("PRAGMA table_info(video_markers)")
             columns = [col[1] for col in c.fetchall()]
-            if 'color' not in columns:
-                c.execute("ALTER TABLE video_markers ADD COLUMN color TEXT DEFAULT '#FFD700'")
+            if "color" not in columns:
+                c.execute(
+                    "ALTER TABLE video_markers ADD COLUMN color TEXT DEFAULT '#FFD700'"
+                )
 
             # Check folders table for is_available
             c.execute("PRAGMA table_info(folders)")
             folder_columns = [col[1] for col in c.fetchall()]
-            if 'is_available' not in folder_columns:
-                c.execute("ALTER TABLE folders ADD COLUMN is_available INTEGER DEFAULT 1")
-                
+            if "is_available" not in folder_columns:
+                c.execute(
+                    "ALTER TABLE folders ADD COLUMN is_available INTEGER DEFAULT 1"
+                )
+
             # Migration for tags table
             c.execute("PRAGMA table_info(tags)")
             tags_columns = [col[1] for col in c.fetchall()]
-            if 'color' not in tags_columns:
+            if "color" not in tags_columns:
                 c.execute("ALTER TABLE tags ADD COLUMN color TEXT DEFAULT '#3498db'")
 
             conn.commit()
@@ -212,31 +259,39 @@ class DatabaseManager:
             with self.get_connection() as conn:
                 conn.row_factory = sqlite3.Row
                 c = conn.cursor()
-                c.execute("""
+                c.execute(
+                    """
                     SELECT * FROM video_files WHERE file_path = ?
-                """, (str(file_path),))
+                """,
+                    (str(file_path),),
+                )
                 row = c.fetchone()
                 return dict(row) if row else None
         except Exception as e:
             logging.error(f"Error getting video data: {e}", exc_info=True)
             return None
 
-    def save_progress(self, file_path, position_sec, duration_sec, watched_percent=None, volume=100):
+    def save_progress(
+        self, file_path, position_sec, duration_sec, watched_percent=None, volume=100
+    ):
         """Updates video playback progress."""
         if duration_sec <= 0:
             return
-        
+
         if watched_percent is None:
             watched_percent = min(100, int((position_sec / duration_sec) * 100))
-            
+
         try:
             with self.get_connection() as conn:
                 c = conn.cursor()
-                c.execute("""
+                c.execute(
+                    """
                     UPDATE video_files 
                     SET last_position = ?, watched_percent = ?, volume = ?
                     WHERE file_path = ?
-                """, (position_sec, watched_percent, volume, str(file_path)))
+                """,
+                    (position_sec, watched_percent, volume, str(file_path)),
+                )
                 conn.commit()
         except Exception as e:
             logging.error(f"Error saving progress: {e}", exc_info=True)
@@ -246,8 +301,10 @@ class DatabaseManager:
         try:
             with self.get_connection() as conn:
                 c = conn.cursor()
-                c.execute('UPDATE folders SET is_expanded = ? WHERE path = ?', 
-                          (1 if expanded else 0, str(path)))
+                c.execute(
+                    "UPDATE folders SET is_expanded = ? WHERE path = ?",
+                    (1 if expanded else 0, str(path)),
+                )
                 conn.commit()
         except Exception as e:
             logging.error(f"Error saving folder state: {e}", exc_info=True)
@@ -258,22 +315,28 @@ class DatabaseManager:
             with self.get_connection() as conn:
                 conn.row_factory = sqlite3.Row
                 c = conn.cursor()
-                
+
                 # Get video_id and current selection
-                c.execute("SELECT id, selected_audio_id FROM video_files WHERE file_path = ?", (str(file_path),))
+                c.execute(
+                    "SELECT id, selected_audio_id FROM video_files WHERE file_path = ?",
+                    (str(file_path),),
+                )
                 video = c.fetchone()
                 if not video:
                     return [], None
-                
-                video_id = video['id']
-                selected_id = video['selected_audio_id']
-                
-                c.execute("""
+
+                video_id = video["id"]
+                selected_id = video["selected_audio_id"]
+
+                c.execute(
+                    """
                     SELECT * FROM audio_tracks 
                     WHERE video_id = ? 
                     ORDER BY is_default DESC, stream_index ASC
-                """, (video_id,))
-                
+                """,
+                    (video_id,),
+                )
+
                 tracks = [dict(row) for row in c.fetchall()]
                 return tracks, selected_id
         except Exception as e:
@@ -286,22 +349,28 @@ class DatabaseManager:
             with self.get_connection() as conn:
                 conn.row_factory = sqlite3.Row
                 c = conn.cursor()
-                
-                c.execute("SELECT id, selected_subtitle_id, subtitles_enabled FROM video_files WHERE file_path = ?", (str(file_path),))
+
+                c.execute(
+                    "SELECT id, selected_subtitle_id, subtitles_enabled FROM video_files WHERE file_path = ?",
+                    (str(file_path),),
+                )
                 video = c.fetchone()
                 if not video:
                     return [], None, 0
-                
-                video_id = video['id']
-                selected_id = video['selected_subtitle_id']
-                enabled = video['subtitles_enabled']
-                
-                c.execute("""
+
+                video_id = video["id"]
+                selected_id = video["selected_subtitle_id"]
+                enabled = video["subtitles_enabled"]
+
+                c.execute(
+                    """
                     SELECT * FROM subtitle_tracks 
                     WHERE video_id = ? 
                     ORDER BY is_default DESC, stream_index ASC
-                """, (video_id,))
-                
+                """,
+                    (video_id,),
+                )
+
                 tracks = [dict(row) for row in c.fetchall()]
                 return tracks, selected_id, enabled
         except Exception as e:
@@ -318,7 +387,9 @@ class DatabaseManager:
                 row = c.fetchone()
                 return dict(row) if row else None
         except Exception as e:
-            logging.error(f"Error getting track info from {table_name}: {e}", exc_info=True)
+            logging.error(
+                f"Error getting track info from {table_name}: {e}", exc_info=True
+            )
             return None
 
     def save_selected_audio(self, file_path, track_id):
@@ -326,11 +397,57 @@ class DatabaseManager:
         try:
             with self.get_connection() as conn:
                 c = conn.cursor()
-                c.execute("UPDATE video_files SET selected_audio_id = ? WHERE file_path = ?", 
-                          (track_id, str(file_path)))
+                c.execute(
+                    "UPDATE video_files SET selected_audio_id = ? WHERE file_path = ?",
+                    (track_id, str(file_path)),
+                )
                 conn.commit()
         except Exception as e:
             logging.error(f"Error saving audio selection: {e}", exc_info=True)
+
+    def save_secondary_audio(self, file_path, track_id, volume, enabled):
+        """Saves secondary audio settings for a video."""
+        try:
+            with self.get_connection() as conn:
+                c = conn.cursor()
+                c.execute(
+                    """
+                    UPDATE video_files 
+                    SET secondary_audio_id = ?, 
+                        secondary_audio_volume = ?, 
+                        secondary_audio_enabled = ?
+                    WHERE file_path = ?
+                """,
+                    (track_id, volume, 1 if enabled else 0, str(file_path)),
+                )
+                conn.commit()
+        except Exception as e:
+            logging.error(f"Error saving secondary audio: {e}", exc_info=True)
+
+    def load_secondary_audio(self, file_path):
+        """Loads secondary audio settings. Returns (track_id, volume, enabled)."""
+        try:
+            with self.get_connection() as conn:
+                conn.row_factory = sqlite3.Row
+                c = conn.cursor()
+                c.execute(
+                    """
+                    SELECT secondary_audio_id, secondary_audio_volume, secondary_audio_enabled 
+                    FROM video_files 
+                    WHERE file_path = ?
+                """,
+                    (str(file_path),),
+                )
+                row = c.fetchone()
+                if row:
+                    return (
+                        row["secondary_audio_id"],
+                        row["secondary_audio_volume"] or 10,
+                        bool(row["secondary_audio_enabled"]),
+                    )
+        except Exception as e:
+            logging.error(f"Error loading secondary audio: {e}", exc_info=True)
+        return (None, 10, False)
 
     def save_selected_subtitle(self, file_path, track_id, enabled=None):
         """Saves the selected subtitle track and enabled state."""
@@ -338,11 +455,15 @@ class DatabaseManager:
             with self.get_connection() as conn:
                 c = conn.cursor()
                 if enabled is not None:
-                    c.execute("UPDATE video_files SET selected_subtitle_id = ?, subtitles_enabled = ? WHERE file_path = ?", 
-                              (track_id, 1 if enabled else 0, str(file_path)))
+                    c.execute(
+                        "UPDATE video_files SET selected_subtitle_id = ?, subtitles_enabled = ? WHERE file_path = ?",
+                        (track_id, 1 if enabled else 0, str(file_path)),
+                    )
                 else:
-                    c.execute("UPDATE video_files SET selected_subtitle_id = ? WHERE file_path = ?", 
-                              (track_id, str(file_path)))
+                    c.execute(
+                        "UPDATE video_files SET selected_subtitle_id = ? WHERE file_path = ?",
+                        (track_id, str(file_path)),
+                    )
                 conn.commit()
         except Exception as e:
             logging.error(f"Error saving subtitle selection: {e}", exc_info=True)
@@ -352,8 +473,10 @@ class DatabaseManager:
         try:
             with self.get_connection() as conn:
                 c = conn.cursor()
-                c.execute("UPDATE video_files SET subtitles_enabled = ? WHERE file_path = ?", 
-                          (1 if enabled else 0, str(file_path)))
+                c.execute(
+                    "UPDATE video_files SET subtitles_enabled = ? WHERE file_path = ?",
+                    (1 if enabled else 0, str(file_path)),
+                )
                 conn.commit()
         except Exception as e:
             logging.error(f"Error updating subtitle state: {e}", exc_info=True)
@@ -364,11 +487,11 @@ class DatabaseManager:
             with self.get_connection() as conn:
                 conn.row_factory = sqlite3.Row
                 c = conn.cursor()
-                
+
                 # Get all folders
                 c.execute("SELECT * FROM folders WHERE is_available = 1 ORDER BY path")
                 folders = [dict(row) for row in c.fetchall()]
-                
+
                 # Get all videos
                 c.execute("""
                     SELECT v.*, 
@@ -386,7 +509,7 @@ class DatabaseManager:
                     JOIN tags t ON vt.tag_id = t.id
                 """)
                 tags_rows = c.fetchall()
-                
+
                 # Get all markers for all videos
                 c.execute("""
                     SELECT video_id, position_seconds, label, color 
@@ -394,34 +517,34 @@ class DatabaseManager:
                     ORDER BY position_seconds
                 """)
                 markers_rows = c.fetchall()
-                
+
                 # Map tags by video_id
                 tags_map = {}
                 for row in tags_rows:
-                    vid = row['video_id']
-                    tag = {'id': row['id'], 'name': row['name'], 'color': row['color']}
+                    vid = row["video_id"]
+                    tag = {"id": row["id"], "name": row["name"], "color": row["color"]}
                     if vid not in tags_map:
                         tags_map[vid] = []
                     tags_map[vid].append(tag)
-                
+
                 # Map markers by video_id
                 markers_map = {}
                 for row in markers_rows:
-                    vid = row['video_id']
+                    vid = row["video_id"]
                     marker = {
-                        'position_seconds': row['position_seconds'],
-                        'label': row['label'],
-                        'color': row['color']
+                        "position_seconds": row["position_seconds"],
+                        "label": row["label"],
+                        "color": row["color"],
                     }
                     if vid not in markers_map:
                         markers_map[vid] = []
                     markers_map[vid].append(marker)
-                
+
                 # Attach tags and markers to videos
                 for video in videos:
-                    video['tags'] = tags_map.get(video['id'], [])
-                    video['markers'] = markers_map.get(video['id'], [])
-                
+                    video["tags"] = tags_map.get(video["id"], [])
+                    video["markers"] = markers_map.get(video["id"], [])
+
                 return folders, videos
         except Exception as e:
             logging.error(f"Error loading courses: {e}", exc_info=True)
@@ -450,8 +573,10 @@ class DatabaseManager:
         try:
             with self.get_connection() as conn:
                 c = conn.cursor()
-                c.execute('UPDATE video_files SET watched_percent = 100, last_position = duration WHERE file_path = ?', 
-                          (str(file_path),))
+                c.execute(
+                    "UPDATE video_files SET watched_percent = 100, last_position = duration WHERE file_path = ?",
+                    (str(file_path),),
+                )
                 conn.commit()
         except Exception as e:
             logging.error(f"Error marking as watched: {e}", exc_info=True)
@@ -461,8 +586,10 @@ class DatabaseManager:
         try:
             with self.get_connection() as conn:
                 c = conn.cursor()
-                c.execute('UPDATE video_files SET watched_percent = 100, last_position = duration WHERE folder_path = ?', 
-                          (str(folder_path),))
+                c.execute(
+                    "UPDATE video_files SET watched_percent = 100, last_position = duration WHERE folder_path = ?",
+                    (str(folder_path),),
+                )
                 conn.commit()
         except Exception as e:
             logging.error(f"Error marking folder as watched: {e}", exc_info=True)
@@ -472,8 +599,10 @@ class DatabaseManager:
         try:
             with self.get_connection() as conn:
                 c = conn.cursor()
-                c.execute('UPDATE video_files SET watched_percent = 0, last_position = 0 WHERE folder_path = ?', 
-                          (str(folder_path),))
+                c.execute(
+                    "UPDATE video_files SET watched_percent = 0, last_position = 0 WHERE folder_path = ?",
+                    (str(folder_path),),
+                )
                 conn.commit()
         except Exception as e:
             logging.error(f"Error resetting folder progress: {e}", exc_info=True)
@@ -483,8 +612,10 @@ class DatabaseManager:
         try:
             with self.get_connection() as conn:
                 c = conn.cursor()
-                c.execute('UPDATE video_files SET watched_percent = 0, last_position = 0 WHERE file_path = ?', 
-                          (str(file_path),))
+                c.execute(
+                    "UPDATE video_files SET watched_percent = 0, last_position = 0 WHERE file_path = ?",
+                    (str(file_path),),
+                )
                 conn.commit()
         except Exception as e:
             logging.error(f"Error resetting progress: {e}", exc_info=True)
@@ -495,10 +626,16 @@ class DatabaseManager:
             with self.get_connection() as conn:
                 conn.row_factory = sqlite3.Row
                 c = conn.cursor()
-                c.execute('SELECT last_position, volume FROM video_files WHERE file_path = ?', (str(file_path),))
+                c.execute(
+                    "SELECT last_position, volume FROM video_files WHERE file_path = ?",
+                    (str(file_path),),
+                )
                 row = c.fetchone()
                 if row:
-                    return {'last_position': row['last_position'], 'volume': row['volume'] or 100}
+                    return {
+                        "last_position": row["last_position"],
+                        "volume": row["volume"] or 100,
+                    }
         except Exception as e:
             logging.error(f"Error getting video progress: {e}", exc_info=True)
         return None
@@ -509,11 +646,16 @@ class DatabaseManager:
             with self.get_connection() as conn:
                 c = conn.cursor()
                 # Get video id first
-                c.execute("SELECT id FROM video_files WHERE file_path = ?", (str(file_path),))
+                c.execute(
+                    "SELECT id FROM video_files WHERE file_path = ?", (str(file_path),)
+                )
                 row = c.fetchone()
                 if row:
                     video_id = row[0]
-                    c.execute("SELECT COUNT(*) FROM video_markers WHERE video_id = ?", (video_id,))
+                    c.execute(
+                        "SELECT COUNT(*) FROM video_markers WHERE video_id = ?",
+                        (video_id,),
+                    )
                     return c.fetchone()[0]
         except Exception as e:
             logging.error(f"Error getting marker count: {e}", exc_info=True)
@@ -525,7 +667,10 @@ class DatabaseManager:
             with self.get_connection() as conn:
                 conn.row_factory = sqlite3.Row
                 c = conn.cursor()
-                c.execute('SELECT id, file_path, folder_path FROM video_files WHERE file_path = ?', (str(file_path),))
+                c.execute(
+                    "SELECT id, file_path, folder_path FROM video_files WHERE file_path = ?",
+                    (str(file_path),),
+                )
                 row = c.fetchone()
                 return dict(row) if row else None
         except Exception as e:
@@ -543,17 +688,18 @@ class DatabaseManager:
         try:
             with self.get_connection() as conn:
                 c = conn.cursor()
-                
+
                 # Use LIKE query to match folder and all subfolders
                 # Ensure folder_path ends with separator or match exact
                 # We need to escape special characters for LIKE
-                escaped_path = str(folder_path).replace('%', '\\%').replace('_', '\\_')
-                
+                escaped_path = str(folder_path).replace("%", "\\%").replace("_", "\\_")
+
                 # Windows paths use backslashes, check if we need to handle that specifically for SQLite
-                # The paths in DB seem to be stored as is. 
+                # The paths in DB seem to be stored as is.
                 # Let's assume standard path separator behavior.
-                
-                c.execute("""
+
+                c.execute(
+                    """
                     SELECT 
                         COUNT(*) as total_videos,
                         SUM(CASE WHEN watched_percent >= 90 THEN 1 ELSE 0 END) as watched,
@@ -566,33 +712,39 @@ class DatabaseManager:
                         END) as watched_duration
                     FROM video_files 
                     WHERE folder_path = ? OR folder_path LIKE ? ESCAPE '\\'
-                """, (str(folder_path), f"{escaped_path}\\%"))
-                
+                """,
+                    (str(folder_path), f"{escaped_path}\\%"),
+                )
+
                 row = c.fetchone()
                 if not row:
                     return None
-                    
+
                 total_videos = row[0] or 0
                 watched = row[1] or 0
                 in_progress = row[2] or 0
                 unwatched = row[3] or 0
                 total_duration = row[4] or 0
                 watched_duration = row[5] or 0
-                
+
                 remaining_duration = max(0, total_duration - watched_duration)
-                progress_percent = (watched_duration / total_duration * 100) if total_duration > 0 else 0
-                
+                progress_percent = (
+                    (watched_duration / total_duration * 100)
+                    if total_duration > 0
+                    else 0
+                )
+
                 return {
-                    'total_videos': total_videos,
-                    'watched_videos': watched,
-                    'in_progress_videos': in_progress,
-                    'unwatched_videos': unwatched,
-                    'total_duration': total_duration,
-                    'watched_duration': watched_duration,
-                    'remaining_duration': remaining_duration,
-                    'progress_percent': int(progress_percent)
+                    "total_videos": total_videos,
+                    "watched_videos": watched,
+                    "in_progress_videos": in_progress,
+                    "unwatched_videos": unwatched,
+                    "total_duration": total_duration,
+                    "watched_duration": watched_duration,
+                    "remaining_duration": remaining_duration,
+                    "progress_percent": int(progress_percent),
                 }
-                
+
         except Exception as e:
             logging.error(f"Error calculating folder stats: {e}", exc_info=True)
             return None
@@ -604,16 +756,21 @@ class DatabaseManager:
             with self.get_connection() as conn:
                 c = conn.cursor()
                 # Get video_id first
-                c.execute("SELECT id FROM video_files WHERE file_path = ?", (str(file_path),))
+                c.execute(
+                    "SELECT id FROM video_files WHERE file_path = ?", (str(file_path),)
+                )
                 row = c.fetchone()
                 if not row:
                     return None
-                
+
                 video_id = row[0]
-                c.execute("""
+                c.execute(
+                    """
                     INSERT INTO video_markers (video_id, position_seconds, label, color)
                     VALUES (?, ?, ?, ?)
-                """, (video_id, position_seconds, label, color))
+                """,
+                    (video_id, position_seconds, label, color),
+                )
                 conn.commit()
                 return c.lastrowid
         except Exception as e:
@@ -626,12 +783,15 @@ class DatabaseManager:
             with self.get_connection() as conn:
                 conn.row_factory = sqlite3.Row
                 c = conn.cursor()
-                c.execute("""
+                c.execute(
+                    """
                     SELECT m.* FROM video_markers m
                     JOIN video_files v ON m.video_id = v.id
                     WHERE v.file_path = ?
                     ORDER BY m.position_seconds ASC
-                """, (str(file_path),))
+                """,
+                    (str(file_path),),
+                )
                 return [dict(row) for row in c.fetchall()]
         except Exception as e:
             logging.error(f"Error getting markers: {e}", exc_info=True)
@@ -655,9 +815,15 @@ class DatabaseManager:
             with self.get_connection() as conn:
                 c = conn.cursor()
                 if position is not None:
-                    c.execute("UPDATE video_markers SET label = ?, color = ?, position_seconds = ? WHERE id = ?", (label, color, position, marker_id))
+                    c.execute(
+                        "UPDATE video_markers SET label = ?, color = ?, position_seconds = ? WHERE id = ?",
+                        (label, color, position, marker_id),
+                    )
                 else:
-                    c.execute("UPDATE video_markers SET label = ?, color = ? WHERE id = ?", (label, color, marker_id))
+                    c.execute(
+                        "UPDATE video_markers SET label = ?, color = ? WHERE id = ?",
+                        (label, color, marker_id),
+                    )
                 conn.commit()
                 return True
         except Exception as e:
@@ -684,17 +850,23 @@ class DatabaseManager:
                 c = conn.cursor()
                 if new_state is None:
                     # Get current status if not provided
-                    c.execute("SELECT is_favorite FROM video_files WHERE file_path = ?", (str(file_path),))
+                    c.execute(
+                        "SELECT is_favorite FROM video_files WHERE file_path = ?",
+                        (str(file_path),),
+                    )
                     row = c.fetchone()
                     if row:
                         new_state = 0 if row[0] else 1
                     else:
-                        new_state = 1 # Default to favorite if adding? Or strict? 
+                        new_state = 1  # Default to favorite if adding? Or strict?
                         # Actually logic in main.py handles defaults, here we just update.
                         # But if row doesn't exist, we can't update.
                         return False
-                
-                c.execute("UPDATE video_files SET is_favorite = ? WHERE file_path = ?", (1 if new_state else 0, str(file_path)))
+
+                c.execute(
+                    "UPDATE video_files SET is_favorite = ? WHERE file_path = ?",
+                    (1 if new_state else 0, str(file_path)),
+                )
                 conn.commit()
                 return True
         except Exception as e:
@@ -722,7 +894,7 @@ class DatabaseManager:
                 conn.commit()
                 return c.lastrowid
         except sqlite3.IntegrityError:
-            return None # Tag likely exists
+            return None  # Tag likely exists
         except Exception as e:
             logging.error(f"Error creating tag: {e}", exc_info=True)
             return None
@@ -732,7 +904,10 @@ class DatabaseManager:
         try:
             with self.get_connection() as conn:
                 c = conn.cursor()
-                c.execute("UPDATE tags SET name = ?, color = ? WHERE id = ?", (name, color, tag_id))
+                c.execute(
+                    "UPDATE tags SET name = ?, color = ? WHERE id = ?",
+                    (name, color, tag_id),
+                )
                 conn.commit()
                 return True
         except Exception as e:
@@ -756,11 +931,16 @@ class DatabaseManager:
         try:
             with self.get_connection() as conn:
                 c = conn.cursor()
-                c.execute("SELECT id FROM video_files WHERE file_path = ?", (str(file_path),))
+                c.execute(
+                    "SELECT id FROM video_files WHERE file_path = ?", (str(file_path),)
+                )
                 row = c.fetchone()
                 if row:
                     video_id = row[0]
-                    c.execute("INSERT OR IGNORE INTO video_tags (video_id, tag_id) VALUES (?, ?)", (video_id, tag_id))
+                    c.execute(
+                        "INSERT OR IGNORE INTO video_tags (video_id, tag_id) VALUES (?, ?)",
+                        (video_id, tag_id),
+                    )
                     conn.commit()
                     return True
         except Exception as e:
@@ -772,11 +952,16 @@ class DatabaseManager:
         try:
             with self.get_connection() as conn:
                 c = conn.cursor()
-                c.execute("SELECT id FROM video_files WHERE file_path = ?", (str(file_path),))
+                c.execute(
+                    "SELECT id FROM video_files WHERE file_path = ?", (str(file_path),)
+                )
                 row = c.fetchone()
                 if row:
                     video_id = row[0]
-                    c.execute("DELETE FROM video_tags WHERE video_id = ? AND tag_id = ?", (video_id, tag_id))
+                    c.execute(
+                        "DELETE FROM video_tags WHERE video_id = ? AND tag_id = ?",
+                        (video_id, tag_id),
+                    )
                     conn.commit()
                     return True
         except Exception as e:
@@ -789,13 +974,16 @@ class DatabaseManager:
             with self.get_connection() as conn:
                 conn.row_factory = sqlite3.Row
                 c = conn.cursor()
-                c.execute("""
+                c.execute(
+                    """
                     SELECT t.* FROM tags t
                     JOIN video_tags vt ON t.id = vt.tag_id
                     JOIN video_files v ON vt.video_id = v.id
                     WHERE v.file_path = ?
                     ORDER BY t.name
-                """, (str(file_path),))
+                """,
+                    (str(file_path),),
+                )
                 return [dict(row) for row in c.fetchall()]
         except Exception as e:
             logging.error(f"Error getting video tags: {e}", exc_info=True)
@@ -803,25 +991,31 @@ class DatabaseManager:
 
     def mark_files_unavailable(self, root_path, except_file_paths):
         """
-        Marks all video files in root_path as unavailable, 
+        Marks all video files in root_path as unavailable,
         EXCEPT those in the except_file_paths list.
         """
         try:
             with self.get_connection() as conn:
                 c = conn.cursor()
-                
-                escaped_root = str(root_path).replace('%', '\\%').replace('_', '\\_')
+
+                escaped_root = str(root_path).replace("%", "\\%").replace("_", "\\_")
                 root_pattern = f"{escaped_root}\\%"
 
-                c.execute("CREATE TEMP TABLE IF NOT EXISTS available_files (path TEXT PRIMARY KEY)")
+                c.execute(
+                    "CREATE TEMP TABLE IF NOT EXISTS available_files (path TEXT PRIMARY KEY)"
+                )
                 c.execute("DELETE FROM available_files")
-                
+
                 if except_file_paths:
-                    c.executemany("INSERT INTO available_files (path) VALUES (?)", [(p,) for p in except_file_paths])
-                
+                    c.executemany(
+                        "INSERT INTO available_files (path) VALUES (?)",
+                        [(p,) for p in except_file_paths],
+                    )
+
                 # Update video_files
                 # We need to join with folders to check root_path
-                c.execute("""
+                c.execute(
+                    """
                     UPDATE video_files
                     SET is_available = 0
                     WHERE id IN (
@@ -830,8 +1024,10 @@ class DatabaseManager:
                         WHERE f.root_path = ?
                         AND v.file_path NOT IN (SELECT path FROM available_files)
                     )
-                """, (str(root_path),))
-                
+                """,
+                    (str(root_path),),
+                )
+
                 c.execute("DROP TABLE available_files")
                 conn.commit()
         except Exception as e:
@@ -839,28 +1035,35 @@ class DatabaseManager:
 
     def mark_folders_unavailable(self, root_path, except_folder_paths):
         """
-        Marks all folders in root_path as unavailable, 
+        Marks all folders in root_path as unavailable,
         EXCEPT those in the except_folder_paths list.
         """
         try:
             with self.get_connection() as conn:
                 c = conn.cursor()
-                
-                c.execute("CREATE TEMP TABLE IF NOT EXISTS available_folders (path TEXT PRIMARY KEY)")
+
+                c.execute(
+                    "CREATE TEMP TABLE IF NOT EXISTS available_folders (path TEXT PRIMARY KEY)"
+                )
                 c.execute("DELETE FROM available_folders")
-                
+
                 if except_folder_paths:
-                    c.executemany("INSERT INTO available_folders (path) VALUES (?)", [(p,) for p in except_folder_paths])
-                
-                c.execute("""
+                    c.executemany(
+                        "INSERT INTO available_folders (path) VALUES (?)",
+                        [(p,) for p in except_folder_paths],
+                    )
+
+                c.execute(
+                    """
                     UPDATE folders
                     SET is_available = 0
                     WHERE root_path = ?
                     AND path NOT IN (SELECT path FROM available_folders)
-                """, (str(root_path),))
-                
+                """,
+                    (str(root_path),),
+                )
+
                 c.execute("DROP TABLE available_folders")
                 conn.commit()
         except Exception as e:
             logging.error(f"Error marking folders unavailable: {e}", exc_info=True)
-

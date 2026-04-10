@@ -188,6 +188,9 @@
             "mono": "Моно",
             "mono_tooltip": "Моно режим"
         },
+        "enable_secondary_audio": "Включить вторую аудиодорожку",
+        "secondary_track": "Вторая дорожка",
+        "secondary_volume": "Громкость второй дорожки",
         "filter_tags": "Фильтр по тегам",
         "file_not_found": "Файл не найден"
     },
