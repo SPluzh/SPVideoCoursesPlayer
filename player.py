@@ -1060,7 +1060,7 @@ class VideoPlayerWidget(QWidget):
             mix_filters = [
                 f"[aid{primary_mpv_id}]aformat=sample_fmts=fltp:sample_rates=48000:channel_layouts=stereo[a1]",
                 f"[aid{secondary_mpv_id}]volume={sec_vol},aformat=sample_fmts=fltp:sample_rates=48000:channel_layouts=stereo[a2]",
-                "[a1][a2]amix=inputs=2:duration=longest:dropout_transition=0,volume=1.0[amixed]",
+                "[a1][a2]amix=inputs=2:duration=longest:dropout_transition=0,volume=2.0[amixed]",
             ]
 
             logging.info("🎛️ Base mixing filters:")
