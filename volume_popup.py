@@ -267,7 +267,8 @@ class VolumePopup(QWidget):
 
         # Style
         self._update_label(self.slider.value())
-        self.setFixedHeight(270) # Set fixed height, but let width expand naturally
+        # Fixed height to prevent resizing when secondary audio is toggled
+        self.setFixedHeight(270)
 
     def cycle_noise_mode(self):
         modes = ["off", "standard", "ai"]
@@ -535,13 +536,12 @@ class VolumeButton(QPushButton):
             return
 
         self.popup.ensurePolished()
-        
-        # Get accurate dimensions before positioning
+
+        # Use fixed height (270px) for consistent positioning
         pw = self.popup.sizeHint().width()
-        ph = self.popup.sizeHint().height()
-        # Fallback to current size/minimums if needed
+        ph = 270  # Always use fixed height regardless of content
+        # Fallback to current width if needed
         pw = max(pw, self.popup.width(), self.popup.minimumWidth())
-        ph = max(ph, self.popup.height(), self.popup.minimumHeight())
 
         button_rect_global = QRect(self.mapToGlobal(QPoint(0, 0)), self.size())
         button_center = button_rect_global.center()
