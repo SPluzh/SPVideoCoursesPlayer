@@ -27,7 +27,7 @@ class ConfigManager:
             "pureref_filename": "reference.pur",
             "show_pureref_badges": "True",
             "show_pureref_badges_when_missing": "False",
-            "enable_debug_file": "True",
+            "enable_debug_file": "False",
         },
         "Paths": {
             "paths": "",

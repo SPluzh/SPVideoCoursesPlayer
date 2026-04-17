@@ -24,6 +24,29 @@ from logging.handlers import RotatingFileHandler
 # Configure logging with both file and console handlers
 def setup_logging():
     """Setup logging to both file and console."""
+    # Create logger
+    logger = logging.getLogger()
+    logger.setLevel(logging.DEBUG)
+
+    # Clear any existing handlers
+    logger.handlers.clear()
+
+    # Console handler (always enabled)
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(logging.DEBUG)
+    console_formatter = logging.Formatter(
+        "%(asctime)s - %(levelname)s - %(message)s", datefmt="%Y-%m-%d %H:%M:%S"
+    )
+    console_handler.setFormatter(console_formatter)
+    logger.addHandler(console_handler)
+
+    # File handler (only if enabled in config)
+    # Note: Config is not loaded yet at this point, so we check later in MainWindow
+    # For now, just setup console logging
+
+
+def enable_file_logging():
+    """Enable file logging if configured."""
     # Determine log file location (next to exe or main.py)
     if getattr(sys, "frozen", False):
         # Running as compiled exe
@@ -34,14 +57,13 @@ def setup_logging():
 
     log_file = log_dir / "sp_video_player_debug.log"
 
-    # Create logger
+    # Check if file handler already exists
     logger = logging.getLogger()
-    logger.setLevel(logging.DEBUG)
+    for handler in logger.handlers:
+        if isinstance(handler, RotatingFileHandler):
+            return  # Already enabled
 
-    # Clear any existing handlers
-    logger.handlers.clear()
-
-    # File handler with rotation (10 MB max, 3 backups)
+    # Add file handler with rotation (10 MB max, 3 backups)
     try:
         file_handler = RotatingFileHandler(
             log_file,
@@ -55,18 +77,9 @@ def setup_logging():
         )
         file_handler.setFormatter(file_formatter)
         logger.addHandler(file_handler)
-        print(f"✅ Debug logging enabled: {log_file}")
+        logging.info(f"✅ Debug file logging enabled: {log_file}")
     except Exception as e:
-        print(f"⚠️ Could not create log file: {e}")
-
-    # Console handler
-    console_handler = logging.StreamHandler()
-    console_handler.setLevel(logging.DEBUG)
-    console_formatter = logging.Formatter(
-        "%(asctime)s - %(levelname)s - %(message)s", datefmt="%Y-%m-%d %H:%M:%S"
-    )
-    console_handler.setFormatter(console_formatter)
-    logger.addHandler(console_handler)
+        logging.error(f"⚠️ Could not create log file: {e}")
 
 
 setup_logging()
@@ -231,6 +244,10 @@ class VideoCourseBrowser(QMainWindow):
         self.db = DatabaseManager(self.db_file)
         self.config = ConfigManager(self.config_file, ROOT_DIR, DATA_DIR)
         self.pureref_manager = PureRefManager(self.config)
+
+        # Enable file logging if configured
+        if self.config.get_enable_debug_file():
+            enable_file_logging()
 
         self.hotkey_manager = HotkeyManager(self)
         self.hotkey_manager.global_action_triggered.connect(self.handle_player_action)
