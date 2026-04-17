@@ -78,6 +78,9 @@ class ConfigManager:
             "text_color": "0,100,180",
             "bg_color": "230,240,255",
         },
+        "TreeLines": {
+            "colors": "#3498db,#9b59b6,#e74c3c,#2ecc71,#f39c12,#1abc9c,#e67e22,#8e44ad,#c0392b,#16a085,#2980b9,#d35400,#27ae60,#f1c40f,#e91e63,#00bcd4,#ff5722,#673ab7,#009688,#ff9800,#4caf50,#03a9f4,#9c27b0,#cddc39",
+        },
     }
 
     def __init__(self, config_file: Path, root_dir: Path, data_dir: Path):
@@ -539,6 +542,22 @@ class ConfigManager:
         if "General" not in config:
             config["General"] = {}
         config["General"]["show_pureref_badges_when_missing"] = str(value)
+        self._write_config(config)
+
+    def get_tree_line_colors(self) -> list:
+        """Returns list of hex color strings for tree nesting lines."""
+        config = self._read_config()
+        colors_str = config.get(
+            "TreeLines", "colors", fallback=self.DEFAULTS["TreeLines"]["colors"]
+        )
+        return [c.strip() for c in colors_str.split(",") if c.strip()]
+
+    def set_tree_line_colors(self, colors: list):
+        """Save tree line colors to config."""
+        config = self._read_config()
+        if "TreeLines" not in config:
+            config["TreeLines"] = {}
+        config["TreeLines"]["colors"] = ",".join(colors)
         self._write_config(config)
 
     def get_raw_config(self) -> configparser.ConfigParser:

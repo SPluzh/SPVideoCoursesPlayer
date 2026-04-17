@@ -39,17 +39,15 @@ class VideoItemDelegate(QStyledItemDelegate):
         self.playing_path = None
         self.is_paused = True
         self.mouse_pos = None
-        self.NESTING_COLORS = [
-            QColor("#3498db"),  # Blue
-            QColor("#9b59b6"),  # Purple
-            QColor("#e74c3c"),  # Red
-            QColor("#2ecc71"),  # Light green
-            QColor("#8e44ad"),  # Deep purple
-            QColor("#d35400"),  # Pumpkin
-            QColor("#c0392b"),  # Dark red
-            QColor("#16a085"),  # Sea green
-            QColor("#2980b9"),  # Strong blue
-        ]
+
+        # Load tree line colors from config
+        color_hex_list = self.config.get("tree_line_colors", [])
+        if color_hex_list:
+            self.NESTING_COLORS = [QColor(hex_color) for hex_color in color_hex_list]
+        else:
+            # Fallback to default blue if config is missing
+            self.NESTING_COLORS = [QColor("#3498db")]
+
         self._init_style_widgets()
         self.pureref_manager = None
 

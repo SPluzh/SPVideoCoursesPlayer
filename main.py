@@ -328,6 +328,7 @@ class VideoCourseBrowser(QMainWindow):
             "show_tree_lines": True,
             "show_pureref_badges": True,
             "show_pureref_badges_when_missing": False,
+            "tree_line_colors": self.config.get_tree_line_colors(),
         }
         delegate = VideoItemDelegate(delegate_config, self.course_tree)
         delegate.pureref_manager = self.pureref_manager

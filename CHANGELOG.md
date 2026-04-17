@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.5.2]
+- **Configuration**: Tree line colors are now configurable via settings.ini:
+    - **Expanded Palette**: Increased color variety from 9 to 24 distinct colors for better visual differentiation in deeply nested folder structures.
+    - **Customization**: Colors can be edited manually in the [TreeLines] section of settings.ini.
+
 ## [1.5.1]
 - **Audio**: Added the ability to play a secondary audio track simultaneously and adjust its independent volume.
 
