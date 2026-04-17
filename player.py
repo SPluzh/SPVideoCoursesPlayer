@@ -856,7 +856,7 @@ class VideoPlayerWidget(QWidget):
             logging.info(f"🔍 Track type: {track_type}")
 
             if track_type == "embedded":
-                # For embedded tracks, use aid directly
+                # For embedded tracks, match by ff-index
                 stream_index = track["stream_index"]
                 logging.info(f"🔍 Embedded track stream_index: {stream_index}")
 
@@ -864,11 +864,30 @@ class VideoPlayerWidget(QWidget):
                     logging.error("❌ Embedded track has no stream_index")
                     return None
 
-                mpv_id = int(stream_index)
+                # Search MPV track list for embedded track with matching ff-index
+                track_list = self.player.track_list
                 logging.info(
-                    f"✅ Embedded track resolved: stream_index={stream_index}, mpv_id={mpv_id}"
+                    f"🔍 Searching {len(track_list)} MPV tracks for embedded audio with ff-index={stream_index}"
                 )
-                return mpv_id
+
+                for t in track_list:
+                    if t.get("type") == "audio" and not t.get("external", False):
+                        ff_index = t.get("ff-index")
+                        mpv_id = t.get("id")
+                        logging.info(
+                            f"   - Embedded audio: MPV ID={mpv_id}, ff-index={ff_index}"
+                        )
+
+                        if ff_index == stream_index:
+                            logging.info(
+                                f"✅ Embedded track resolved: stream_index={stream_index}, mpv_id={mpv_id}"
+                            )
+                            return mpv_id
+
+                logging.error(
+                    f"❌ Could not find embedded track with stream_index={stream_index}"
+                )
+                return None
 
             elif track_type == "external":
                 audio_file_path = track["audio_file_path"]
@@ -1348,21 +1367,24 @@ class VideoPlayerWidget(QWidget):
         volume: saved volume in % (default 100)
         auto_play: automatically start playback
         """
+        logging.info(f"🎬 ========== LOADING VIDEO ==========")
+        logging.info(f"🎬 File: {file_path}")
+        logging.info(f"🎬 Saved position: {saved_position}s")
+        logging.info(f"🎬 Volume: {volume}%")
+        logging.info(f"🎬 Auto-play: {auto_play}")
+
         if not Path(file_path).exists():
+            logging.error(f"🎬 ❌ File does not exist: {file_path}")
             return False
 
         if not self.player:
             # Try to re-initialize MPV if DLL was just downloaded or found
             if setup_mpv_dll():
-                logging.debug(
-                    "VideoPlayerWidget: Attempting to initialize MPV (DLL found)..."
-                )
+                logging.debug("🎬 Attempting to initialize MPV (DLL found)...")
                 self.setup_mpv()
 
             if not self.player:
-                logging.debug(
-                    "VideoPlayerWidget: Cannot load video, player not initialized"
-                )
+                logging.error("🎬 ❌ Cannot load video, player not initialized")
                 return False
 
         self.current_file = file_path
@@ -1371,7 +1393,7 @@ class VideoPlayerWidget(QWidget):
         self.is_loading = True
         self.auto_play_pending = auto_play
         logging.debug(
-            f"DEBUG: load_video setup: path={file_path}, saved={saved_position}, auto={auto_play}"
+            f"🎬 Internal state: current_file={file_path}, saved_position={saved_position}, auto_play_pending={auto_play}"
         )
 
         # Update preview popup video path
@@ -1385,10 +1407,11 @@ class VideoPlayerWidget(QWidget):
             if volume is None:
                 volume = 100
 
+            logging.debug(f"🎬 Setting volume to {volume}%")
             try:
                 self.player.volume = volume
             except Exception as e:
-                logging.error(f"Error setting volume: {e}")
+                logging.error(f"🎬 ❌ Error setting volume: {e}")
 
             # Update volume UI
             if hasattr(self, "volume_btn"):
@@ -1398,17 +1421,18 @@ class VideoPlayerWidget(QWidget):
                 self.volume_btn._update_icon(int(volume))
 
             # Reset audio filters to prevent issues if dual audio was enabled on the previous video
+            logging.debug(f"🎬 Clearing audio filters before loading new video")
             try:
                 self.player["lavfi-complex"] = ""
                 self.player.af = ""
-                logging.debug("DEBUG: Audio filters cleared before loading new video")
+                logging.debug("🎬 ✅ Audio filters cleared")
             except Exception as e:
-                logging.error(f"Error clearing audio filters before load: {e}")
+                logging.error(f"🎬 ❌ Error clearing audio filters before load: {e}")
 
-            logging.debug(f"DEBUG: Calling self.player.loadfile('{file_path}')")
+            logging.info(f"🎬 Calling MPV loadfile: {file_path}")
             self.player.sid = "no"
             self.player.loadfile(file_path)
-            logging.debug(f"DEBUG: loadfile returned")
+            logging.info(f"🎬 ✅ MPV loadfile completed")
             self._apply_subtitle_styles()
             self.play_btn.setEnabled(True)
             self.progress_slider.setEnabled(True)
@@ -1421,7 +1445,7 @@ class VideoPlayerWidget(QWidget):
                     "load_subtitle_tracks", self.load_subtitle_tracks, file_path
                 ),
             )
-            logging.debug(f"Scheduled load_subtitle_tracks (100ms)")
+            logging.debug(f"🎬 Scheduled load_subtitle_tracks (100ms)")
 
             # 2. Start playback/pause (300ms) -> triggers restore_position
             if auto_play:
@@ -1431,12 +1455,12 @@ class VideoPlayerWidget(QWidget):
                         "_start_playback", self._start_playback
                     ),
                 )
-                logging.debug(f"Scheduled _start_playback (300ms)")
+                logging.debug(f"🎬 Scheduled _start_playback (300ms)")
             else:
                 QTimer.singleShot(
                     300, lambda: self._timer_wrapper("_load_paused", self._load_paused)
                 )
-                logging.debug(f"Scheduled _load_paused (300ms)")
+                logging.debug(f"🎬 Scheduled _load_paused (300ms)")
 
             # 3. Load audio tracks (500ms) -> triggers restore_audio_track
             QTimer.singleShot(
@@ -1452,7 +1476,7 @@ class VideoPlayerWidget(QWidget):
                 ),
             )
             logging.debug(
-                f"Scheduled load_audio_tracks (500ms) and restore_audio_track (600ms)"
+                f"🎬 Scheduled load_audio_tracks (500ms) and restore_audio_track (600ms)"
             )
 
             # 4. Restore subtitle track (750ms)
@@ -1462,7 +1486,7 @@ class VideoPlayerWidget(QWidget):
                     "restore_subtitle_track", self.restore_subtitle_track, file_path
                 ),
             )
-            logging.debug(f"Scheduled restore_subtitle_track (750ms)")
+            logging.debug(f"🎬 Scheduled restore_subtitle_track (750ms)")
 
             # 5. Restore secondary audio (800ms)
             QTimer.singleShot(
@@ -1471,17 +1495,18 @@ class VideoPlayerWidget(QWidget):
                     "restore_secondary_audio", self._restore_secondary_audio, file_path
                 ),
             )
-            logging.debug(f"Scheduled restore_secondary_audio (800ms)")
+            logging.debug(f"🎬 Scheduled restore_secondary_audio (800ms)")
 
             # Load markers
-            logging.debug(f"Calling load_markers")
+            logging.debug(f"🎬 Calling load_markers")
             self.load_markers(file_path)
-            logging.debug(f"load_markers returned")
+            logging.debug(f"🎬 load_markers completed")
 
+            logging.info(f"🎬 ========== VIDEO LOADING INITIATED ==========")
             return True
 
         except Exception as e:
-            logging.error(f"Error loading video: {e}")
+            logging.error(f"🎬 ❌ Error loading video: {e}", exc_info=True)
             self.is_loading = False
             self.auto_play_pending = False
             return False
@@ -1550,12 +1575,15 @@ class VideoPlayerWidget(QWidget):
     # ADDED: Methods for audio tracks
     def load_audio_tracks(self, filepath):
         """Load list of audio tracks from DB."""
-        logging.debug(f"load_audio_tracks called")
+        logging.info(f"🔊 ========== LOADING AUDIO TRACKS ==========")
+        logging.info(f"🔊 File: {filepath}")
+
         self.volume_btn.popup.clearAudio()
         self.volume_btn.popup.clearSecondaryAudio()
         self.audio_track_ids = []
 
         if not self.db:
+            logging.error(f"🔊 ❌ Database not available")
             return
 
         try:
@@ -1564,14 +1592,36 @@ class VideoPlayerWidget(QWidget):
             if not tracks:
                 self.volume_btn.popup.addAudioItem(tr("player.no_tracks"), None)
                 self.audio_track_ids.append(None)
-                logging.debug(
-                    f"DEBUG: load_audio_tracks finished (no tracks) for {filepath}"
-                )
+                logging.warning(f"🔊 ⚠️ No audio tracks found in database")
                 return
+
+            logging.info(f"🔊 Found {len(tracks)} audio track(s) in database")
+            logging.info(f"🔊 Selected audio ID from DB: {selected_audio_id}")
 
             selected_index = 0
             for i, track in enumerate(tracks):
                 track_id = track.get("id")
+                track_type = track.get("track_type", "unknown")
+                stream_index = track.get("stream_index")
+                title = track.get("title", "")
+                language = track.get("language", "")
+                codec = track.get("codec", "")
+                is_default = track.get("is_default", 0)
+                audio_file_name = track.get("audio_file_name", "")
+                audio_file_path = track.get("audio_file_path", "")
+
+                logging.info(f"🔊 Track {i + 1}:")
+                logging.info(f"🔊   ID: {track_id}")
+                logging.info(f"🔊   Type: {track_type}")
+                logging.info(f"🔊   Stream Index: {stream_index}")
+                logging.info(f"🔊   Title: {title}")
+                logging.info(f"🔊   Language: {language}")
+                logging.info(f"🔊   Codec: {codec}")
+                logging.info(f"🔊   Is Default: {is_default}")
+                if track_type == "external":
+                    logging.info(f"🔊   File Name: {audio_file_name}")
+                    logging.info(f"🔊   File Path: {audio_file_path}")
+
                 label = (
                     track.get("title")
                     or track.get("audio_file_name")
@@ -1594,8 +1644,10 @@ class VideoPlayerWidget(QWidget):
                 self.audio_track_ids.append(track_id)
                 if track_id == selected_audio_id:
                     selected_index = i
+                    logging.info(f"🔊   ✅ This track is selected (index {i})")
 
             self.volume_btn.popup.setAudioIndex(selected_index)
+            logging.info(f"🔊 Set UI audio index to: {selected_index}")
 
             # Load secondary audio settings
             sec_track_id, sec_volume, sec_enabled = self.db.load_secondary_audio(
@@ -1606,6 +1658,11 @@ class VideoPlayerWidget(QWidget):
             self.secondary_audio_volume = sec_volume
             self.secondary_audio_enabled = sec_enabled
 
+            logging.info(f"🔊 Secondary audio settings:")
+            logging.info(f"🔊   Track ID: {sec_track_id}")
+            logging.info(f"🔊   Volume: {sec_volume}")
+            logging.info(f"🔊   Enabled: {sec_enabled}")
+
             # Update UI
             self.volume_btn.popup.setSecondaryEnabled(sec_enabled)
             self.volume_btn.popup.setSecondaryVolume(sec_volume)
@@ -1614,13 +1671,12 @@ class VideoPlayerWidget(QWidget):
                 for i, track in enumerate(tracks):
                     if track.get("id") == sec_track_id:
                         self.volume_btn.popup.setSecondaryAudioIndex(i)
+                        logging.info(f"🔊 Set secondary audio UI index to: {i}")
                         break
 
-            logging.debug(
-                f"DEBUG: load_audio_tracks finished, selected {selected_index} for video {filepath}"
-            )
+            logging.info(f"🔊 ========== AUDIO TRACKS LOADED ==========")
         except Exception as e:
-            logging.error(f"Error loading audio tracks: {e}")
+            logging.error(f"🔊 ❌ Error loading audio tracks: {e}", exc_info=True)
 
     def change_audio_track(self, index):
         """Switch audio track on selection."""
@@ -1709,21 +1765,27 @@ class VideoPlayerWidget(QWidget):
 
     def restore_audio_track(self, filepath):
         """Restore saved audio track when loading video."""
-        logging.debug(f"restore_audio_track called")
+        logging.info(f"🔊 ========== RESTORING AUDIO TRACK ==========")
+        logging.info(f"🔊 File: {filepath}")
+
         if not self.db or not self.player:
-            logging.debug(f"restore_audio_track aborted (no db or player)")
+            logging.error(
+                f"🔊 ❌ Cannot restore: db={self.db is not None}, player={self.player is not None}"
+            )
             return
 
         # Check if we're still loading the same file
         if self.current_file != filepath:
-            logging.debug(f"restore_audio_track aborted (file changed)")
+            logging.warning(
+                f"🔊 ⚠️ File changed during loading. Current: {self.current_file}, Expected: {filepath}"
+            )
             return
 
         try:
             tracks, selected_audio_id = self.db.load_audio_tracks(filepath)
 
             if not selected_audio_id:
-                logging.info("⏩ No saved audio track - selecting first available")
+                logging.warning("🔊 ⚠️ No saved audio track - selecting first available")
                 if tracks:
                     track = tracks[0]
                     track_id = track["id"]
@@ -1733,80 +1795,123 @@ class VideoPlayerWidget(QWidget):
                     stream_index = track["stream_index"]
                     audio_file_path = track["audio_file_path"]
 
-                    logging.info(
-                        f"💾 Saved first track: {track_type}, stream={stream_index}"
-                    )
+                    logging.info(f"🔊 Saving first track as default:")
+                    logging.info(f"🔊   Track ID: {track_id}")
+                    logging.info(f"🔊   Type: {track_type}")
+                    logging.info(f"🔊   Stream Index: {stream_index}")
 
                     if track_type == "embedded":
                         aid = int(stream_index) if stream_index is not None else 1
                         try:
                             self.player.aid = aid
+                            logging.info(f"🔊 ✅ Set MPV aid={aid} (embedded)")
                         except Exception as e:
-                            logging.error(f"❌ Error setting aid: {e}")
+                            logging.error(
+                                f"🔊 ❌ Error setting aid: {e}", exc_info=True
+                            )
                     elif track_type == "external" and audio_file_path:
                         if Path(audio_file_path).exists():
                             try:
                                 self.player.command(
                                     "audio-add", audio_file_path, "select"
                                 )
+                                logging.info(
+                                    f"🔊 ✅ Added external audio: {audio_file_path}"
+                                )
                             except Exception as e:
-                                logging.error(f"❌ Error adding external audio: {e}")
+                                logging.error(
+                                    f"🔊 ❌ Error adding external audio: {e}",
+                                    exc_info=True,
+                                )
+                        else:
+                            logging.error(
+                                f"🔊 ❌ External audio file not found: {audio_file_path}"
+                            )
 
                     for i in range(self.volume_btn.popup.audioCount()):
                         if self.volume_btn.popup.audioItemData(i) == track_id:
                             self.volume_btn.popup.setAudioIndex(i)
+                            logging.info(f"🔊 Set UI index to: {i}")
                             break
-                logging.debug(f"restore_audio_track finished (default)")
+                logging.info(f"🔊 ========== AUDIO TRACK RESTORED (DEFAULT) ==========")
                 return
 
+            logging.info(f"🔊 Selected audio ID from DB: {selected_audio_id}")
             track = self.db.get_track_info("audio_tracks", selected_audio_id)
             if not track:
-                logging.debug(f"restore_audio_track finished (track not found)")
+                logging.error(
+                    f"🔊 ❌ Track not found in database for ID: {selected_audio_id}"
+                )
                 return
 
             track_type = track["track_type"]
             stream_index = track["stream_index"]
             audio_file_path = track["audio_file_path"]
 
-            # Application logic (outside DB lock)
-            logging.info(f"🔄 Restoring saved: {track_type}, stream={stream_index}")
+            logging.info(f"🔊 Track details:")
+            logging.info(f"🔊   Type: {track_type}")
+            logging.info(f"🔊   Stream Index: {stream_index}")
+            if track_type == "external":
+                logging.info(f"🔊   File Path: {audio_file_path}")
 
             if track_type == "embedded":
                 aid = int(stream_index) if stream_index is not None else 1
                 try:
+                    logging.info(f"🔊 Setting MPV aid={aid}")
                     self.player.aid = aid
-                    logging.info(f"✅ Restored embedded aid={aid}")
+                    logging.info(f"🔊 ✅ Restored embedded audio track (aid={aid})")
                 except Exception as e:
-                    logging.error(f"❌ Error setting aid: {e}")
+                    logging.error(f"🔊 ❌ Error setting aid: {e}", exc_info=True)
 
             elif track_type == "external" and audio_file_path:
                 if Path(audio_file_path).exists():
                     try:
+                        logging.info(
+                            f"🔊 Executing MPV command: audio-add {audio_file_path} select"
+                        )
                         self.player.command("audio-add", audio_file_path, "select")
-                        logging.info(f"✅ Restored external: {audio_file_path}")
+                        logging.info(
+                            f"🔊 ✅ Restored external audio track: {audio_file_path}"
+                        )
                     except Exception as e:
                         if "-12" in str(e):
                             logging.warning(
-                                f"⚠️ audio-add failed with -12 (MPV loading). Retrying restore_audio_track in 1s..."
+                                f"🔊 ⚠️ audio-add failed with error -12 (MPV still loading). Retrying in 1s..."
                             )
                             QTimer.singleShot(
                                 1000, lambda: self.restore_audio_track(filepath)
                             )
                         else:
-                            logging.error(f"❌ Error adding external audio: {e}", exc_info=True)
+                            logging.error(
+                                f"🔊 ❌ Error adding external audio: {e}", exc_info=True
+                            )
                 else:
-                    logging.error(f"❌ External file not found: {audio_file_path}")
+                    logging.error(
+                        f"🔊 ❌ External audio file not found: {audio_file_path}"
+                    )
 
-            logging.debug(f"restore_audio_track finished")
+            logging.info(f"🔊 ========== AUDIO TRACK RESTORED ==========")
+        except Exception as e:
+            logging.error(f"🔊 ❌ Error in restore_audio_track: {e}", exc_info=True)
 
         except Exception as e:
             logging.error(f"❌ Restore error: {e}", exc_info=True)
 
     def _restore_secondary_audio(self, filepath):
         """Restore secondary audio after loading."""
-        logging.debug("_restore_secondary_audio called")
+        logging.info(f"🔊 ========== RESTORING SECONDARY AUDIO ==========")
+        logging.info(f"🔊 File: {filepath}")
+        logging.info(f"🔊 Secondary audio enabled: {self.secondary_audio_enabled}")
+        logging.info(f"🔊 Secondary audio track ID: {self.secondary_audio_track_id}")
+        logging.info(f"🔊 Secondary audio volume: {self.secondary_audio_volume}")
+
         if self.secondary_audio_enabled:
+            logging.info(f"🔊 Applying dual audio mix...")
             self._apply_dual_audio()
+        else:
+            logging.info(f"🔊 Secondary audio disabled, skipping")
+
+        logging.info(f"🔊 ========== SECONDARY AUDIO RESTORE COMPLETE ==========")
 
     def detach_video_widget(self):
         """Detach video widget for PiP mode."""
@@ -1839,11 +1944,14 @@ class VideoPlayerWidget(QWidget):
     # ===================== SUBTITLES =====================
     def load_subtitle_tracks(self, filepath):
         """Load list of subtitles from DB."""
-        logging.debug(f"load_subtitle_tracks called")
+        logging.info(f"📝 ========== LOADING SUBTITLE TRACKS ==========")
+        logging.info(f"📝 File: {filepath}")
+
         popup = self.subtitle_btn.popup
         popup.clear()
 
         if not self.db:
+            logging.error(f"📝 ❌ Database not available")
             return
 
         try:
@@ -1852,8 +1960,12 @@ class VideoPlayerWidget(QWidget):
             )
 
             if not tracks:
-                logging.debug(f"load_subtitle_tracks finished (no tracks)")
+                logging.warning(f"📝 ⚠️ No subtitle tracks found in database")
                 return
+
+            logging.info(f"📝 Found {len(tracks)} subtitle track(s) in database")
+            logging.info(f"📝 Selected subtitle ID from DB: {selected_subtitle_id}")
+            logging.info(f"📝 Subtitles enabled: {subtitles_enabled}")
 
             selected_index = 0
 
@@ -1862,11 +1974,25 @@ class VideoPlayerWidget(QWidget):
                 track_type = track["track_type"]
                 stream_index = track["stream_index"]
                 subtitle_file_name = track["subtitle_file_name"]
+                subtitle_file_path = track.get("subtitle_file_path", "")
                 language = track["language"]
                 title = track["title"]
                 codec = track["codec"]
                 is_default = track["is_default"]
                 is_forced = track["is_forced"]
+
+                logging.info(f"📝 Track {idx + 1}:")
+                logging.info(f"📝   ID: {track_id}")
+                logging.info(f"📝   Type: {track_type}")
+                logging.info(f"📝   Stream Index: {stream_index}")
+                logging.info(f"📝   Language: {language}")
+                logging.info(f"📝   Title: {title}")
+                logging.info(f"📝   Codec: {codec}")
+                logging.info(f"📝   Is Default: {is_default}")
+                logging.info(f"📝   Is Forced: {is_forced}")
+                if track_type == "external":
+                    logging.info(f"📝   File Name: {subtitle_file_name}")
+                    logging.info(f"📝   File Path: {subtitle_file_path}")
 
                 if track_type == "embedded":
                     label = f"#{stream_index}"
@@ -1890,17 +2016,23 @@ class VideoPlayerWidget(QWidget):
 
                 if track_id == selected_subtitle_id:
                     selected_index = idx
+                    logging.info(f"📝   ✅ This track is selected (index {idx})")
 
             # Sync button state with saved subtitles_enabled
             if selected_subtitle_id:
                 popup.setCurrentIndex(selected_index)
+                logging.info(f"📝 Set UI subtitle index to: {selected_index}")
 
             # Set button state based on subtitles_enabled from DB
             self.subtitle_btn.set_enabled_state(bool(subtitles_enabled))
+            logging.info(
+                f"📝 Set subtitle button enabled state to: {bool(subtitles_enabled)}"
+            )
 
-            # Restore state is now handled in load_video for better timing control
-            # QTimer.singleShot(400, lambda: self.restore_subtitle_track(filepath))
-            logging.debug(f"load_subtitle_tracks finished")
+            logging.info(f"📝 ========== SUBTITLE TRACKS LOADED ==========")
+
+        except Exception as e:
+            logging.error(f"📝 ❌ Error loading subtitle tracks: {e}", exc_info=True)
 
         except Exception as e:
             logging.error(f"Error loading subtitle tracks: {e}", exc_info=True)
@@ -2294,9 +2426,13 @@ class VideoPlayerWidget(QWidget):
 
     def restore_subtitle_track(self, filepath):
         """Restore saved subtitles when loading video."""
-        logging.debug(f"restore_subtitle_track called")
+        logging.info(f"📝 ========== RESTORING SUBTITLE TRACK ==========")
+        logging.info(f"📝 File: {filepath}")
+
         if not self.db or not self.player:
-            logging.debug(f"restore_subtitle_track aborted (no db or player)")
+            logging.error(
+                f"📝 ❌ Cannot restore: db={self.db is not None}, player={self.player is not None}"
+            )
             return
 
         try:
@@ -2304,49 +2440,75 @@ class VideoPlayerWidget(QWidget):
                 self.db.load_subtitle_tracks(filepath)
             )
 
+            logging.info(f"📝 Subtitles enabled from DB: {subtitles_enabled}")
+            logging.info(f"📝 Selected subtitle ID from DB: {selected_subtitle_id}")
+
             if not subtitles_enabled:
-                logging.debug(f"restoring subtitles disabled")
+                logging.info(f"📝 Subtitles disabled, setting MPV sid='no'")
                 try:
-                    logging.debug("Setting sid='no'...")
                     self.player.sid = "no"
-                    logging.debug("sid='no' set successfully")
+                    logging.info(f"📝 ✅ MPV sid='no' set successfully")
                 except Exception as e:
-                    logging.error(f"Error setting sid='no': {e}", exc_info=True)
+                    logging.error(f"📝 ❌ Error setting sid='no': {e}", exc_info=True)
+                logging.info(
+                    f"📝 ========== SUBTITLE TRACK RESTORED (DISABLED) =========="
+                )
                 return
 
             if not selected_subtitle_id:
-                logging.debug(f"no selected_subtitle_id")
+                logging.warning(f"📝 ⚠️ No selected subtitle ID")
+                logging.info(f"📝 ========== SUBTITLE TRACK RESTORED (NONE) ==========")
                 return
 
             track = self.db.get_track_info("subtitle_tracks", selected_subtitle_id)
             if not track:
-                logging.error(f"subtitle track {selected_subtitle_id} not found in DB")
+                logging.error(
+                    f"📝 ❌ Subtitle track {selected_subtitle_id} not found in DB"
+                )
                 return
 
             track_type = track["track_type"]
             stream_index = track["stream_index"]
             subtitle_file_path = track["subtitle_file_path"]
-            logging.debug(
-                f"restoring subtitle: type={track_type}, stream={stream_index}, path={subtitle_file_path}"
-            )
+
+            logging.info(f"📝 Track details:")
+            logging.info(f"📝   Type: {track_type}")
+            logging.info(f"📝   Stream Index: {stream_index}")
+            if track_type == "external":
+                logging.info(f"📝   File Path: {subtitle_file_path}")
 
             if track_type == "embedded":
                 try:
+                    logging.info(f"📝 Setting MPV sid={stream_index}")
                     self.player.sid = stream_index
+                    logging.info(
+                        f"📝 ✅ Restored embedded subtitle track (sid={stream_index})"
+                    )
                 except Exception as e:
-                    logging.error(f"❌ Error restoring subtitle: {e}", exc_info=True)
+                    logging.error(f"📝 ❌ Error restoring subtitle: {e}", exc_info=True)
             else:
                 if subtitle_file_path and Path(subtitle_file_path).exists():
-                    self.player.command("sub-add", subtitle_file_path, "select")
+                    try:
+                        logging.info(
+                            f"📝 Executing MPV command: sub-add {subtitle_file_path} select"
+                        )
+                        self.player.command("sub-add", subtitle_file_path, "select")
+                        logging.info(
+                            f"📝 ✅ Restored external subtitle: {subtitle_file_path}"
+                        )
+                    except Exception as e:
+                        logging.error(
+                            f"📝 ❌ Error loading external subtitle: {e}", exc_info=True
+                        )
                 else:
                     logging.error(
-                        f"❌ External subtitle file not found: {subtitle_file_path}"
+                        f"📝 ❌ External subtitle file not found: {subtitle_file_path}"
                     )
 
-            logging.debug(f"restore_subtitle_track finished")
+            logging.info(f"📝 ========== SUBTITLE TRACK RESTORED ==========")
 
         except Exception as e:
-            logging.error(f"❌ Subtitle restore error: {e}", exc_info=True)
+            logging.error(f"📝 ❌ Subtitle restore error: {e}", exc_info=True)
 
     def duration_changed(self, duration_ms):
         self.progress_slider.setRange(0, duration_ms)

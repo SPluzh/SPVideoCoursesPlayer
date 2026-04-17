@@ -27,6 +27,7 @@ class ConfigManager:
             "pureref_filename": "reference.pur",
             "show_pureref_badges": "True",
             "show_pureref_badges_when_missing": "False",
+            "enable_debug_file": "True",
         },
         "Paths": {
             "paths": "",
@@ -563,3 +564,16 @@ class ConfigManager:
     def get_raw_config(self) -> configparser.ConfigParser:
         """Get the raw ConfigParser for binary path resolution or other direct access."""
         return self._read_config()
+
+    def get_enable_debug_file(self) -> bool:
+        """Returns whether debug logging to file is enabled."""
+        config = self._read_config()
+        return config.getboolean("General", "enable_debug_file", fallback=True)
+
+    def set_enable_debug_file(self, value: bool):
+        """Set whether debug logging to file is enabled."""
+        config = self._read_config()
+        if "General" not in config:
+            config["General"] = {}
+        config["General"]["enable_debug_file"] = str(value)
+        self._write_config(config)

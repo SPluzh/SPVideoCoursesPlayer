@@ -18,11 +18,58 @@ locale.setlocale(locale.LC_NUMERIC, "C")
 from database import DatabaseManager
 import json
 import logging
+from logging.handlers import RotatingFileHandler
 
-# Configure logging
-logging.basicConfig(
-    level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s"
-)
+
+# Configure logging with both file and console handlers
+def setup_logging():
+    """Setup logging to both file and console."""
+    # Determine log file location (next to exe or main.py)
+    if getattr(sys, "frozen", False):
+        # Running as compiled exe
+        log_dir = Path(sys.executable).parent
+    else:
+        # Running as script
+        log_dir = ROOT_DIR
+
+    log_file = log_dir / "sp_video_player_debug.log"
+
+    # Create logger
+    logger = logging.getLogger()
+    logger.setLevel(logging.DEBUG)
+
+    # Clear any existing handlers
+    logger.handlers.clear()
+
+    # File handler with rotation (10 MB max, 3 backups)
+    try:
+        file_handler = RotatingFileHandler(
+            log_file,
+            maxBytes=10 * 1024 * 1024,  # 10 MB
+            backupCount=3,
+            encoding="utf-8",
+        )
+        file_handler.setLevel(logging.DEBUG)
+        file_formatter = logging.Formatter(
+            "%(asctime)s - %(levelname)s - %(message)s", datefmt="%Y-%m-%d %H:%M:%S"
+        )
+        file_handler.setFormatter(file_formatter)
+        logger.addHandler(file_handler)
+        print(f"✅ Debug logging enabled: {log_file}")
+    except Exception as e:
+        print(f"⚠️ Could not create log file: {e}")
+
+    # Console handler
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(logging.DEBUG)
+    console_formatter = logging.Formatter(
+        "%(asctime)s - %(levelname)s - %(message)s", datefmt="%Y-%m-%d %H:%M:%S"
+    )
+    console_handler.setFormatter(console_formatter)
+    logger.addHandler(console_handler)
+
+
+setup_logging()
 import io
 from icon_manager import load_icons_dict
 from PyQt6.QtWidgets import (

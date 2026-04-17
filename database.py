@@ -311,6 +311,7 @@ class DatabaseManager:
 
     def load_audio_tracks(self, file_path):
         """Loads all audio tracks for a given video file."""
+        logging.info(f"💾 DB: Loading audio tracks for: {file_path}")
         try:
             with self.get_connection() as conn:
                 conn.row_factory = sqlite3.Row
@@ -323,10 +324,17 @@ class DatabaseManager:
                 )
                 video = c.fetchone()
                 if not video:
+                    logging.warning(
+                        f"💾 DB: ⚠️ Video not found in database: {file_path}"
+                    )
                     return [], None
 
                 video_id = video["id"]
                 selected_id = video["selected_audio_id"]
+
+                logging.info(
+                    f"💾 DB: Found video_id={video_id}, selected_audio_id={selected_id}"
+                )
 
                 c.execute(
                     """
@@ -338,13 +346,15 @@ class DatabaseManager:
                 )
 
                 tracks = [dict(row) for row in c.fetchall()]
+                logging.info(f"💾 DB: Returning {len(tracks)} audio track(s)")
                 return tracks, selected_id
         except Exception as e:
-            logging.error(f"Error loading audio tracks: {e}", exc_info=True)
+            logging.error(f"💾 DB: ❌ Error loading audio tracks: {e}", exc_info=True)
             return [], None
 
     def load_subtitle_tracks(self, file_path):
         """Loads all subtitle tracks for a given video file."""
+        logging.info(f"💾 DB: Loading subtitle tracks for: {file_path}")
         try:
             with self.get_connection() as conn:
                 conn.row_factory = sqlite3.Row
@@ -356,11 +366,18 @@ class DatabaseManager:
                 )
                 video = c.fetchone()
                 if not video:
+                    logging.warning(
+                        f"💾 DB: ⚠️ Video not found in database: {file_path}"
+                    )
                     return [], None, 0
 
                 video_id = video["id"]
                 selected_id = video["selected_subtitle_id"]
                 enabled = video["subtitles_enabled"]
+
+                logging.info(
+                    f"💾 DB: Found video_id={video_id}, selected_subtitle_id={selected_id}, enabled={enabled}"
+                )
 
                 c.execute(
                     """
@@ -372,9 +389,10 @@ class DatabaseManager:
                 )
 
                 tracks = [dict(row) for row in c.fetchall()]
+                logging.info(f"💾 DB: Returning {len(tracks)} subtitle track(s)")
                 return tracks, selected_id, enabled
         except Exception as e:
-            logging.error(f"Error loading subtitles: {e}", exc_info=True)
+            logging.error(f"💾 DB: ❌ Error loading subtitles: {e}", exc_info=True)
             return [], None, 0
 
     def get_track_info(self, table_name, track_id):
