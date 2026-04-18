@@ -189,6 +189,16 @@ class PreviewPopup(QWidget):
         if not self.preview_mpv or self.pending_time is None:
             return
 
+        # Check if video is actually loaded by verifying duration
+        try:
+            duration = self.preview_mpv.duration
+            if duration is None or duration <= 0:
+                # Video not loaded yet, silently skip
+                return
+        except Exception:
+            # MPV not ready
+            return
+
         time_key = self.pending_time
 
         # Double check cache
@@ -198,10 +208,6 @@ class PreviewPopup(QWidget):
             return
 
         try:
-            # Verify MPV is still valid and video is loaded
-            if not self._mpv_video_loaded:
-                return
-
             # Level 1 Optimization: Keyframe seek (faster but less precise)
             self.preview_mpv.seek(time_key, "absolute+keyframes")
 
