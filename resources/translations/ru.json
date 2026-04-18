@@ -194,6 +194,14 @@
         "filter_tags": "Фильтр по тегам",
         "file_not_found": "Файл не найден"
     },
+    "audio": {
+        "embedded": "Встроенная",
+        "external": "Внешняя",
+        "unknown": "Неизвестная",
+        "external_file": "Внешний файл",
+        "track_number": "Дорожка #{number}",
+        "unknown_track": "Неизвестная дорожка"
+    },
     "status": {
         "error": "Ошибка",
         "ready": "Готов",

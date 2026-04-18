@@ -194,6 +194,14 @@
         "filter_tags": "Filter by tags",
         "file_not_found": "File not found"
     },
+    "audio": {
+        "embedded": "Embedded",
+        "external": "External",
+        "unknown": "Unknown",
+        "external_file": "External file",
+        "track_number": "Track #{number}",
+        "unknown_track": "Unknown track"
+    },
     "status": {
         "ready": "Ready",
         "error": "Error",

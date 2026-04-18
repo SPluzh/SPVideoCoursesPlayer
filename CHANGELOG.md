@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.5.3]
+- **Audio Tracks**: Improved audio track naming for better clarity:
+    - **Unified Format**: All audio tracks now display in a consistent "Type: Language/Name" format.
+    - **Language Display**: Language codes (ru, en, etc.) are now shown as readable names (Русский, English, Deutsch, etc.).
+    - **Clear Identification**: Track type (Embedded/External) is immediately visible.
+
+
 ## [1.5.2]
 - **Configuration**: Tree line colors are now configurable via settings.ini:
     - **Expanded Palette**: Increased color variety from 9 to 24 distinct colors for better visual differentiation in deeply nested folder structures.

@@ -1,192 +1,86 @@
 # Agent Guidelines for SPVideoCoursesPlayer
 
-This document provides coding agents with essential information about the SPVideoCoursesPlayer codebase.
-
-## Project Overview
-
-SPVideoCoursesPlayer is a PyQt6-based desktop video player for Windows, designed for managing and watching downloaded video courses with progress tracking, markers, and advanced audio features.
+High-signal instructions for coding agents working on this PyQt6-based Windows video player.
 
 **Tech Stack:** Python 3.10+, PyQt6, libmpv, SQLite, FFmpeg
 
-## Build & Test Commands
+## Commands
 
-### Running the Application
+**Run:**
 ```bash
 python main.py
 ```
 
-### Running Tests
+**Test translations (must pass before commit):**
 ```bash
-# Check translation completeness (verifies all keys exist in en.json and ru.json)
 python tests/check_translations.py
-
-# Test taskbar buttons functionality
-python tests/test_taskbar_buttons.py
-
-# Run a single test file
-python tests/<test_name>.py
 ```
 
-### Building Executable
+**Build (use existing spec file):**
 ```bash
-# Build standalone Windows executable with PyInstaller
-pyinstaller --name "SP Video Courses Player" --windowed --icon=resources/icons/app.ico main.py
-
-# Output will be in dist/ folder
+pyinstaller _build_/SPVideoCoursesPlayer.spec
 ```
 
-### Installing Dependencies
+**Install:**
 ```bash
 pip install -r requirements.txt
-
-# Required: PyQt6, python-mpv, comtypes, mutagen, pyinstaller
 ```
 
-### Debugging & Utilities
-```bash
-# Debug scanner functionality
-python debug_scanner.py
+## Architecture
 
-# Verify refactoring integrity
-python verify_refactoring.py
+**Entry point:** `main.py` (3146 lines) - MainWindow, PiP overlay, all UI wiring  
+**Core modules:** `player.py` (2318 lines), `scanner.py` (1515 lines), `library.py` (1416 lines), `database.py` (993 lines)
 
-# Check Python version (requires 3.10+, tested with 3.14.2)
-python --version
-```
+**Key files:**
+- `constants.py` - ROOT_DIR, RESOURCES_DIR, DATA_DIR (import these, never hardcode paths)
+- `translator.py` - Global `tr()` function for i18n (en.json, ru.json)
+- `config_manager.py` - All settings.ini operations (never read INI directly)
+- `database.py` - DatabaseManager with context managers (WAL mode, foreign keys enabled)
+- `hotkeys.py` - HotkeyManager using physical scan codes (layout-independent)
+- `mpv_handler.py` - MPV DLL setup (must run before importing python-mpv)
+- `utils.py` - format_time, natural_sort_key, resolve_binary_path, setup_encoding
 
-## Project Structure
+**Dialogs:** about, folder_stats, marker, progress, settings, tags, update  
+**Popups:** preview, subtitle, tag_filter, volume
 
-```
-SPVideoCoursesPlayer/
-├── main.py                 # Application entry point, main window, PiP overlay
-├── player.py               # Video player widget with MPV integration
-├── library.py              # Video library tree widget and delegates
-├── database.py             # DatabaseManager for SQLite operations
-├── config_manager.py       # Settings.ini read/write operations
-├── scanner.py              # Video scanning and thumbnail generation
-├── mpv_handler.py          # MPV DLL setup and video widget
-├── translator.py           # i18n translation system (Translator class, tr())
-├── constants.py            # Project-wide path constants (ROOT_DIR, RESOURCES_DIR, DATA_DIR)
-├── utils.py                # Shared utility functions (format_time, natural_sort_key, etc.)
-├── hotkeys.py              # Keyboard shortcut management
-├── styles.py               # Qt stylesheet definitions (StyleManager, DARK_STYLE)
-├── icon_manager.py         # Icon loading and caching
-├── video_item_data.py      # VideoItemData class for library items
-├── thumbnail_provider.py   # Thumbnail generation and caching
-├── search_utils.py         # Smart search functionality
-├── taskbar_progress.py     # Windows taskbar integration
-├── *_dialog.py             # Various dialog windows (settings, tags, markers, etc.)
-├── *_popup.py              # Popup widgets (subtitles, volume, preview, etc.)
-├── update_*.py             # Update utilities (app, ffmpeg, libmpv)
-├── resources/              # Icons, translations, binaries, styles
-│   ├── translations/       # en.json, ru.json
-│   ├── styles/             # dark.qss
-│   └── bin/                # ffmpeg.exe, ffprobe.exe, libmpv-2.dll
-├── data/                   # SQLite DB, thumbnails (gitignored)
-└── tests/                  # Test scripts
-```
+**Resources:**
+- `resources/bin/` - ffmpeg.exe, ffprobe.exe, libmpv-2.dll (gitignored, auto-downloaded)
+- `resources/translations/` - en.json, ru.json (nested JSON, dot notation keys)
+- `resources/icons/` - 44 PNG icons
+- `data/` - video_courses.db (SQLite), thumbnails (gitignored)
 
-## Code Style Guidelines
+## Critical Setup Requirements
 
-### Imports
-- Standard library imports first
-- Third-party imports second (PyQt6, etc.)
-- Local imports last
-- Group related imports together
-- Use `from constants import ROOT_DIR, RESOURCES_DIR, DATA_DIR` for paths
+**Startup sequence matters:**
+1. `setup_encoding()` - Must run first (fixes Windows UTF-8)
+2. Import constants
+3. `setup_mpv_dll()` - Must run before importing python-mpv
+4. `locale.setlocale(locale.LC_NUMERIC, "C")` - Required for MPV compatibility
 
-Example:
-```python
-import sys
-import os
-from pathlib import Path
+**Path handling:**
+- ALWAYS use `pathlib.Path` objects, never strings
+- Import: `from constants import ROOT_DIR, RESOURCES_DIR, DATA_DIR`
+- Join with `/`: `RESOURCES_DIR / 'icons' / 'play.png'`
 
-from PyQt6.QtWidgets import QWidget, QVBoxLayout
-from PyQt6.QtCore import Qt, pyqtSignal
+**MPV safety:**
+- Wrap ALL MPV calls in try-except blocks (MPV throws exceptions during playback)
 
-from constants import ROOT_DIR, RESOURCES_DIR
-from utils import format_time, natural_sort_key
-from translator import tr
-```
-
-### Formatting
-- **Indentation:** 4 spaces (no tabs)
-- **Line length:** Aim for 100-120 characters, but not strict
-- **Quotes:** Single quotes `'` preferred, double quotes `"` for strings with single quotes
-- **Docstrings:** Use triple double-quotes `"""` for module/class/function docs
-
-### Naming Conventions
-- **Classes:** PascalCase (e.g., `VideoPlayerWidget`, `DatabaseManager`)
-- **Functions/Methods:** snake_case (e.g., `format_time`, `get_video_info`)
-- **Constants:** UPPER_SNAKE_CASE (e.g., `ROOT_DIR`, `DATA_DIR`)
-- **Private methods:** Prefix with underscore (e.g., `_read_config`, `_print_lock`)
-- **PyQt signals:** snake_case (e.g., `video_finished`, `position_changed`)
-
-### Type Hints
-- Not consistently used throughout the codebase
-- Add type hints for new functions when clarity is needed
-- Use `Path` from pathlib for file paths
-
-### Error Handling
-- Use try-except blocks for file I/O, database operations, and external processes
-- Log errors with `logging.error()` including traceback: `logging.error(f"Error: {e}", exc_info=True)`
-- Use descriptive error messages with emoji prefixes: `❌ ERROR`, `⚠️ WARNING`, `✅ SUCCESS`, `ℹ️ INFO`
-- Fail gracefully in UI code - don't crash the application
-- Always wrap MPV operations in try-except blocks (MPV can throw exceptions during playback)
-
-Example:
-```python
-try:
-    with open(file_path, 'r', encoding='utf-8') as f:
-        data = json.load(f)
-except Exception as e:
-    logging.error(f"❌ Failed to load {file_path}: {e}", exc_info=True)
-    return None
-```
-
-### Logging
-- Use Python's `logging` module (configured in main.py)
-- Levels: `DEBUG`, `INFO`, `WARNING`, `ERROR`
-- Format: `logging.debug(f"Message with {variable}")`
-- Comment out verbose debug logs in production code
-
-### Database Operations
-- Always use `DatabaseManager` class (database.py)
-- Use context managers: `with self.db.get_connection() as conn:`
-- Use parameterized queries to prevent SQL injection
-- Foreign keys are enabled with CASCADE deletes
-
-### Translation System
+**Translation system:**
 - Use `tr('key.subkey')` for all user-facing strings
-- Translation keys use dot notation: `'player.play'`, `'settings.title'`
-- Support placeholders: `tr('video_info.size_kb', size='123.4')`
-- Translation files: `resources/translations/en.json`, `ru.json`
+- Keys use dot notation: `'player.play'`, `'settings.title'`
+- Placeholders: `tr('video_info.size_kb', size='123.4')`
+- Run `python tests/check_translations.py` before committing
 
-### PyQt6 Patterns
-- Inherit from appropriate Qt base classes
-- Use signals for inter-widget communication
-- Connect signals in `__init__` or dedicated setup methods
-- Use `pyqtSignal` for custom signals
-- Prefer `QTimer.singleShot()` for delayed execution
-- Use `Qt.ConnectionType.QueuedConnection` for thread-safe signals
+**Database:**
+- Always use `DatabaseManager` class
+- Context managers: `with self.db.get_connection() as conn:`
+- Parameterized queries only (SQL injection prevention)
+- WAL mode enabled, foreign keys with CASCADE deletes
 
-### Path Handling
-- Always use `pathlib.Path` objects, not strings
-- Import constants: `from constants import ROOT_DIR, RESOURCES_DIR, DATA_DIR`
-- Use `/` operator for path joining: `RESOURCES_DIR / 'icons' / 'play.png'`
-- Check existence with `.exists()`, create dirs with `.mkdir(exist_ok=True)`
-
-### Configuration
-- All settings managed through `ConfigManager` class
-- Settings stored in `resources/settings.ini` (gitignored)
-- Use `config.get_*()` methods, never read INI directly
-- Defaults defined in `ConfigManager.DEFAULTS`
-
-### Threading
-- Use `ThreadPoolExecutor` for concurrent operations (scanner.py)
-- Use `threading.Lock()` for shared resource protection
-- Use `QThread` for long-running Qt operations
-- Emit signals from worker threads to update UI
+**Configuration:**
+- All settings via `ConfigManager` class
+- Never read settings.ini directly
+- Defaults in `ConfigManager.DEFAULTS`
 
 ## Common Patterns
 
@@ -220,22 +114,6 @@ except Exception as e:
 - **No unit tests:** Only utility test scripts in tests/
 - **High DPI:** Application supports High DPI displays with Qt's PassThrough scaling policy
 
-## Debugging Tips
-
-- Enable debug logging: Already set to `logging.DEBUG` in main.py
-- Check `data/video_courses.db` with SQLite browser
-- Verify binary paths in settings.ini
-- Test translations with `tests/check_translations.py`
-- Use `logging.debug()` liberally, comment out before commit
-
-## External Dependencies
-
-- **PyQt6:** GUI framework
-- **python-mpv:** MPV player bindings
-- **comtypes:** Windows COM for taskbar features
-- **mutagen:** Audio metadata reading
-- **pyinstaller:** Building standalone executable
-
 ## Development Agreements & Best Practices
 
 1. **Path Handling**: ALWAYS use `pathlib.Path` objects, never strings
@@ -268,8 +146,8 @@ except Exception as e:
 ## Quick Reference
 
 ### File Locations
-- **Main entry**: `main.py` (3000+ lines, contains MainWindow, PiPOverlay)
-- **Config**: `resources/settings.ini` (gitignored, managed by ConfigManager)
+- **Main entry**: `main.py` (3146 lines, contains MainWindow, PiPOverlay)
+- **Config**: `settings.ini` (gitignored, managed by ConfigManager)
 - **Database**: `data/video_courses.db` (SQLite, WAL mode enabled)
 - **Translations**: `resources/translations/en.json`, `ru.json`
 - **Binaries**: `resources/bin/` (ffmpeg.exe, ffprobe.exe, libmpv-2.dll)

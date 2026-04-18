@@ -164,7 +164,7 @@ from tags_dialog import TagsDialog
 
 # from floating_player import FloatingVideoWindow, PiPManager
 from tag_filter_popup import TagFilterPopup
-from utils import natural_sort_key, format_time, format_duration, format_size
+from utils import natural_sort_key, format_time, format_duration, format_size, format_audio_track_name
 from config_manager import ConfigManager
 from pureref_manager import PureRefManager
 from search_utils import smart_search
@@ -2267,14 +2267,7 @@ class VideoCourseBrowser(QMainWindow):
                 channels = track["channels"]
                 is_default = track["is_default"]
 
-                if track_type == "embedded":
-                    label = f"#{stream_index}"
-                    if language:
-                        label += f" [{language}]"
-                    if title:
-                        label += f" - {title}"
-                else:
-                    label = f"{audio_file_name or tr('player.external_audio')}"
+                label = format_audio_track_name(track)
 
                 if is_default:
                     label += f" [{tr('player.default')}]"

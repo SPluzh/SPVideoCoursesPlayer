@@ -161,7 +161,7 @@ class VolumePopup(QWidget):
 
         self.list_widget = QListWidget()
         self.list_widget.setObjectName("audioList")
-        self.list_widget.setFixedWidth(220)
+        self.list_widget.setFixedWidth(400)
         self.list_widget.setMinimumHeight(100)
         self.list_widget.setHorizontalScrollBarPolicy(
             Qt.ScrollBarPolicy.ScrollBarAlwaysOff
@@ -216,7 +216,7 @@ class VolumePopup(QWidget):
 
         self.secondary_list_widget = QListWidget()
         self.secondary_list_widget.setObjectName("audioList")
-        self.secondary_list_widget.setFixedWidth(220)
+        self.secondary_list_widget.setFixedWidth(400)
         self.secondary_list_widget.setFixedHeight(80)
         self.secondary_list_widget.setHorizontalScrollBarPolicy(
             Qt.ScrollBarPolicy.ScrollBarAlwaysOff

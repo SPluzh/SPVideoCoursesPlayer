@@ -28,6 +28,7 @@ from preview_popup import PreviewPopup
 from marker_dialog import MarkerDialog
 from marker_gallery import MarkerGalleryWidget
 from thumbnail_provider import ThumbnailProvider
+from utils import format_audio_track_name
 
 from constants import RESOURCES_DIR
 from icon_manager import load_icons_dict
@@ -1622,16 +1623,8 @@ class VideoPlayerWidget(QWidget):
                     logging.info(f"🔊   File Name: {audio_file_name}")
                     logging.info(f"🔊   File Path: {audio_file_path}")
 
-                label = (
-                    track.get("title")
-                    or track.get("audio_file_name")
-                    or f"Track {i + 1}"
-                )
+                label = format_audio_track_name(track)
 
-                if track.get("language"):
-                    label += f" [{track['language']}]"
-                if track.get("codec"):
-                    label += f" ({track['codec']})"
                 if track.get("is_default"):
                     label += f" [{tr('player.default')}]"
 
