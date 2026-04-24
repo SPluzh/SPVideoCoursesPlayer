@@ -568,7 +568,7 @@ class ConfigManager:
     def get_enable_debug_file(self) -> bool:
         """Returns whether debug logging to file is enabled."""
         config = self._read_config()
-        return config.getboolean("General", "enable_debug_file", fallback=True)
+        return config.getboolean("General", "enable_debug_file", fallback=False)
 
     def set_enable_debug_file(self, value: bool):
         """Set whether debug logging to file is enabled."""
