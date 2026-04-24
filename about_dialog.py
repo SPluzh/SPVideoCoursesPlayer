@@ -8,8 +8,10 @@ from PyQt6.QtWidgets import (
     QScrollArea,
     QWidget,
     QGridLayout,
+    QHBoxLayout,
 )
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, QUrl
+from PyQt6.QtGui import QDesktopServices, QIcon
 from translator import tr
 
 from constants import RESOURCES_DIR
@@ -53,18 +55,40 @@ class AboutDialog(QDialog):
         container_layout.setContentsMargins(25, 30, 25, 25)
         container_layout.setSpacing(12)
 
-        # Title
-        title = QLabel(tr("app.title"))
-        title.setObjectName("aboutTitle")
-        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        container_layout.addWidget(title)
+        # Header Layout (Title + Version + GitHub)
+        header_layout = QHBoxLayout()
+        header_layout.setContentsMargins(0, 0, 0, 0)
+        header_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        header_layout.setSpacing(15)  # Spacing between major elements
 
-        # Version
+        # Title (App Name + Version)
+        app_title = tr("app.title")
         version_text = self.get_app_version()
-        version = QLabel(tr("about.version", version=version_text))
-        version.setObjectName("aboutVersion")
-        version.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        container_layout.addWidget(version)
+        
+        title = QLabel(f"{app_title} {version_text}")
+        title.setObjectName("aboutTitle")
+        header_layout.addWidget(title)
+
+        # GitHub Link Group
+        github_link_group = QHBoxLayout()
+        github_link_group.setSpacing(5)
+        github_link_group.setAlignment(Qt.AlignmentFlag.AlignVCenter)
+
+        # GitHub Icon
+        github_icon_label = QLabel()
+        github_icon_path = str(RESOURCES_DIR / "icons" / "github.png")
+        github_icon_label.setPixmap(QIcon(github_icon_path).pixmap(20, 20))
+        github_link_group.addWidget(github_icon_label)
+
+        # GitHub Text Link
+        github_text_label = QLabel(tr("about.github"))
+        github_text_label.setObjectName("aboutGithubLink")
+        github_text_label.setCursor(Qt.CursorShape.PointingHandCursor)
+        github_text_label.mousePressEvent = lambda e: self.open_github()
+        github_link_group.addWidget(github_text_label)
+
+        header_layout.addLayout(github_link_group)
+        container_layout.addLayout(header_layout)
 
         # Description
         desc = QLabel(tr("about.description"))
@@ -248,3 +272,7 @@ class AboutDialog(QDialog):
             self_geo = self.frameGeometry()
             self_geo.moveCenter(parent_geo.center())
             self.move(self_geo.topLeft())
+
+    def open_github(self):
+        """Open project GitHub repository in default browser"""
+        QDesktopServices.openUrl(QUrl("https://github.com/SPluzh/SPVideoCoursesPlayer"))

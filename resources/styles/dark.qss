@@ -468,6 +468,12 @@ QLabel {
     color: @text-main;
 }
 
+QLabel#aboutTitle, QLabel#aboutVersion, QLabel#aboutGithubLink {
+    font-size: 16px;
+    font-weight: bold;
+    color: @text-light;
+}
+
 QLabel#titleLabel {
     font-size: 18px;
     font-weight: bold;
@@ -1437,6 +1443,19 @@ QLabel#TagBadge {
 #aboutVersion { 
     color: @text-meta; 
     font-size: 12px;
+    line-height: 16px;
+}
+
+#aboutGithubLink {
+    color: @accent;
+    font-weight: bold;
+    font-size: 12px;
+    line-height: 16px;
+    text-decoration: none;
+}
+
+#aboutGithubLink:hover {
+    color: @text-light;
 }
 
 #aboutSeparator {

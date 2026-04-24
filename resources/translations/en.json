@@ -386,6 +386,7 @@
         "title": "About",
         "description": "Video player for local courses with hierarchical library, progress tracking, bookmarks, tags, and learning statistics. Includes video zoom, audio enhancement, custom subtitle settings, and instant thumbnail previews on the timeline.",
         "version": "Version {version}",
+        "github": "GitHub",
         "close": "Close"
     },
     "context_menu": {
