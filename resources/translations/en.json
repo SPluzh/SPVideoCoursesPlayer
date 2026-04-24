@@ -135,6 +135,7 @@
         "default_marker_label": "Marker",
         "no_markers": "No markers found",
         "tooltip_pip": "Detach video",
+        "tooltip_fullscreen": "Fullscreen",
         "audio_delay": "Audio Delay",
         "zoom_level": "Zoom: {percent}%",
         "volume": "Volume",

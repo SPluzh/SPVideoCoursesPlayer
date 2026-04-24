@@ -135,6 +135,7 @@
         "default_marker_label": "Метка",
         "no_markers": "Маркеры не найдены",
         "tooltip_pip": "Открепить видео",
+        "tooltip_fullscreen": "Полноэкранный режим",
         "audio_delay": "Задержка звука",
         "zoom_level": "Масштаб: {percent}%",
         "volume": "Громкость",

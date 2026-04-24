@@ -294,7 +294,7 @@ class VideoPlayerWidget(QWidget):
         panel_layout = QHBoxLayout(self.control_panel)
         panel_layout.setContentsMargins(0, 5, 0, 0)
 
-        self.icons = load_icons_dict(["play", "pause", "next", "prev", "pip"])
+        self.icons = load_icons_dict(["play", "pause", "next", "prev", "pip", "fullscreen", "picture-in-picture"])
 
         # Previous Video Button
         self.prev_video_btn = QPushButton()
@@ -321,6 +321,9 @@ class VideoPlayerWidget(QWidget):
         self.next_video_btn.clicked.connect(self.next_video_requested.emit)
         panel_layout.addWidget(self.next_video_btn)
 
+        self.time_label = QLabel("00:00 / 00:00")
+        panel_layout.addWidget(self.time_label, 0, Qt.AlignmentFlag.AlignVCenter)
+
         self.progress_slider = ClickableSlider(Qt.Orientation.Horizontal)
         self.progress_slider.setRange(0, 1000)
         self.progress_slider.sliderMoved.connect(self.set_position)
@@ -330,11 +333,17 @@ class VideoPlayerWidget(QWidget):
         self.progress_slider.marker_edit_requested.connect(self.edit_marker)
         self.progress_slider.marker_delete_requested.connect(self.delete_marker)
         self.progress_slider.add_marker_requested.connect(self.add_marker)
-
         panel_layout.addWidget(self.progress_slider, 1)
 
-        self.time_label = QLabel("00:00 / 00:00")
-        panel_layout.addWidget(self.time_label)
+        self.speed_slider = QSlider(Qt.Orientation.Horizontal)
+        self.speed_slider.setRange(5, 30)
+        self.speed_slider.setValue(10)
+        self.speed_slider.valueChanged.connect(self.change_speed)
+        panel_layout.addWidget(self.speed_slider)
+
+        self.speed_label = QLabel(tr("player.speed", speed="1.0"))
+        self.speed_label.setContentsMargins(0, 0, 2, 0)
+        panel_layout.addWidget(self.speed_label, 0, Qt.AlignmentFlag.AlignVCenter)
 
         self.subtitle_btn = SubtitleButton()
         self.subtitle_btn.subtitleToggled.connect(self.toggle_subtitles)
@@ -364,15 +373,21 @@ class VideoPlayerWidget(QWidget):
 
         panel_layout.addWidget(self.volume_btn)
 
-        self.speed_slider = QSlider(Qt.Orientation.Horizontal)
-        self.speed_slider.setRange(5, 30)
-        self.speed_slider.setValue(10)
-        self.speed_slider.valueChanged.connect(self.change_speed)
-        panel_layout.addWidget(self.speed_slider)
+        # PiP Button
+        self.pip_btn = QPushButton()
+        self.pip_btn.setIcon(self.icons["picture-in-picture"])
+        self.pip_btn.setFixedSize(30, 30)
+        self.pip_btn.setToolTip(tr("player.tooltip_pip"))
+        self.pip_btn.clicked.connect(self.pip_mode_requested.emit)
+        panel_layout.addWidget(self.pip_btn)
 
-        self.speed_label = QLabel(tr("player.speed", speed="1.0"))
-        self.speed_label.setContentsMargins(0, 0, 2, 0)
-        panel_layout.addWidget(self.speed_label)
+        # Fullscreen Button
+        self.fullscreen_btn = QPushButton()
+        self.fullscreen_btn.setIcon(self.icons["fullscreen"])
+        self.fullscreen_btn.setFixedSize(30, 30)
+        self.fullscreen_btn.setToolTip(tr("player.tooltip_fullscreen"))
+        self.fullscreen_btn.clicked.connect(self.toggle_fullscreen_requested.emit)
+        panel_layout.addWidget(self.fullscreen_btn)
 
         # Ensure buttons don't take focus to avoid breaking global hotkeys
         for btn in [
@@ -381,6 +396,8 @@ class VideoPlayerWidget(QWidget):
             self.next_video_btn,
             self.subtitle_btn,
             self.volume_btn,
+            self.pip_btn,
+            self.fullscreen_btn,
         ]:
             btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
 

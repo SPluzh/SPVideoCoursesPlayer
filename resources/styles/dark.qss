@@ -100,7 +100,7 @@ QPushButton:disabled {
 
 /* Кнопка Play/Pause */
 QPushButton#playBtn {
-    min-width: 50px;
+    min-width: 40px;
 }
 
 QPushButton#favFilterBtn {
@@ -395,15 +395,13 @@ HoverTreeWidget::item:selected:hover {
 
 QSlider::groove:horizontal {
     background: @border;
-    height: 10px;
+    height: 15px;
 }
 
 QSlider::handle:horizontal {
-    background: @accent;
-    width: 16px;
-    height: 16px;
+    background: @accent-pressed;
+    width: 15px;
     margin: -5px 0;
-    border: 2px solid @bg-dark;
 }
 
 QSlider::handle:horizontal:hover {
