@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.5.4]
+- **View Menu**: Enhanced menu icons and added missing menu items:
+    - **Fullscreen**: Added "Fullscreen" menu item with hotkey (F) and icon.
+    - **Always on Top**: Added pin icon to the toggle.
+    - **Floating Window**: Updated icon to picture-in-picture.
+- **Player Controls**: Added PiP and Fullscreen buttons to the control panel:
+    - Moved speed slider to the left (after time label, before subtitles).
+    - Added PiP and Fullscreen buttons at the right end of the control panel.
+
 ## [1.5.3]
 - **Audio Tracks**: Improved audio track naming for better clarity:
     - **Unified Format**: All audio tracks now display in a consistent "Type: Language/Name" format.
