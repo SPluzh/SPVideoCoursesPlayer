@@ -1374,8 +1374,6 @@ class VideoItemDelegate(QStyledItemDelegate):
 
         painter.restore()
 
-        painter.restore()
-
 
 class HoverTreeWidget(QTreeWidget):
     def __init__(self, parent=None):
