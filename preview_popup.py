@@ -6,7 +6,7 @@ from pathlib import Path
 from collections import OrderedDict
 from PyQt6.QtWidgets import QWidget, QLabel, QVBoxLayout
 from PyQt6.QtCore import Qt, QTimer, QSize, QPoint
-from PyQt6.QtGui import QPixmap
+from PyQt6.QtGui import QPixmap, QGuiApplication
 
 PREVIEW_CACHE_MAX = 50
 
@@ -160,8 +160,8 @@ class PreviewPopup(QWidget):
         x = global_pos.x() - popup_width // 2
         y = global_pos.y() - popup_height - 15  # 15px margin
 
-        # Keep within screen bounds
-        screen = self.screen()
+        # Keep within screen bounds - use screen at cursor position, not popup's current screen
+        screen = QGuiApplication.screenAt(global_pos)
         if screen:
             geo = screen.availableGeometry()
             x = max(geo.left(), min(x, geo.right() - popup_width))

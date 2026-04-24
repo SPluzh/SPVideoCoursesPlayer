@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.5.5]
+- **Multi-Monitor**: Fixed preview popup staying on the wrong monitor when application is moved to a different display.
+- **Fullscreen**: Fixed window minimizing when exiting fullscreen after being maximized - the window now correctly returns to its maximized state.
+
 ## [1.5.4]
 - **View Menu**: Enhanced menu icons and added missing menu items:
     - **Fullscreen**: Added "Fullscreen" menu item with hotkey (F) and icon.

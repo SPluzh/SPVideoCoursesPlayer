@@ -275,6 +275,9 @@ class VideoCourseBrowser(QMainWindow):
         self.resize_margin = 12
         self.current_hover_edge = None
         self.pip_overlay = None
+        
+        # Fullscreen State
+        self._was_maximized_before_fullscreen = False
 
         self.create_menu_bar()
 
@@ -685,7 +688,11 @@ class VideoCourseBrowser(QMainWindow):
             self.exit_pip_mode()
 
         if self.isFullScreen():
-            self.showNormal()
+            # Exiting fullscreen - restore previous maximize state
+            if getattr(self, '_was_maximized_before_fullscreen', False):
+                self.showMaximized()
+            else:
+                self.showNormal()
             self.menuBar().show()
             self.status.show()
             if hasattr(self, "browser_widget"):
@@ -693,6 +700,8 @@ class VideoCourseBrowser(QMainWindow):
             if hasattr(self, "_saved_splitter_state"):
                 self.splitter.restoreState(self._saved_splitter_state)
         else:
+            # Entering fullscreen - save current maximize state
+            self._was_maximized_before_fullscreen = self.isMaximized()
             self._saved_splitter_state = self.splitter.saveState()
             self.showFullScreen()
             self.menuBar().hide()
