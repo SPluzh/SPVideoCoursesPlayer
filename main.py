@@ -738,6 +738,13 @@ class VideoCourseBrowser(QMainWindow):
             self.create_menu_bar()
             if hasattr(self, "search_edit"):
                 self.search_edit.setPlaceholderText(tr("library.search_placeholder"))
+            # Update main window button tooltips
+            if hasattr(self, "fav_filter_btn"):
+                self.fav_filter_btn.setToolTip(tr("library.filter_favorites"))
+            if hasattr(self, "tag_filter_btn"):
+                self.tag_filter_btn.setToolTip(tr("library.filter_tags"))
+            if hasattr(self, "marker_toggle_btn"):
+                self.marker_toggle_btn.setToolTip(tr("library.show_markers"))
             if hasattr(self, "video_player") and self.video_player:
                 logging.debug("Updating player texts")
                 self.video_player.update_texts()

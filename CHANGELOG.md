@@ -3,6 +3,7 @@
 All notable changes to this project will be documented in this file.
 
 ## [1.5.5]
+- **Tooltips**: Fixed tooltips not updating when switching languages - Previous/Next video, PiP, Fullscreen, Favorites filter, Tags filter, and Show Markers button tooltips now update immediately.
 - **Debug Logging**: Debug file logging is now disabled by default - only enabled when `enable_debug_file = True` is set in settings.ini.
 - **Multi-Monitor**: Fixed preview popup staying on the wrong monitor when application is moved to a different display.
 - **Fullscreen**: Fixed window minimizing when exiting fullscreen after being maximized - the window now correctly returns to its maximized state.

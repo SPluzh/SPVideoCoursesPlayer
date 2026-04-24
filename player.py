@@ -2713,6 +2713,11 @@ class VideoPlayerWidget(QWidget):
             if self.player and self.player.pause
             else tr("player.pause")
         )
+        # Update player control button tooltips
+        self.prev_video_btn.setToolTip(tr("player.tooltip_prev_video"))
+        self.next_video_btn.setToolTip(tr("player.tooltip_next_video"))
+        self.pip_btn.setToolTip(tr("player.tooltip_pip"))
+        self.fullscreen_btn.setToolTip(tr("player.tooltip_fullscreen"))
 
     def moveEvent(self, event):
         """Keep gallery overlay in sync when window moves."""
