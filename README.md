@@ -132,6 +132,16 @@ Once configured, you'll see PureRef badges on folder items in your library, allo
 
 ---
 
+### 📜 Credits
+
+- [PyQt6](https://pypi.org/project/PyQt6/) - GUI framework
+- [libmpv](https://mpv.io/) - Video playback engine
+- [FFmpeg](https://ffmpeg.org/) - Video processing & thumbnails
+- [RNNoise](https://jmvalin.ca/demo/rnnoise/) (Xiph.Org) - AI noise reduction model
+- [Lucide](https://lucide.dev/) - Icon toolkit
+
+---
+
 <a name="russian"></a>
 
 ## 🇷🇺 Русский
@@ -244,16 +254,6 @@ SP Video Courses Player/
 ---
 
 ### 📜 Благодарности
-
-- [PyQt6](https://pypi.org/project/PyQt6/) - GUI framework
-- [libmpv](https://mpv.io/) - Video playback engine
-- [FFmpeg](https://ffmpeg.org/) - Video processing & thumbnails
-- [RNNoise](https://jmvalin.ca/demo/rnnoise/) (Xiph.Org) - AI noise reduction model
-- [Lucide](https://lucide.dev/) - Icon toolkit
-
----
-
-### 📜 Credits
 
 - [PyQt6](https://pypi.org/project/PyQt6/) - GUI framework
 - [libmpv](https://mpv.io/) - Video playback engine
