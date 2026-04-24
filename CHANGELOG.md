@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 - **Debug Logging**: Debug file logging is now disabled by default - only enabled when `enable_debug_file = True` is set in settings.ini.
 - **Multi-Monitor**: Fixed preview popup staying on the wrong monitor when application is moved to a different display.
 - **Fullscreen**: Fixed window minimizing when exiting fullscreen after being maximized - the window now correctly returns to its maximized state.
+- **Tools Menu**: Added icons to Tools menu items (Collapse Tree, Expand Tree, Locate Video).
 
 ## [1.5.4]
 - **View Menu**: Enhanced menu icons and added missing menu items:

@@ -1085,14 +1085,14 @@ class VideoCourseBrowser(QMainWindow):
         tools_menu.addSeparator()
 
         locate_action = QAction(
-            self.icons.get("menu_video", QIcon()), tr("menu.locate_video"), self
+            self.icons.get("locate", QIcon()), tr("menu.locate_video"), self
         )
         locate_action.setShortcut("L")
         locate_action.triggered.connect(self.locate_active_video)
         tools_menu.addAction(locate_action)
 
         expand_tree_action = QAction(
-            self.icons.get("menu_expand", QIcon()), tr("menu.expand_tree"), self
+            self.icons.get("expand", QIcon()), tr("menu.expand_tree"), self
         )
         expand_tree_action.setShortcut("E")
         expand_tree_action.triggered.connect(
@@ -1101,7 +1101,7 @@ class VideoCourseBrowser(QMainWindow):
         tools_menu.addAction(expand_tree_action)
 
         collapse_tree_action = QAction(
-            self.icons.get("menu_collapse", QIcon()), tr("menu.collapse_tree"), self
+            self.icons.get("collapse", QIcon()), tr("menu.collapse_tree"), self
         )
         collapse_tree_action.setShortcut("W")
         collapse_tree_action.triggered.connect(
@@ -2038,6 +2038,9 @@ class VideoCourseBrowser(QMainWindow):
             "fullscreen",
             "picture-in-picture",
             "pin",
+            "collapse",
+            "expand",
+            "locate",
         ]
         self.icons = load_icons_dict(icon_names)
 
