@@ -30,7 +30,8 @@
         "always_on_top": "Always on Top",
         "show_tree_lines": "Show Tree Lines",
         "show_pureref_badges": "Show PureRef Icons",
-        "show_pureref_badges_when_missing": "Show PureRef Icons When Missing"
+        "show_pureref_badges_when_missing": "Show PureRef Icons When Missing",
+        "fullscreen": "Fullscreen"
     },
     "library": {
         "search_placeholder": "Search...",

@@ -1181,13 +1181,24 @@ class VideoCourseBrowser(QMainWindow):
         )
         view_menu.addAction(self.show_pureref_badges_when_missing_action)
 
-        self.always_on_top_action = QAction(tr("menu.always_on_top"), self)
+        self.always_on_top_action = QAction(
+            self.icons.get("pin", QIcon()), tr("menu.always_on_top"), self
+        )
         self.always_on_top_action.setCheckable(True)
         self.always_on_top_action.setShortcut("T")
         self.always_on_top_action.triggered.connect(self.toggle_always_on_top)
         view_menu.addAction(self.always_on_top_action)
 
-        pip_action = QAction(self.icons.get("pip", QIcon()), tr("menu.pip_mode"), self)
+        fullscreen_action = QAction(
+            self.icons.get("fullscreen", QIcon()), tr("menu.fullscreen"), self
+        )
+        fullscreen_action.setShortcut("F")
+        fullscreen_action.triggered.connect(self.toggle_fullscreen)
+        view_menu.addAction(fullscreen_action)
+
+        pip_action = QAction(
+            self.icons.get("picture-in-picture", QIcon()), tr("menu.pip_mode"), self
+        )
         pip_action.setShortcut("P")
         pip_action.triggered.connect(self.toggle_pip_mode)
         view_menu.addAction(pip_action)
@@ -2015,6 +2026,9 @@ class VideoCourseBrowser(QMainWindow):
             "context_tags",
             "show_markers",
             "pip",
+            "fullscreen",
+            "picture-in-picture",
+            "pin",
         ]
         self.icons = load_icons_dict(icon_names)
 

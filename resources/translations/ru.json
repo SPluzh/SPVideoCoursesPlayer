@@ -30,7 +30,8 @@
         "always_on_top": "Поверх всех окон",
         "show_tree_lines": "Показывать линии дерева",
         "show_pureref_badges": "Показывать иконки PureRef",
-        "show_pureref_badges_when_missing": "Показывать иконки PureRef при отсутствии файла"
+        "show_pureref_badges_when_missing": "Показывать иконки PureRef при отсутствии файла",
+        "fullscreen": "Полноэкранный режим"
     },
     "library": {
         "search_placeholder": "Поиск...",
