@@ -2693,6 +2693,9 @@ class VideoCourseBrowser(QMainWindow):
 
     def open_pureref(self, item):
         """Open or create PureRef file for the folder."""
+        import traceback
+        logging.info(f"[PUREREF] open_pureref called from: {''.join(traceback.format_stack()[-3:-1])}")
+        
         path = item.data(0, Qt.ItemDataRole.UserRole)
         root_path = item.data(0, Qt.ItemDataRole.UserRole + 3)
 
@@ -2700,6 +2703,8 @@ class VideoCourseBrowser(QMainWindow):
             return
 
         folder = Path(root_path) / path
+        logging.info(f"[PUREREF] Opening PureRef for folder: {folder}")
+        
         if not folder.exists():
             QMessageBox.warning(
                 self,

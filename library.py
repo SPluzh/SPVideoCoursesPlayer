@@ -967,19 +967,44 @@ class VideoItemDelegate(QStyledItemDelegate):
 
                 # Handle PureRef badge click for folders
                 if item_type == "folder" and getattr(self, "pureref_manager", None):
-                    folder_path = index.data(Qt.ItemDataRole.UserRole)
-                    root_path = index.data(Qt.ItemDataRole.UserRole + 3)
-                    if folder_path and root_path:
-                        full_folder = Path(root_path) / folder_path
-                        icon_rect = self._get_folder_icon_rect(option.rect, index)
-                        badge_rect = self.get_pureref_badge_rect(icon_rect)
-                        if badge_rect.contains(QPointF(event.pos())):
-                            tree = self.parent()
-                            if tree:
-                                window = tree.window()
-                                if hasattr(window, "open_pureref_for_folder"):
-                                    window.open_pureref_for_folder(full_folder)
-                            return True
+                    # Check if PureRef badges should be shown
+                    show_badges = self.config.get("show_pureref_badges", True)
+                    show_when_missing = self.config.get(
+                        "show_pureref_badges_when_missing", False
+                    )
+                    
+                    logging.debug(f"[PUREREF editorEvent] show_badges={show_badges}, show_when_missing={show_when_missing}")
+                    
+                    # Only process clicks if badges are enabled
+                    if show_badges:
+                        folder_path = index.data(Qt.ItemDataRole.UserRole)
+                        root_path = index.data(Qt.ItemDataRole.UserRole + 3)
+                        if folder_path and root_path:
+                            full_folder = Path(root_path) / folder_path
+                            has_file = self.pureref_manager.has_pur_file(full_folder)
+                            should_show_badge = has_file or show_when_missing
+                            
+                            logging.debug(f"[PUREREF editorEvent] has_file={has_file}, should_show_badge={should_show_badge}")
+                            
+                            # Only handle clicks if badge is actually visible
+                            if should_show_badge:
+                                icon_rect = self._get_folder_icon_rect(option.rect, index)
+                                badge_rect = self.get_pureref_badge_rect(icon_rect)
+                                
+                                logging.debug(f"[PUREREF editorEvent] badge_rect={badge_rect}, click_pos={event.pos()}, contains={badge_rect.contains(QPointF(event.pos()))}")
+                                
+                                if badge_rect.contains(QPointF(event.pos())):
+                                    logging.info(f"[PUREREF editorEvent] Opening PureRef for folder: {full_folder}")
+                                    tree = self.parent()
+                                    if tree:
+                                        window = tree.window()
+                                        if hasattr(window, "open_pureref_for_folder"):
+                                            window.open_pureref_for_folder(full_folder)
+                                    return True
+                            else:
+                                logging.debug(f"[PUREREF editorEvent] Skipped - badge should not be shown")
+                    else:
+                        logging.debug(f"[PUREREF editorEvent] Skipped - badges disabled")
 
                 # Original marker logic
                 marker = self.get_marker_at_pos(option.rect, event.pos(), index)
@@ -1459,18 +1484,30 @@ class HoverTreeWidget(QTreeWidget):
 
                         visual_rect = self.visualRect(index)
                         if not visual_rect.isNull():
-                            icon_rect = delegate._get_folder_icon_rect(
-                                visual_rect, index
+                            # Check if PureRef badge should be shown
+                            show_badges = delegate.config.get("show_pureref_badges", True)
+                            show_when_missing = delegate.config.get(
+                                "show_pureref_badges_when_missing", False
                             )
-                            badge_rect = delegate.get_pureref_badge_rect(icon_rect)
-
-                            # Check if mouse is over icon or badge
-                            if icon_rect.contains(
-                                QPointF(event.pos())
-                            ) or badge_rect.contains(QPointF(event.pos())):
-                                self.viewport().setCursor(
-                                    Qt.CursorShape.PointingHandCursor
-                                )
+                            
+                            should_show_badge = False
+                            if show_badges and getattr(delegate, "pureref_manager", None):
+                                folder_path = index.data(Qt.ItemDataRole.UserRole)
+                                root_path = index.data(Qt.ItemDataRole.UserRole + 3)
+                                if folder_path and root_path:
+                                    full_folder = Path(root_path) / folder_path
+                                    has_file = delegate.pureref_manager.has_pur_file(full_folder)
+                                    should_show_badge = has_file or show_when_missing
+                            
+                            # Only show hand cursor over badge when it's actually displayed
+                            if should_show_badge:
+                                icon_rect = delegate._get_folder_icon_rect(visual_rect, index)
+                                badge_rect = delegate.get_pureref_badge_rect(icon_rect)
+                                
+                                if badge_rect.contains(QPointF(event.pos())):
+                                    self.viewport().setCursor(Qt.CursorShape.PointingHandCursor)
+                                else:
+                                    self.viewport().setCursor(Qt.CursorShape.ArrowCursor)
                             else:
                                 self.viewport().setCursor(Qt.CursorShape.ArrowCursor)
 
@@ -1515,42 +1552,47 @@ class HoverTreeWidget(QTreeWidget):
                                     main_window.play_video_in_player(item, resume=True)
                             return  # Stop processing to avoid standard row selection
 
-                # Handle folder icon/badge clicks
+                # Handle folder badge clicks (PureRef)
                 elif item_type == "folder":
-                    visual_rect = self.visualRect(index)
-                    if not visual_rect.isNull():
-                        icon_rect = delegate._get_folder_icon_rect(visual_rect, index)
+                    # Check if PureRef badges should be shown FIRST
+                    show_badges = delegate.config.get("show_pureref_badges", True)
+                    show_when_missing = delegate.config.get(
+                        "show_pureref_badges_when_missing", False
+                    )
 
-                        # Check if PureRef badges should be shown
-                        show_badges = delegate.config.get("show_pureref_badges", True)
-                        show_when_missing = delegate.config.get(
-                            "show_pureref_badges_when_missing", False
-                        )
+                    logging.debug(f"[PUREREF CLICK] show_badges={show_badges}, show_when_missing={show_when_missing}")
 
-                        if show_badges and getattr(delegate, "pureref_manager", None):
-                            folder_path = index.data(Qt.ItemDataRole.UserRole)
-                            root_path = index.data(Qt.ItemDataRole.UserRole + 3)
-                            if folder_path and root_path:
-                                full_folder = Path(root_path) / folder_path
-                                has_file = delegate.pureref_manager.has_pur_file(
-                                    full_folder
-                                )
-                                should_show_badge = has_file or show_when_missing
+                    # Only process clicks if badges are enabled and pureref_manager exists
+                    if show_badges and getattr(delegate, "pureref_manager", None):
+                        folder_path = index.data(Qt.ItemDataRole.UserRole)
+                        root_path = index.data(Qt.ItemDataRole.UserRole + 3)
+                        if folder_path and root_path:
+                            full_folder = Path(root_path) / folder_path
+                            has_file = delegate.pureref_manager.has_pur_file(full_folder)
+                            should_show_badge = has_file or show_when_missing
 
-                                if should_show_badge:
-                                    badge_rect = delegate.get_pureref_badge_rect(
-                                        icon_rect
-                                    )
-                                    # If click is on icon or badge, open PureRef
-                                    if icon_rect.contains(
-                                        QPointF(event.pos())
-                                    ) or badge_rect.contains(QPointF(event.pos())):
+                            logging.debug(f"[PUREREF CLICK] has_file={has_file}, should_show_badge={should_show_badge}")
+
+                            # Only handle clicks if badge is actually visible
+                            if should_show_badge:
+                                visual_rect = self.visualRect(index)
+                                if not visual_rect.isNull():
+                                    icon_rect = delegate._get_folder_icon_rect(visual_rect, index)
+                                    badge_rect = delegate.get_pureref_badge_rect(icon_rect)
+                                    
+                                    logging.debug(f"[PUREREF CLICK] badge_rect={badge_rect}, click_pos={event.pos()}, contains={badge_rect.contains(QPointF(event.pos()))}")
+                                    
+                                    # Only handle clicks on the badge button itself, not the folder icon
+                                    if badge_rect.contains(QPointF(event.pos())):
+                                        logging.info(f"[PUREREF CLICK] Opening PureRef for folder: {full_folder}")
                                         item = self.itemFromIndex(index)
                                         if item:
                                             main_window = self.window()
                                             if hasattr(main_window, "open_pureref"):
                                                 main_window.open_pureref(item)
                                         return  # Stop processing to avoid standard row selection
+                    else:
+                        logging.debug(f"[PUREREF CLICK] Skipped - badges disabled or no pureref_manager")
 
         super().mousePressEvent(event)
 
