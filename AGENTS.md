@@ -101,6 +101,12 @@ pip install -r requirements.txt
 1. Add to `resources/translations/en.json` and `ru.json`
 2. Use nested structure: `{"player": {"play": "Play"}}`
 3. Run `python tests/check_translations.py` to verify
+4. **CRITICAL**: If adding tooltips or any UI text that should update on language change:
+   - Set the text/tooltip in `setup_ui()` using `tr()`
+   - ALSO add the same line to the `update_texts()` method in the same class
+   - Example: `self.speed_slider.setToolTip(tr("player.tooltip_speed"))` must appear in BOTH places
+   - The `update_texts()` method is called by `MainWindow.update_all_texts()` when language changes
+   - Without this, the text will only show in the initial language and won't update on language switch
 
 ## Important Notes
 

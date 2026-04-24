@@ -106,6 +106,7 @@
         "tooltip_zoom": "Reset zoom",
         "tooltip_subtitle_track": "Subtitles",
         "tooltip_volume": "Volume\nL-click for slider\nR-click to mute",
+        "tooltip_speed": "Playback speed (0.5x - 3.0x)",
         "audio_tracks": "Audio Tracks",
         "embedded_audio": "Embedded",
         "external_audio": "External",

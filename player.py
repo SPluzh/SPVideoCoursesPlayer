@@ -338,6 +338,7 @@ class VideoPlayerWidget(QWidget):
         self.speed_slider = QSlider(Qt.Orientation.Horizontal)
         self.speed_slider.setRange(5, 30)
         self.speed_slider.setValue(10)
+        self.speed_slider.setToolTip(tr("player.tooltip_speed"))
         self.speed_slider.valueChanged.connect(self.change_speed)
         panel_layout.addWidget(self.speed_slider)
 
@@ -2718,6 +2719,7 @@ class VideoPlayerWidget(QWidget):
         self.next_video_btn.setToolTip(tr("player.tooltip_next_video"))
         self.pip_btn.setToolTip(tr("player.tooltip_pip"))
         self.fullscreen_btn.setToolTip(tr("player.tooltip_fullscreen"))
+        self.speed_slider.setToolTip(tr("player.tooltip_speed"))
 
     def moveEvent(self, event):
         """Keep gallery overlay in sync when window moves."""

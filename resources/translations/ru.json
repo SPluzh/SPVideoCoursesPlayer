@@ -106,6 +106,7 @@
         "tooltip_zoom": "Сбросить масштаб",
         "tooltip_subtitle_track": "Субтитры",
         "tooltip_volume": "Громкость\nЛКМ — слайдер\nПКМ — без звука",
+        "tooltip_speed": "Скорость воспроизведения (0.5x - 3.0x)",
         "audio_tracks": "Аудиодорожки",
         "embedded_audio": "Встроенная",
         "external_audio": "Внешняя",
