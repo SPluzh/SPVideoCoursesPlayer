@@ -403,11 +403,16 @@
         "edit_tags": "Редактировать теги...",
         "tags": "Теги",
         "folder_stats": "Статистика курса",
-        "open_pureref": "Открыть PureRef"
+        "open_pureref": "Открыть PureRef",
+        "create_pureref": "Создать PureRef",
+        "delete_pureref": "Удалить PureRef"
     },
     "pureref": {
         "exe_not_found": "PureRef не найден: {path}",
-        "launch_error": "Не удалось запустить PureRef: {error}"
+        "launch_error": "Не удалось запустить PureRef: {error}",
+        "confirm_delete_nonempty": "Файл PureRef не пустой. Вы уверены, что хотите его удалить?",
+        "delete_success": "Файл PureRef успешно удалён",
+        "delete_error": "Не удалось удалить файл PureRef: {error}"
     },
     "tags": {
         "title": "Управление тегами",

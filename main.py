@@ -2195,8 +2195,19 @@ class VideoCourseBrowser(QMainWindow):
             stats_action.triggered.connect(lambda: self.show_folder_stats(item))
 
             menu.addSeparator()
-            pureref_action = menu.addAction(tr("context_menu.open_pureref"))
-            pureref_action.triggered.connect(lambda: self.open_pureref(item))
+
+            folder_path = item.data(0, Qt.ItemDataRole.UserRole)
+            folder_root = item.data(0, Qt.ItemDataRole.UserRole + 3)
+            if folder_path and folder_root:
+                folder_full = Path(folder_root) / folder_path
+                has_pur = self.pureref_manager.has_pur_file(folder_full)
+                pureref_text = tr("context_menu.open_pureref") if has_pur else tr("context_menu.create_pureref")
+                pureref_action = menu.addAction(pureref_text)
+                pureref_action.triggered.connect(lambda: self.open_pureref(item))
+
+                delete_pureref_action = menu.addAction(tr("context_menu.delete_pureref"))
+                delete_pureref_action.setEnabled(has_pur)
+                delete_pureref_action.triggered.connect(lambda: self.delete_pureref(item))
 
             menu.addSeparator()
 
@@ -2722,6 +2733,42 @@ class VideoCourseBrowser(QMainWindow):
                 err_detail = error.split(":", 1)[1] if ":" in error else error
                 msg = tr("pureref.launch_error", error=err_detail)
             QMessageBox.warning(self, tr("error.title"), msg)
+
+    def delete_pureref(self, item):
+        """Delete PureRef file for the folder."""
+        path = item.data(0, Qt.ItemDataRole.UserRole)
+        root_path = item.data(0, Qt.ItemDataRole.UserRole + 3)
+
+        if not path or not root_path:
+            return
+
+        folder = Path(root_path) / path
+        
+        if not self.pureref_manager.has_pur_file(folder):
+            return
+
+        file_size = self.pureref_manager.get_file_size(folder)
+        
+        if file_size > 0:
+            reply = QMessageBox.question(
+                self,
+                tr("dialog.confirm"),
+                tr("pureref.confirm_delete_nonempty"),
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.No
+            )
+            if reply != QMessageBox.StandardButton.Yes:
+                return
+
+        success, error = self.pureref_manager.delete(folder)
+        if success:
+            self.info_label.setText(tr("pureref.delete_success"))
+            QTimer.singleShot(3000, lambda: self.info_label.clear())
+        else:
+            msg = tr("pureref.delete_error", error=error.split(":", 1)[1] if ":" in error else error)
+            QMessageBox.warning(self, tr("error.title"), msg)
+
+        self.load_courses()
 
     def open_video_directory(self, item):
         file_path = item.data(0, Qt.ItemDataRole.UserRole)

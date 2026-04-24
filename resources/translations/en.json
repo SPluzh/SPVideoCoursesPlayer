@@ -403,11 +403,16 @@
         "edit_tags": "Edit Tags...",
         "tags": "Tags",
         "folder_stats": "Course Statistics",
-        "open_pureref": "Open PureRef"
+        "open_pureref": "Open PureRef",
+        "create_pureref": "Create PureRef",
+        "delete_pureref": "Delete PureRef"
     },
     "pureref": {
         "exe_not_found": "PureRef not found at: {path}",
-        "launch_error": "Failed to launch PureRef: {error}"
+        "launch_error": "Failed to launch PureRef: {error}",
+        "confirm_delete_nonempty": "The PureRef file is not empty. Are you sure you want to delete it?",
+        "delete_success": "PureRef file deleted successfully",
+        "delete_error": "Failed to delete PureRef file: {error}"
     },
     "tags": {
         "title": "Manage Tags",

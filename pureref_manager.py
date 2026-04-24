@@ -27,6 +27,54 @@ class PureRefManager:
         filename = self.config.get_pureref_filename()
         return (folder / filename).exists()
 
+    def get_file_size(self, folder: Path) -> int:
+        """Get the size of the .pur file in bytes.
+        
+        Returns:
+            File size in bytes, or 0 if file doesn't exist.
+        """
+        filename = self.config.get_pureref_filename()
+        pur_file = folder / filename
+        if pur_file.exists():
+            try:
+                return pur_file.stat().st_size
+            except Exception as e:
+                logging.error(f"Error getting PureRef file size: {e}")
+                return 0
+        return 0
+
+    def delete(self, folder: Path) -> tuple[bool, str]:
+        """Delete the .pur file for the given folder.
+        
+        Returns:
+            (success, error_message) — success=True if ok,
+            otherwise error_message contains the reason.
+        """
+        filename = self.config.get_pureref_filename()
+        pur_file = folder / filename
+
+        if not pur_file.exists():
+            return False, "file_not_found"
+
+        # Clean up running process if any
+        key = folder.resolve()
+        proc = self._processes.pop(key, None)
+        if proc is not None and proc.poll() is None:
+            try:
+                proc.terminate()
+                proc.wait(timeout=3)
+            except Exception as e:
+                logging.warning(f"Error terminating PureRef process: {e}")
+
+        # Delete the file
+        try:
+            pur_file.unlink()
+            logging.info(f"Deleted PureRef file: {pur_file}")
+            return True, ""
+        except Exception as e:
+            logging.error(f"Error deleting PureRef file: {e}")
+            return False, f"delete_error:{e}"
+
     def is_running(self, folder: Path) -> bool:
         """Check if PureRef is currently running for this folder."""
         key = folder.resolve()
