@@ -694,7 +694,11 @@ class VideoCourseBrowser(QMainWindow):
             else:
                 self.showNormal()
             self.menuBar().show()
-            self.status.show()
+            # Restore status bar to saved state
+            if hasattr(self, "_was_status_visible_before_fullscreen"):
+                self.status.setVisible(self._was_status_visible_before_fullscreen)
+            else:
+                self.status.show()
             if hasattr(self, "browser_widget"):
                 self.browser_widget.show()
             if hasattr(self, "_saved_splitter_state"):
@@ -702,6 +706,7 @@ class VideoCourseBrowser(QMainWindow):
         else:
             # Entering fullscreen - save current maximize state
             self._was_maximized_before_fullscreen = self.isMaximized()
+            self._was_status_visible_before_fullscreen = self.status.isVisible()
             self._saved_splitter_state = self.splitter.saveState()
             self.showFullScreen()
             self.menuBar().hide()
@@ -843,6 +848,13 @@ class VideoCourseBrowser(QMainWindow):
                 self.browser_widget.setVisible(show_library)
                 if hasattr(self, "toggle_lib_action"):
                     self.toggle_lib_action.setChecked(show_library)
+
+            # Restore status bar visibility
+            show_status_bar = state.get("show_status_bar", True)
+            if hasattr(self, "status"):
+                self.status.setVisible(show_status_bar)
+                if hasattr(self, "toggle_status_action"):
+                    self.toggle_status_action.setChecked(show_status_bar)
 
             is_maximized = state.get("is_maximized", False)
 
@@ -986,6 +998,7 @@ class VideoCourseBrowser(QMainWindow):
 
         state["playback_speed"] = str(self.video_player.speed_slider.value())
         state["show_markers"] = str(self.marker_toggle_btn.isChecked())
+        state["show_status_bar"] = str(self.status.isVisible())
         state["show_pureref_badges"] = str(self.show_pureref_badges_action.isChecked())
         state["show_pureref_badges_when_missing"] = str(
             self.show_pureref_badges_when_missing_action.isChecked()
@@ -1165,6 +1178,12 @@ class VideoCourseBrowser(QMainWindow):
         self.toggle_osd_action.setChecked(self.config.get_show_osd())
         self.toggle_osd_action.triggered.connect(self.toggle_osd_display)
         view_menu.addAction(self.toggle_osd_action)
+
+        self.toggle_status_action = QAction(tr("menu.show_status_bar"), self)
+        self.toggle_status_action.setCheckable(True)
+        self.toggle_status_action.setChecked(True)
+        self.toggle_status_action.triggered.connect(self.toggle_status_bar)
+        view_menu.addAction(self.toggle_status_action)
 
         self.toggle_lib_action = QAction(tr("menu.show_library"), self)
         self.toggle_lib_action.setCheckable(True)
@@ -1809,6 +1828,10 @@ class VideoCourseBrowser(QMainWindow):
         if hasattr(self, "toggle_lib_action"):
             self.toggle_lib_action.setChecked(self.browser_widget.isVisible())
 
+    def toggle_status_bar(self):
+        if hasattr(self, "status") and hasattr(self, "toggle_status_action"):
+            self.status.setVisible(self.toggle_status_action.isChecked())
+
     def toggle_tree_lines(self):
         checked = self.show_tree_lines_action.isChecked()
         delegate = self.course_tree.itemDelegate()
@@ -1940,7 +1963,11 @@ class VideoCourseBrowser(QMainWindow):
         # Show UI elements
         self.browser_widget.show()
         self.menuBar().show()
-        self.statusBar().show()
+        # Restore status bar to saved state
+        if hasattr(self, "toggle_status_action"):
+            self.status.setVisible(self.toggle_status_action.isChecked())
+        else:
+            self.statusBar().show()
         self.video_player.set_controls_visible(True)
 
         # Restore minimum sizes for normal mode

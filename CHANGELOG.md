@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.5.6]
+- **Status Bar**: Added toggle to show/hide the status bar. Added "Show Status Bar" item in the View menu (after "Show OSD Notifications").
+
 ## [1.5.5]
 - **Subtitles**: Fixed subtitle track selection when toggling on/off - previously selected track is now remembered and restored correctly. Checkmarks in the subtitle list now update properly.
 - **Tooltips**: Fixed tooltips not updating when switching languages - Previous/Next video, PiP, Fullscreen, Favorites filter, Tags filter, Show Markers button, Volume button, Subtitle button, and Audio Tools buttons (Noise, Compressor, De-ess, Mono) tooltips now update immediately. Added update_texts() method to Tags Dialog and Settings Dialog for complete tooltip language support.

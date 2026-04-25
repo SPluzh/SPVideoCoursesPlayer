@@ -418,6 +418,11 @@ class ConfigManager:
                 state["show_library"] = config.getboolean("Window", "show_library")
             except (ValueError, TypeError):
                 pass
+        if config.has_option("Window", "show_status_bar"):
+            try:
+                state["show_status_bar"] = config.getboolean("Window", "show_status_bar")
+            except (ValueError, TypeError):
+                pass
         if config.has_option("Window", "show_tree_lines"):
             try:
                 state["show_tree_lines"] = config.getboolean(
@@ -519,6 +524,17 @@ class ConfigManager:
         if "Window" not in config:
             config["Window"] = {}
         config["Window"]["show_tree_lines"] = str(value)
+        self._write_config(config)
+
+    def get_show_status_bar(self) -> bool:
+        config = self._read_config()
+        return config.getboolean("Window", "show_status_bar", fallback=True)
+
+    def set_show_status_bar(self, value: bool):
+        config = self._read_config()
+        if "Window" not in config:
+            config["Window"] = {}
+        config["Window"]["show_status_bar"] = str(value)
         self._write_config(config)
 
     def get_show_pureref_badges(self) -> bool:
