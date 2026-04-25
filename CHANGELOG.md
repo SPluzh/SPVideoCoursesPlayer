@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.5.7]
+- **Performance**: Optimized video loading by transitioning to an event-driven model:
+    - Replaced hardcoded initialization delays with instant MPV event triggers.
+    - Implemented database query caching for audio and subtitle tracks, eliminating duplicate DB round-trips.
+    - Added asynchronous verification for network file paths to prevent UI freezing.
+    - Enabled `auto-safe` hardware video decoding for improved efficiency and lower CPU usage.
+
 ## [1.5.6]
 - **PiP Close Button**: Added a close button (×) in the top-right corner of Picture-in-Picture mode
 - **Status Bar**: Added toggle to show/hide the status bar. Added "Show Status Bar" item in the View menu (after "Show OSD Notifications").

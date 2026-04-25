@@ -204,6 +204,7 @@ class VideoPlayerWidget(QWidget):
         self.auto_play_pending = False
         self._pending_file_path = None  # File path pending initialization after file-loaded
         self._cached_audio_data = None  # Cache for (tracks, selected_audio_id) to avoid duplicate DB queries
+        self._cached_subtitle_data = None # Cache for subtitle tracks
         self.player = None
         self.osd_manager = None  # Will be initialized in setup_mpv
         self.sub_color = "#FFFFFF"
@@ -1243,7 +1244,7 @@ class VideoPlayerWidget(QWidget):
             self.player = mpv.MPV(
                 wid=str(int(self.video_widget.winId())),
                 vo="gpu",
-                hwdec="no",  # Disable hwdec to prevent d3d11 crashes
+                hwdec="auto-safe",  # Enable safe hardware decoding
                 sid="no",  # Disable subtitles by default
                 keep_open=True,
                 idle=True,
@@ -1453,9 +1454,10 @@ class VideoPlayerWidget(QWidget):
         logging.info(f"🎬 Volume: {volume}%")
         logging.info(f"🎬 Auto-play: {auto_play}")
 
-        if not Path(file_path).exists():
-            logging.error(f"🎬 ❌ File does not exist: {file_path}")
-            return False
+        if not str(file_path).startswith(r"\\") and not str(file_path).startswith("//"):
+            if not Path(file_path).exists():
+                logging.error(f"🎬 ❌ File does not exist: {file_path}")
+                return False
 
         if not self.player:
             # Try to re-initialize MPV if DLL was just downloaded or found
@@ -1919,9 +1921,6 @@ class VideoPlayerWidget(QWidget):
         except Exception as e:
             logging.error(f"🔊 ❌ Error in restore_audio_track: {e}", exc_info=True)
 
-        except Exception as e:
-            logging.error(f"❌ Restore error: {e}", exc_info=True)
-
     def _restore_secondary_audio(self, filepath):
         """Restore secondary audio after loading."""
         logging.info(f"🔊 ========== RESTORING SECONDARY AUDIO ==========")
@@ -2055,12 +2054,10 @@ class VideoPlayerWidget(QWidget):
             )
 
             logging.info(f"📝 ========== SUBTITLE TRACKS LOADED ==========")
+            self._cached_subtitle_data = (tracks, selected_subtitle_id, subtitles_enabled)
 
         except Exception as e:
             logging.error(f"📝 ❌ Error loading subtitle tracks: {e}", exc_info=True)
-
-        except Exception as e:
-            logging.error(f"Error loading subtitle tracks: {e}", exc_info=True)
 
     def toggle_subtitles(self, enabled):
         """Toggle subtitles on/off."""
@@ -2463,9 +2460,13 @@ class VideoPlayerWidget(QWidget):
             return
 
         try:
-            tracks, selected_subtitle_id, subtitles_enabled = (
-                self.db.load_subtitle_tracks(filepath)
-            )
+            if self._cached_subtitle_data is not None:
+                tracks, selected_subtitle_id, subtitles_enabled = self._cached_subtitle_data
+                logging.info(f"📝 Using cached subtitle data (skipping DB query)")
+            else:
+                tracks, selected_subtitle_id, subtitles_enabled = (
+                    self.db.load_subtitle_tracks(filepath)
+                )
 
             logging.info(f"📝 Subtitles enabled from DB: {subtitles_enabled}")
             logging.info(f"📝 Selected subtitle ID from DB: {selected_subtitle_id}")
@@ -2487,7 +2488,10 @@ class VideoPlayerWidget(QWidget):
                 logging.info(f"📝 ========== SUBTITLE TRACK RESTORED (NONE) ==========")
                 return
 
-            track = self.db.get_track_info("subtitle_tracks", selected_subtitle_id)
+            track = next((t for t in tracks if t["id"] == selected_subtitle_id), None)
+            if not track and self._cached_subtitle_data is None:
+                # Fallback to DB query if running standalone without cache
+                track = self.db.get_track_info("subtitle_tracks", selected_subtitle_id)
             if not track:
                 logging.error(
                     f"📝 ❌ Subtitle track {selected_subtitle_id} not found in DB"
