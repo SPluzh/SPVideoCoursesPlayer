@@ -315,3 +315,17 @@ class TagsDialog(QDialog):
                 self.db.remove_tag_from_video(self.file_path, tag_id)
                 
         self.accept()
+
+    def update_texts(self):
+        """Update all translatable texts when language changes."""
+        # Update window title
+        title = tr("tags.title")
+        if self.file_path:
+            title = tr("tags.assign_title")
+        self.setWindowTitle(title)
+        
+        # Update tooltips
+        self.color_btn.setToolTip(tr("tags.select_color"))
+        self.add_btn.setToolTip(tr("tags.add_btn"))
+        self.edit_btn.setToolTip(tr("tags.edit_btn"))
+        self.del_btn.setToolTip(tr("tags.delete"))

@@ -576,3 +576,15 @@ class SettingsDialog(QDialog):
             self.pureref_path_status.setStyleSheet("color: #F44336;")
             self.pureref_path_btn.setIcon(self.icons.get("fail", QIcon()))
             self.pureref_path_status.setToolTip(str(e))
+
+    def update_texts(self):
+        """Update all translatable texts when language changes."""
+        # Re-validate paths to update tooltips with translated text
+        for i in range(self.pathslist.topLevelItemCount()):
+            item = self.pathslist.topLevelItem(i)
+            self._validate_path(item)
+        
+        # Update dependency status tooltips
+        self.check_libmpv_version()
+        self.check_ffmpeg_version()
+        self.check_pureref_path()
