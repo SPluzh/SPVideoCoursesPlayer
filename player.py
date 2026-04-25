@@ -187,6 +187,7 @@ class VideoPlayerWidget(QWidget):
     mpv_time_pos_changed = pyqtSignal(int)
     mpv_duration_changed = pyqtSignal(int)
     mpv_pause_changed = pyqtSignal(bool)
+    mpv_file_loaded = pyqtSignal()  # Emitted from MPV thread when file is loaded
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -201,6 +202,8 @@ class VideoPlayerWidget(QWidget):
         self.taskbar_progress = None
         self.is_loading = False
         self.auto_play_pending = False
+        self._pending_file_path = None  # File path pending initialization after file-loaded
+        self._cached_audio_data = None  # Cache for (tracks, selected_audio_id) to avoid duplicate DB queries
         self.player = None
         self.osd_manager = None  # Will be initialized in setup_mpv
         self.sub_color = "#FFFFFF"
@@ -1287,28 +1290,17 @@ class VideoPlayerWidget(QWidget):
             @self.player.property_observer("playback-restart")
             def playback_restart_observer(_name, value):
                 if value:
-                    is_loading = getattr(self, "is_loading", False)
-                    auto_pending = getattr(self, "auto_play_pending", False)
                     saved_pos = getattr(self, "saved_position", 0)
                     attempted = getattr(self, "position_restore_attempted", True)
 
                     logging.debug(
-                        f"DEBUG: playback-restart event. value={value}, is_loading={is_loading}, auto_pending={auto_pending}, saved={saved_pos}, attempted={attempted}"
+                        f"DEBUG: playback-restart event. value={value}, saved={saved_pos}, attempted={attempted}"
                     )
 
-                    if is_loading:
-                        self.is_loading = False
-                        if auto_pending:
-                            logging.debug(
-                                "DEBUG: Triggering _ensure_playing after restart"
-                            )
-                            QTimer.singleShot(20, self._ensure_playing)
-                            self.auto_play_pending = False
-
-                    # Robust position restoration
+                    # Position restoration fallback: if _on_file_loaded already did it, skip
                     if saved_pos > 0 and not attempted:
                         logging.info(
-                            f"DEBUG: Found saved position {saved_pos}, scheduling restoration"
+                            f"DEBUG: playback-restart: scheduling position restoration ({saved_pos}s)"
                         )
                         QTimer.singleShot(50, self.restore_position)
                     elif saved_pos > 0:
@@ -1323,14 +1315,11 @@ class VideoPlayerWidget(QWidget):
             @self.player.event_callback("file-loaded")
             def file_loaded_callback(_event):
                 logging.info("DEBUG: MPV Event: file-loaded")
-                # If restoration hasn't happened yet by file-loaded, try it here too
-                if getattr(self, "saved_position", 0) > 0 and not getattr(
-                    self, "position_restore_attempted", True
-                ):
-                    logging.info(
-                        f"DEBUG: Restoration not yet triggered by playback-restart, trying on file-loaded"
-                    )
-                    QTimer.singleShot(50, self.restore_position)
+                # Emit signal to run post-load initialization on the main thread
+                self.mpv_file_loaded.emit()
+
+            # Connect file-loaded signal to main-thread handler
+            self.mpv_file_loaded.connect(self._on_file_loaded)
 
             self.video_widget.set_player(self.player)
 
@@ -1370,6 +1359,78 @@ class VideoPlayerWidget(QWidget):
                 self.player.pause = False
         except Exception as e:
             logging.error(f"Error ensuring playback: {e}")
+
+    def _on_file_loaded(self):
+        """
+        Called on the main thread when MPV fires the 'file-loaded' event.
+        Replaces the old QTimer chain (100/300/500/600/750/800ms) with immediate
+        sequential initialization now that MPV has confirmed the file is open.
+        """
+        filepath = self._pending_file_path
+        if not filepath:
+            logging.debug("_on_file_loaded: no pending file path, skipping")
+            return
+
+        # Guard: only initialize if this is still the active file
+        if self.current_file != filepath:
+            logging.warning(
+                f"_on_file_loaded: file changed (pending={filepath}, current={self.current_file}), skipping"
+            )
+            self._pending_file_path = None
+            return
+
+        logging.info(f"🎬 _on_file_loaded: running post-load initialization for {filepath}")
+
+        try:
+            # 1. Load subtitle tracks list into UI
+            self.load_subtitle_tracks(filepath)
+        except Exception as e:
+            logging.error(f"_on_file_loaded: load_subtitle_tracks error: {e}", exc_info=True)
+
+        try:
+            # 2. Load audio tracks into UI + cache results to avoid duplicate DB call in restore_audio_track
+            self.load_audio_tracks(filepath)
+        except Exception as e:
+            logging.error(f"_on_file_loaded: load_audio_tracks error: {e}", exc_info=True)
+
+        try:
+            # 3. Restore saved audio track (uses _cached_audio_data set by load_audio_tracks)
+            self.restore_audio_track(filepath)
+        except Exception as e:
+            logging.error(f"_on_file_loaded: restore_audio_track error: {e}", exc_info=True)
+
+        try:
+            # 4. Restore saved subtitle track
+            self.restore_subtitle_track(filepath)
+        except Exception as e:
+            logging.error(f"_on_file_loaded: restore_subtitle_track error: {e}", exc_info=True)
+
+        try:
+            # 5. Restore secondary audio (if enabled)
+            self._restore_secondary_audio(filepath)
+        except Exception as e:
+            logging.error(f"_on_file_loaded: _restore_secondary_audio error: {e}", exc_info=True)
+
+        try:
+            # 6. Set play/pause state
+            if self.auto_play_pending:
+                self._ensure_playing()
+                self.auto_play_pending = False
+            else:
+                self._load_paused()
+        except Exception as e:
+            logging.error(f"_on_file_loaded: play/pause state error: {e}", exc_info=True)
+
+        # 7. Restore position (triggered by playback-restart observer but also attempt here as fallback)
+        if self.saved_position > 0 and not self.position_restore_attempted:
+            try:
+                self.restore_position()
+            except Exception as e:
+                logging.error(f"_on_file_loaded: restore_position error: {e}", exc_info=True)
+
+        self.is_loading = False
+        self._pending_file_path = None
+        logging.info("🎬 _on_file_loaded: initialization complete")
 
     def set_ffmpeg_path(self, path):
         """Set FFmpeg path for preview generation."""
@@ -1450,76 +1511,21 @@ class VideoPlayerWidget(QWidget):
 
             logging.info(f"🎬 Calling MPV loadfile: {file_path}")
             self.player.sid = "no"
+            # Store pending path so _on_file_loaded() knows which file to initialize
+            self._pending_file_path = file_path
+            self._cached_audio_data = None  # Clear stale cache
             self.player.loadfile(file_path)
             logging.info(f"🎬 ✅ MPV loadfile completed")
             self._apply_subtitle_styles()
             self.play_btn.setEnabled(True)
             self.progress_slider.setEnabled(True)
 
-            # Serialize initialization to debug crash
-            # 1. Load subtitles info (100ms)
-            QTimer.singleShot(
-                100,
-                lambda: self._timer_wrapper(
-                    "load_subtitle_tracks", self.load_subtitle_tracks, file_path
-                ),
-            )
-            logging.debug(f"🎬 Scheduled load_subtitle_tracks (100ms)")
-
-            # 2. Start playback/pause (300ms) -> triggers restore_position
-            if auto_play:
-                QTimer.singleShot(
-                    300,
-                    lambda: self._timer_wrapper(
-                        "_start_playback", self._start_playback
-                    ),
-                )
-                logging.debug(f"🎬 Scheduled _start_playback (300ms)")
-            else:
-                QTimer.singleShot(
-                    300, lambda: self._timer_wrapper("_load_paused", self._load_paused)
-                )
-                logging.debug(f"🎬 Scheduled _load_paused (300ms)")
-
-            # 3. Load audio tracks (500ms) -> triggers restore_audio_track
-            QTimer.singleShot(
-                500,
-                lambda: self._timer_wrapper(
-                    "load_audio_tracks", self.load_audio_tracks, file_path
-                ),
-            )
-            QTimer.singleShot(
-                600,
-                lambda: self._timer_wrapper(
-                    "restore_audio_track", self.restore_audio_track, file_path
-                ),
-            )
-            logging.debug(
-                f"🎬 Scheduled load_audio_tracks (500ms) and restore_audio_track (600ms)"
-            )
-
-            # 4. Restore subtitle track (750ms)
-            QTimer.singleShot(
-                750,
-                lambda: self._timer_wrapper(
-                    "restore_subtitle_track", self.restore_subtitle_track, file_path
-                ),
-            )
-            logging.debug(f"🎬 Scheduled restore_subtitle_track (750ms)")
-
-            # 5. Restore secondary audio (800ms)
-            QTimer.singleShot(
-                800,
-                lambda: self._timer_wrapper(
-                    "restore_secondary_audio", self._restore_secondary_audio, file_path
-                ),
-            )
-            logging.debug(f"🎬 Scheduled restore_secondary_audio (800ms)")
-
-            # Load markers
+            # Load markers immediately (pure DB read, no MPV needed)
             logging.debug(f"🎬 Calling load_markers")
             self.load_markers(file_path)
             logging.debug(f"🎬 load_markers completed")
+            # All remaining initialization runs in _on_file_loaded()
+            # which is called when MPV emits the file-loaded event
 
             logging.info(f"🎬 ========== VIDEO LOADING INITIATED ==========")
             return True
@@ -1686,8 +1692,11 @@ class VideoPlayerWidget(QWidget):
                         break
 
             logging.info(f"🔊 ========== AUDIO TRACKS LOADED ==========")
+            # Cache results for restore_audio_track() to avoid a duplicate DB call
+            self._cached_audio_data = (tracks, selected_audio_id)
         except Exception as e:
             logging.error(f"🔊 ❌ Error loading audio tracks: {e}", exc_info=True)
+
 
     def change_audio_track(self, index):
         """Switch audio track on selection."""
@@ -1793,7 +1802,12 @@ class VideoPlayerWidget(QWidget):
             return
 
         try:
-            tracks, selected_audio_id = self.db.load_audio_tracks(filepath)
+            # Use cached data from load_audio_tracks() if available to avoid duplicate DB query
+            if self._cached_audio_data is not None:
+                tracks, selected_audio_id = self._cached_audio_data
+                logging.info("🔊 Using cached audio track data (skipping DB query)")
+            else:
+                tracks, selected_audio_id = self.db.load_audio_tracks(filepath)
 
             if not selected_audio_id:
                 logging.warning("🔊 ⚠️ No saved audio track - selecting first available")
