@@ -84,7 +84,7 @@ class MPVVideoWidget(QFrame):
         self.zoom_level = 0.0
         self.pan_x = 0.0
         self.pan_y = 0.0
-        self.zoom_step = 0.1
+        self.zoom_step = 0.05
         self.min_zoom = 0.0
         self.max_zoom = 5.0
 
