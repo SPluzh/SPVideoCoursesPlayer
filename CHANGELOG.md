@@ -3,6 +3,7 @@
 All notable changes to this project will be documented in this file.
 
 ## [1.5.5]
+- **Subtitles**: Fixed subtitle track selection when toggling on/off - previously selected track is now remembered and restored correctly. Checkmarks in the subtitle list now update properly.
 - **Tooltips**: Fixed tooltips not updating when switching languages - Previous/Next video, PiP, Fullscreen, Favorites filter, Tags filter, Show Markers button, Volume button, Subtitle button, and Audio Tools buttons (Noise, Compressor, De-ess, Mono) tooltips now update immediately. Added update_texts() method to Tags Dialog and Settings Dialog for complete tooltip language support.
 - **Testing**: Added comprehensive tooltip coverage test (test_tooltips.py) that uses AST analysis to verify all tooltips are properly implemented for language switching. The test checks 6 classes with tooltips and validates direct setToolTip() calls, delegated update_texts() calls, and dynamic tooltips via method calls.
 - **Debug Logging**: Debug file logging is now disabled by default - only enabled when `enable_debug_file = True` is set in settings.ini.

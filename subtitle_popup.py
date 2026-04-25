@@ -355,6 +355,7 @@ class SubtitleButton(QPushButton):
             
         # Position popup above the button
         self.popup.setSubtitlesEnabled(self.subtitles_enabled)
+        self.popup._update_checkmarks()  # Ensure checkmarks are up-to-date
         self.popup.ensurePolished()
         self.popup.adjustSize()
         

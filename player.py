@@ -321,9 +321,6 @@ class VideoPlayerWidget(QWidget):
         self.next_video_btn.clicked.connect(self.next_video_requested.emit)
         panel_layout.addWidget(self.next_video_btn)
 
-        self.time_label = QLabel("00:00 / 00:00")
-        panel_layout.addWidget(self.time_label, 0, Qt.AlignmentFlag.AlignVCenter)
-
         self.progress_slider = ClickableSlider(Qt.Orientation.Horizontal)
         self.progress_slider.setRange(0, 1000)
         self.progress_slider.sliderMoved.connect(self.set_position)
@@ -334,6 +331,9 @@ class VideoPlayerWidget(QWidget):
         self.progress_slider.marker_delete_requested.connect(self.delete_marker)
         self.progress_slider.add_marker_requested.connect(self.add_marker)
         panel_layout.addWidget(self.progress_slider, 1)
+
+        self.time_label = QLabel("00:00 / 00:00")
+        panel_layout.addWidget(self.time_label, 0, Qt.AlignmentFlag.AlignVCenter)
 
         self.speed_slider = QSlider(Qt.Orientation.Horizontal)
         self.speed_slider.setRange(5, 30)
@@ -2055,12 +2055,14 @@ class VideoPlayerWidget(QWidget):
 
         popup = self.subtitle_btn.popup
         if enabled:
-            # Turn on — select first track if exists
+            # Turn on — use previously selected track or first if none selected
             if popup.count() > 0:
-                popup.setCurrentIndex(0)
-                self.change_subtitle_track(0)
+                # Use the last selected index if valid, otherwise use 0
+                index_to_use = popup.selected_index if popup.selected_index >= 0 else 0
+                popup.setCurrentIndex(index_to_use)
+                self.change_subtitle_track(index_to_use)
         else:
-            # Turn off
+            # Turn off (but keep selected_index intact for next enable)
             try:
                 self.player.sid = "no"
                 logging.info("🔇 Subtitles disabled")

@@ -395,13 +395,14 @@ HoverTreeWidget::item:selected:hover {
 
 QSlider::groove:horizontal {
     background: @border;
-    height: 15px;
+    height: 10px;
 }
 
 QSlider::handle:horizontal {
-    background: @accent-pressed;
-    width: 15px;
+    background: @accent;
+    width: 14px;
     margin: -5px 0;
+    border: 2px solid @bg-dark;
 }
 
 QSlider::handle:horizontal:hover {
