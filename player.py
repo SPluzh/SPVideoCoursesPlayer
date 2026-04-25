@@ -1009,7 +1009,7 @@ class VideoPlayerWidget(QWidget):
                 logging.info(
                     "⚠️ Secondary audio disabled or no track selected - applying normal filters"
                 )
-                self._update_audio_filters()
+                self._update_audio_filters(force_normal=True)
                 return
 
             # Get track info from DB
@@ -1022,7 +1022,7 @@ class VideoPlayerWidget(QWidget):
 
             if not primary_id:
                 logging.warning("❌ No primary audio track selected")
-                self._update_audio_filters()
+                self._update_audio_filters(force_normal=True)
                 return
 
             logging.info("📂 Getting track info from DB...")
@@ -1036,7 +1036,7 @@ class VideoPlayerWidget(QWidget):
 
             if not primary_track or not secondary_track:
                 logging.warning("❌ Could not load track info for dual audio")
-                self._update_audio_filters()
+                self._update_audio_filters(force_normal=True)
                 return
 
             # Validate tracks are different
