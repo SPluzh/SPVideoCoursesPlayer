@@ -22,7 +22,7 @@ class TagFilterPopup(QWidget):
         main_layout.setSpacing(10)
         
         # Header
-        header_label = QLabel(tr("player.filter_tags") if tr("player.filter_tags") != "player.filter_tags" else "Tags")
+        header_label = QLabel(tr("library.filter_tags_popup"))
         header_label.setObjectName("popupHeaderLabel")
         header_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         main_layout.addWidget(header_label)

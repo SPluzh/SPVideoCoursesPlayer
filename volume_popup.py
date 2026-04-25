@@ -524,9 +524,7 @@ class VolumeButton(QPushButton):
 
     def mousePressEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
-            self.show_popup()
-        elif event.button() == Qt.MouseButton.RightButton:
-            # Toggle mute logic
+            # Left click - toggle mute
             current_volume = self.popup.slider.value()
             if current_volume > 0:
                 self.stored_volume = current_volume
@@ -534,6 +532,9 @@ class VolumeButton(QPushButton):
             else:
                 restore = self.stored_volume if self.stored_volume > 0 else 20
                 self.popup.slider.setValue(restore)
+        elif event.button() == Qt.MouseButton.RightButton:
+            # Right click - show popup
+            self.show_popup()
         else:
             super().mousePressEvent(event)
 

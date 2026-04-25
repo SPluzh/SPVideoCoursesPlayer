@@ -57,7 +57,7 @@ class SubtitlePopup(QWidget):
         list_section.setSpacing(4)
         list_section.setContentsMargins(0, 0, 0, 0)
         
-        self.list_title_label = QLabel(tr('player.tooltip_subtitle_track'))
+        self.list_title_label = QLabel(tr('player.subtitle_tracks'))
         self.list_title_label.setObjectName("popupHeaderLabel")
         # Removing fixed height to allow QSS control
         list_section.addWidget(self.list_title_label)
@@ -305,7 +305,7 @@ class SubtitlePopup(QWidget):
 
     def update_texts(self):
         """Update texts on language change."""
-        self.list_title_label.setText(tr('player.tooltip_subtitle_track'))
+        self.list_title_label.setText(tr('player.subtitle_tracks'))
         self.size_title_label.setText(tr('player.subtitle_size'))
         self.text_title_label.setText(tr('player.subtitle_text'))
         self.outline_title_label.setText(tr('player.subtitle_outline'))
@@ -335,13 +335,13 @@ class SubtitleButton(QPushButton):
     
     def mousePressEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
-            # Left click - show selection popup
-            self.show_popup()
-        elif event.button() == Qt.MouseButton.RightButton:
-            # Right click - toggle subtitles on/off
+            # Left click - toggle subtitles on/off
             self.subtitles_enabled = not self.subtitles_enabled
             self._update_icon()
             self.subtitleToggled.emit(self.subtitles_enabled)
+        elif event.button() == Qt.MouseButton.RightButton:
+            # Right click - show selection popup
+            self.show_popup()
         else:
             super().mousePressEvent(event)
     

@@ -37,7 +37,8 @@
     "library": {
         "search_placeholder": "Search...",
         "filter_favorites": "Show only favorites",
-        "filter_tags": "Filter by tags",
+        "filter_tags": "Filter by tags\nL-click to toggle\nR-click to select tags",
+        "filter_tags_popup": "Filter by Tags",
         "select_all": "Select All",
         "deselect_all": "Deselect All",
         "no_tags_available": "No tags available",
@@ -105,8 +106,9 @@
         "tooltip_next_video": "Next video",
         "tooltip_screenshot": "Take screenshot",
         "tooltip_zoom": "Reset zoom",
-        "tooltip_subtitle_track": "Subtitles",
-        "tooltip_volume": "Volume\nL-click for slider\nR-click to mute",
+        "tooltip_subtitle_track": "Subtitles\nL-click to toggle\nR-click for settings",
+        "subtitle_tracks": "Subtitle Tracks",
+        "tooltip_volume": "Volume\nL-click to mute\nR-click for settings",
         "tooltip_speed": "Playback speed (0.5x - 3.0x)",
         "audio_tracks": "Audio Tracks",
         "embedded_audio": "Embedded",
@@ -195,7 +197,7 @@
         "enable_secondary_audio": "Enable Secondary Audio",
         "secondary_track": "Secondary Track",
         "secondary_volume": "Secondary Volume",
-        "filter_tags": "Filter by tags",
+        "filter_tags": "Filter by tags\nL-click to toggle\nR-click to select tags",
         "file_not_found": "File not found"
     },
     "audio": {

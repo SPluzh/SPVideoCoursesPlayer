@@ -37,7 +37,8 @@
     "library": {
         "search_placeholder": "Поиск...",
         "filter_favorites": "Показать только избранное",
-        "filter_tags": "Фильтр по тегам",
+        "filter_tags": "Фильтр по тегам\nЛКМ — вкл/выкл\nПКМ — выбор тегов",
+        "filter_tags_popup": "Фильтр по тегам",
         "select_all": "Выбрать все",
         "deselect_all": "Снять все",
         "no_tags_available": "Теги отсутствуют",
@@ -105,8 +106,9 @@
         "tooltip_next_video": "Следующее видео",
         "tooltip_screenshot": "Сделать скриншот",
         "tooltip_zoom": "Сбросить масштаб",
-        "tooltip_subtitle_track": "Субтитры",
-        "tooltip_volume": "Громкость\nЛКМ — слайдер\nПКМ — без звука",
+        "tooltip_subtitle_track": "Субтитры\nЛКМ — вкл/выкл\nПКМ — настройки",
+        "subtitle_tracks": "Дорожки субтитров",
+        "tooltip_volume": "Громкость\nЛКМ — без звука\nПКМ — настройки",
         "tooltip_speed": "Скорость воспроизведения (0.5x - 3.0x)",
         "audio_tracks": "Аудиодорожки",
         "embedded_audio": "Встроенная",
@@ -195,7 +197,7 @@
         "enable_secondary_audio": "Включить вторую аудиодорожку",
         "secondary_track": "Вторая дорожка",
         "secondary_volume": "Громкость второй дорожки",
-        "filter_tags": "Фильтр по тегам",
+        "filter_tags": "Фильтр по тегам\nЛКМ — вкл/выкл\nПКМ — выбор тегов",
         "file_not_found": "Файл не найден"
     },
     "audio": {

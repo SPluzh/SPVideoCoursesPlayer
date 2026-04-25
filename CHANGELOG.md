@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 ## [1.5.6]
 - **PiP Close Button**: Added a close button (×) in the top-right corner of Picture-in-Picture mode
 - **Status Bar**: Added toggle to show/hide the status bar. Added "Show Status Bar" item in the View menu (after "Show OSD Notifications").
+- **Mouse Button Swap**: Swapped left/right click actions for Subtitle and Volume buttons:
+    - **Subtitle**: Left-click toggles subtitles on/off, Right-click opens settings.
+    - **Volume**: Left-click toggles mute, Right-click opens settings.
+- **Tooltips**: Updated tooltips with clear mouse button instructions:
+    - Subtitle: "L-click to toggle / R-click for settings"
+    - Volume: "L-click to mute / R-click for settings"
+    - Tag Filter: "L-click to toggle / R-click to select tags"
 
 ## [1.5.5]
 - **Subtitles**: Fixed subtitle track selection when toggling on/off - previously selected track is now remembered and restored correctly. Checkmarks in the subtitle list now update properly.
