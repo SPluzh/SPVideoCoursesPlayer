@@ -200,6 +200,10 @@ class PiPCloseButton(QPushButton):
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         self.hide()
 
+    def update_texts(self):
+        """Update tooltip text when language changes."""
+        self.setToolTip(tr("pip.close_tooltip"))
+
 
 class PiPOverlay(QWidget):
     def __init__(self, parent=None):
