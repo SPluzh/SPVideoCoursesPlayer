@@ -170,6 +170,37 @@ from pureref_manager import PureRefManager
 from search_utils import smart_search
 
 
+class PiPCloseButton(QPushButton):
+    """Separate close button widget for PiP mode."""
+    def __init__(self, parent=None):
+        super().__init__("×", parent)
+        self.setFixedSize(24, 24)
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self.setToolTip(tr("pip.close_tooltip"))
+        self.setStyleSheet("""
+            QPushButton {
+                background-color: rgba(0, 0, 0, 100);
+                color: white;
+                border: none;
+                border-radius: 4px;
+                font-size: 18px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #018574;
+            }
+        """)
+        # Make it a top-level window
+        self.setWindowFlags(
+            Qt.WindowType.Tool
+            | Qt.WindowType.FramelessWindowHint
+            | Qt.WindowType.WindowStaysOnTopHint
+        )
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+        self.hide()
+
+
 class PiPOverlay(QWidget):
     def __init__(self, parent=None):
         flags = (
@@ -275,6 +306,7 @@ class VideoCourseBrowser(QMainWindow):
         self.resize_margin = 12
         self.current_hover_edge = None
         self.pip_overlay = None
+        self.pip_close_button = None
         
         # Fullscreen State
         self._was_maximized_before_fullscreen = False
@@ -1886,6 +1918,12 @@ class VideoCourseBrowser(QMainWindow):
         self.pip_overlay.setGeometry(self.geometry())
         self.pip_overlay.show()
         self.pip_overlay.raise_()
+        
+        # Create close button
+        if not self.pip_close_button:
+            self.pip_close_button = PiPCloseButton(self)
+            self.pip_close_button.clicked.connect(self.exit_pip_mode)
+        self.pip_close_button.hide()  # Initially hidden, will show on hover
 
         # Hide UI elements
         self.browser_widget.hide()
@@ -1944,6 +1982,9 @@ class VideoCourseBrowser(QMainWindow):
             )
 
         self.show()
+
+        # Update close button position after window is shown
+        QTimer.singleShot(0, self._update_pip_close_button_position)
 
         # Flags change might require re-initializing taskbar buttons
         QTimer.singleShot(500, self._refresh_taskbar_buttons)
@@ -2004,6 +2045,11 @@ class VideoCourseBrowser(QMainWindow):
             self.pip_overlay.hide()
             self.pip_overlay.deleteLater()
             self.pip_overlay = None
+        
+        if self.pip_close_button:
+            self.pip_close_button.hide()
+            self.pip_close_button.deleteLater()
+            self.pip_close_button = None
 
         # Restore normal geometry
         if self.normal_geometry:
@@ -3462,6 +3508,9 @@ class VideoCourseBrowser(QMainWindow):
             if event.type() == QEvent.Type.Enter:
                 if self.pip_overlay:
                     self.pip_overlay.set_active(True)
+                if self.pip_close_button:
+                    self.pip_close_button.show()
+                    self.pip_close_button.raise_()
             elif event.type() == QEvent.Type.Leave:
                 # Check if mouse is actually outside the main window area
                 if self.pip_overlay:
@@ -3470,6 +3519,8 @@ class VideoCourseBrowser(QMainWindow):
                     if not self.geometry().contains(QCursor.pos()):
                         self.pip_overlay.set_active(False)
                         self.pip_overlay.set_hover_edge(None)
+                        if self.pip_close_button:
+                            self.pip_close_button.hide()
 
             # Use global position for consistent coordinate mapping across widgets
             if event.type() in [
@@ -3573,6 +3624,28 @@ class VideoCourseBrowser(QMainWindow):
             self.handle_pip_mouse_release(event)
         else:
             super().mouseReleaseEvent(event)
+    
+    def resizeEvent(self, event):
+        """Handle window resize events."""
+        super().resizeEvent(event)
+        if self.is_pip_mode:
+            # Update overlay geometry
+            if self.pip_overlay:
+                self.pip_overlay.setGeometry(self.geometry())
+            # Update close button position
+            if self.pip_close_button:
+                self._update_pip_close_button_position()
+    
+    def moveEvent(self, event):
+        """Handle window move events."""
+        super().moveEvent(event)
+        if self.is_pip_mode:
+            # Update overlay geometry
+            if self.pip_overlay:
+                self.pip_overlay.setGeometry(self.geometry())
+            # Update close button position
+            if self.pip_close_button:
+                self._update_pip_close_button_position()
 
     def _get_resize_edge(self, pos):
         m = self.resize_margin
@@ -3675,6 +3748,18 @@ class VideoCourseBrowser(QMainWindow):
             new_geo.setWidth(w)
 
         self.setGeometry(new_geo)
+        
+        # Update close button position after resize
+        if self.pip_close_button:
+            self._update_pip_close_button_position()
+    
+    def _update_pip_close_button_position(self):
+        """Update the position of the PiP close button to match the main window."""
+        if self.pip_close_button and self.is_pip_mode:
+            # Position at top-right corner, 10px from edges
+            btn_x = self.x() + self.width() - 34
+            btn_y = self.y() + 10
+            self.pip_close_button.move(btn_x, btn_y)
 
     def closeEvent(self, event):
         self.save_window_state()

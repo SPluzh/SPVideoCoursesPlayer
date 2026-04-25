@@ -226,7 +226,8 @@
         "no_videos_title": "Библиотека пуста"
     },
     "pip": {
-        "return_to_window": "Вернуть в окно"
+        "return_to_window": "Вернуть в окно",
+        "close_tooltip": "Выйти из плавающего окна"
     },
     "dialog": {
         "select_directory": "Выберите директорию с курсами",

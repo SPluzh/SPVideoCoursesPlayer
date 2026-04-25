@@ -226,7 +226,8 @@
         "no_videos_title": "Library is empty"
     },
     "pip": {
-        "return_to_window": "Return to Window"
+        "return_to_window": "Return to Window",
+        "close_tooltip": "Exit Picture-in-Picture"
     },
     "dialog": {
         "select_directory": "Select Courses Directory",
