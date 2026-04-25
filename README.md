@@ -255,11 +255,11 @@ SP Video Courses Player/
 
 ### 📜 Благодарности
 
-- [PyQt6](https://pypi.org/project/PyQt6/) - GUI framework
-- [libmpv](https://mpv.io/) - Video playback engine
-- [FFmpeg](https://ffmpeg.org/) - Video processing & thumbnails
-- [RNNoise](https://jmvalin.ca/demo/rnnoise/) (Xiph.Org) - AI noise reduction model
-- [Lucide](https://lucide.dev/) - Icon toolkit
+- [PyQt6](https://pypi.org/project/PyQt6/) - Фреймворк для графического интерфейса
+- [libmpv](https://mpv.io/) - Движок воспроизведения видео
+- [FFmpeg](https://ffmpeg.org/) - Обработка видео и создание миниатюр
+- [RNNoise](https://jmvalin.ca/demo/rnnoise/) (Xiph.Org) - AI модель шумоподавления
+- [Lucide](https://lucide.dev/) - Набор иконок
 
 ---
 
