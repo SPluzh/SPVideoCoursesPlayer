@@ -8,6 +8,7 @@ All notable changes to this project will be documented in this file.
     - Implemented database query caching for audio and subtitle tracks, eliminating duplicate DB round-trips.
     - Added asynchronous verification for network file paths to prevent UI freezing.
     - Enabled `auto-safe` hardware video decoding for improved efficiency and lower CPU usage.
+- **UI**: Changed status bar default visibility from shown to hidden by default.
 
 ## [1.5.6]
 - **PiP Close Button**: Added a close button (×) in the top-right corner of Picture-in-Picture mode

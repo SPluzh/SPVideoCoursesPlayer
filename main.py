@@ -886,7 +886,7 @@ class VideoCourseBrowser(QMainWindow):
                     self.toggle_lib_action.setChecked(show_library)
 
             # Restore status bar visibility
-            show_status_bar = state.get("show_status_bar", True)
+            show_status_bar = state.get("show_status_bar", False)
             if hasattr(self, "status"):
                 self.status.setVisible(show_status_bar)
                 if hasattr(self, "toggle_status_action"):

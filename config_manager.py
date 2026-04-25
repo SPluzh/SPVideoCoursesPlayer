@@ -528,7 +528,7 @@ class ConfigManager:
 
     def get_show_status_bar(self) -> bool:
         config = self._read_config()
-        return config.getboolean("Window", "show_status_bar", fallback=True)
+        return config.getboolean("Window", "show_status_bar", fallback=False)
 
     def set_show_status_bar(self, value: bool):
         config = self._read_config()
