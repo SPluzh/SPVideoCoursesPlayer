@@ -3054,6 +3054,9 @@ class VideoCourseBrowser(QMainWindow):
 
         folders, videos = self.db.get_courses()
 
+        # Sort folders by natural sort key so "1, 2, 3... 10, 11" instead of "1, 10, 11, 2"
+        folders.sort(key=lambda f: natural_sort_key(f.get("name", "")))
+
         # Index folders
         folder_items = {}
         folders_data = {}
