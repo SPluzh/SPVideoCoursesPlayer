@@ -80,7 +80,7 @@ class ConfigManager:
             "bg_color": "230,240,255",
         },
         "TreeLines": {
-            "colors": "#ed2a2a, #ed732a, #edbd2a, #d5ed2a, #8ced2a, #43ed2a, #2aed5b, #2aeda4, #2aeded, #2aa4ed, #d52aed, #ed2abd, #ed2a73, #e46767, #e49667, #e4c467, #d4e467, #a5e467, #76e467, #67e486, #67e4b5, #67e4e4, #67b5e4, #6786e4, #7667e4, #a567e4, #d467e4, #e467c4, #e46796, #da0b0b, #da580b, #daa60b, #c0da0b, #72da0b, #25da0b, #0bda3f, #0bda8c, #0bdada, #0b8cda, #c00bda, #da0ba6, #da0b58, #e08484, #e0a784, #e0c984, #d4e084, #b2e084, #90e084, #84e09b, #84e0bd, #84e0e0, #84bde0, #849be0, #9084e0, #b284e0, #d484e0, #e084c9, #e084a7,",
+            "colors": " #ed2a2a, #ed732a, #edbd2a, #d5ed2a, #8ced2a, #43ed2a, #2aed5b, #2aeda4, #2aeded, #2aa4ed, #d52aed, #ed2abd, #ed2a73, #e46767, #e49667, #e4c467, #d4e467, #a5e467, #76e467, #67e486, #67e4b5, #67e4e4, #67b5e4, #6786e4, #7667e4, #a567e4, #d467e4, #e467c4, #e46796, #da580b, #daa60b, #c0da0b, #72da0b, #25da0b, #0bda3f, #0bda8c, #0bdada, #0b8cda, #c00bda, #da0ba6, #da0b58, #e08484, #e0a784, #e0c984, #d4e084, #b2e084, #90e084, #84e09b, #84e0bd, #84e0e0, #84bde0, #849be0, #9084e0, #b284e0, #d484e0, #e084c9, #e084a7,",
         },
     }
 

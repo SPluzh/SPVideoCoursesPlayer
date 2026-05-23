@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.5.9]
+- **Library**: Improved tree line color assignment — no parent-child or sibling conflicts.
+
 ## [1.5.8]
 - **Library**: Fixed folder sorting to use natural order (`1, 2, 3... 9, 10, 11` instead of `1, 10, 11, 2`).
 
