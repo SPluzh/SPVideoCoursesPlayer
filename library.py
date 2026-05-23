@@ -304,6 +304,9 @@ class VideoItemDelegate(QStyledItemDelegate):
         painter.save()
         painter.setRenderHint(QPainter.RenderHint.Antialiasing, False)
 
+        # Track used color indices to avoid parent-child and sibling conflicts
+        used_colors = set()
+
         for i in range(depth):
             parent_path_str, _ = chain[i]
 
@@ -313,9 +316,23 @@ class VideoItemDelegate(QStyledItemDelegate):
                 if child_is_last:
                     continue
 
-            # Hash the path to get a stable positive integer
+            # Hash the path to get a stable positive integer as starting point
             path_hash = zlib.adler32(parent_path_str.encode("utf-8", errors="ignore"))
-            color_index = path_hash % len(self.NESTING_COLORS)
+            base_index = path_hash % len(self.NESTING_COLORS)
+
+            # Use second hash component to determine search step
+            # Minimum step is 1/3 of palette to ensure distant colors
+            min_distance = len(self.NESTING_COLORS) // 3
+            step = (path_hash // len(self.NESTING_COLORS)) % (len(self.NESTING_COLORS) - min_distance) + min_distance
+
+            # Search for first color not used by ancestors, starting from distant position
+            color_index = base_index
+            attempts = 0
+            while color_index in used_colors and attempts < len(self.NESTING_COLORS):
+                color_index = (base_index + step * (attempts + 1)) % len(self.NESTING_COLORS)
+                attempts += 1
+
+            used_colors.add(color_index)
             color = self.NESTING_COLORS[color_index]
 
             painter.setPen(Qt.PenStyle.NoPen)
@@ -1297,13 +1314,38 @@ class VideoItemDelegate(QStyledItemDelegate):
                 and item.childCount() > 0
                 and self.config.get("show_tree_lines", True)
             ):
-                # Calculate line color using same algorithm as nesting lines
+                # Calculate line color using same conflict-aware algorithm as nesting lines
+                depth = len(chain)
+                used_colors = set()
+                for i in range(depth):
+                    parent_path_str, _ = chain[i]
+                    ancestor_hash = zlib.adler32(
+                        parent_path_str.encode("utf-8", errors="ignore")
+                    )
+                    base_idx = ancestor_hash % len(self.NESTING_COLORS)
+                    min_distance = len(self.NESTING_COLORS) // 3
+                    step = (ancestor_hash // len(self.NESTING_COLORS)) % (len(self.NESTING_COLORS) - min_distance) + min_distance
+                    color_idx = base_idx
+                    attempts = 0
+                    while color_idx in used_colors and attempts < len(self.NESTING_COLORS):
+                        color_idx = (base_idx + step * (attempts + 1)) % len(self.NESTING_COLORS)
+                        attempts += 1
+                    used_colors.add(color_idx)
+
+                # Compute folder's own color, avoiding ancestor colors
                 folder_path = index.data(Qt.ItemDataRole.UserRole)
                 path_hash = zlib.adler32(
                     str(folder_path).encode("utf-8", errors="ignore")
                 )
-                color_index = path_hash % len(self.NESTING_COLORS)
-                line_color = self.NESTING_COLORS[color_index]
+                base_idx = path_hash % len(self.NESTING_COLORS)
+                min_distance = len(self.NESTING_COLORS) // 3
+                step = (path_hash // len(self.NESTING_COLORS)) % (len(self.NESTING_COLORS) - min_distance) + min_distance
+                color_idx = base_idx
+                attempts = 0
+                while color_idx in used_colors and attempts < len(self.NESTING_COLORS):
+                    color_idx = (base_idx + step * (attempts + 1)) % len(self.NESTING_COLORS)
+                    attempts += 1
+                line_color = self.NESTING_COLORS[color_idx]
 
                 # Draw line with same width as nesting lines
                 line_width = 2
