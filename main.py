@@ -1189,7 +1189,9 @@ class VideoCourseBrowser(QMainWindow):
         view_menu = menubar.addMenu(tr("menu.view"))
 
         # Language selection
-        lang_menu = view_menu.addMenu(tr("menu.language"))
+        lang_menu = view_menu.addMenu(
+            self.icons.get("languages", QIcon()), tr("menu.language")
+        )
         lang_group = QActionGroup(self)
         lang_group.setExclusive(True)
 
@@ -1287,7 +1289,7 @@ class VideoCourseBrowser(QMainWindow):
         help_menu = menubar.addMenu(tr("menu.help"))
 
         check_updates_action = QAction(
-            self.icons.get("upload", QIcon()), tr("menu.check_updates"), self
+            self.icons.get("update", QIcon()), tr("menu.check_updates"), self
         )
         check_updates_action.triggered.connect(
             lambda: self._check_for_update(force=True)
@@ -2100,6 +2102,8 @@ class VideoCourseBrowser(QMainWindow):
     def load_icons(self):
         # List of icons to load for the browser
         icon_names = [
+            "languages",
+            "update",
             "menu_scan",
             "menu_settings",
             "menu_reload",
