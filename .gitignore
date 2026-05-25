@@ -14,9 +14,12 @@ venv/
 env/
 .venv/
 
-# Build artifacts (PyInstaller)
+# Build & Distribution
 build/
 dist/
+*.spec
+_build_/installer_output/
+_build_/*.exe
 
 # Application Data
 data/
