@@ -659,6 +659,8 @@ class VideoCourseBrowser(QMainWindow):
             self.video_player.seek_to_percent(80)
         elif action == "seek_percent_90":
             self.video_player.seek_to_percent(90)
+        elif action == "seek_percent_100":
+            self.video_player.seek_to_percent(100)
 
     def locate_active_video(self):
         """Scroll the library to the currently playing video."""

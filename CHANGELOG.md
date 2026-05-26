@@ -5,6 +5,7 @@ All notable changes to this project will be documented in this file.
 ## [1.5.10]
 - **Hotkeys**: Added YouTube-style percentage seeking with keys 0-9:
     - **Number Keys**: Press `0-9` on the main keyboard or numpad to instantly jump to 0%, 10%, 20%... 90% of the video.
+    - **Home/End Keys**: Press `Home` to jump to the beginning (0%) and `End` to jump to the end (100%) of the video.
 
 ## [1.5.9]
 - **Library**: Improved tree line color assignment — no parent-child or sibling conflicts.

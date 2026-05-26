@@ -128,6 +128,8 @@ class HotkeyManager(QObject):
             Qt.Key.Key_7: "seek_percent_70",
             Qt.Key.Key_8: "seek_percent_80",
             Qt.Key.Key_9: "seek_percent_90",
+            Qt.Key.Key_Home: "seek_percent_0",
+            Qt.Key.Key_End: "seek_percent_100",
             # Fallback for Cyrillic layout (Russian)
             0x410: "toggle_fullscreen",  # RU A (where F is)
             0x44C: "toggle_mute",  # RU softign (where M is)
@@ -222,6 +224,8 @@ class HotkeyManager(QObject):
             0x37: "seek_percent_70",  # 7
             0x38: "seek_percent_80",  # 8
             0x39: "seek_percent_90",  # 9
+            0x24: "seek_percent_0",  # Home
+            0x23: "seek_percent_100",  # End
         }
 
         # Start global listener thread
