@@ -150,6 +150,7 @@ class AboutDialog(QDialog):
                         "← / →",
                         f"{tr('hotkeys.seek_backward')} / {tr('hotkeys.seek_forward')}",
                     ),
+                    ("0-9 / Numpad 0-9", f"{tr('hotkeys.seek_to_0')} - {tr('hotkeys.seek_to_90')}"),
                     (",", tr("hotkeys.frame_back")),
                     (".", tr("hotkeys.frame_step")),
                     (f"{tr('hotkeys.keys.shift')} + ←", tr("hotkeys.prev_video")),

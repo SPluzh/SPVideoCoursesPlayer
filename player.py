@@ -1195,6 +1195,30 @@ class VideoPlayerWidget(QWidget):
         except Exception as e:
             logging.error(f"Error seeking: {e}")
 
+    def seek_to_percent(self, percent):
+        """Seek to a specific percentage of video duration."""
+        if not self.player:
+            return
+        try:
+            duration = self.player.duration
+            if not duration or duration <= 0:
+                logging.warning("Cannot seek to percent: duration not available")
+                return
+            
+            # Calculate target position
+            target_seconds = (percent / 100.0) * duration
+            
+            # Seek to absolute position
+            self.player.seek(target_seconds, "absolute")
+            
+            # Show OSD notification
+            if self.osd_manager:
+                self.osd_manager.show_seek_percent(percent)
+                
+            logging.info(f"Seeked to {percent}% ({target_seconds:.2f}s / {duration:.2f}s)")
+        except Exception as e:
+            logging.error(f"Error seeking to percent: {e}")
+
     def frame_step(self):
         """Step forward one frame."""
         self.video_widget.frame_step()

@@ -218,6 +218,16 @@ class OSDManager:
             message = tr("player.osd.seek_backward", seconds=abs(seconds))
         self.show_osd(message)
 
+    def show_seek_percent(self, percent):
+        """
+        Show seek to percentage OSD.
+
+        Args:
+            percent: Percentage to seek to (0-100)
+        """
+        message = tr("player.osd.seek_percent", percent=percent)
+        self.show_osd(message, duration=1000)
+
     def show_frame_step(self, forward=True):
         """
         Show frame step OSD.

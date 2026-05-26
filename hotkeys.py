@@ -117,6 +117,17 @@ class HotkeyManager(QObject):
             Qt.Key.Key_T: "toggle_always_on_top",
             Qt.Key.Key_E: "expand_tree",
             Qt.Key.Key_W: "collapse_tree",
+            # Percentage seeking (0-9 keys)
+            Qt.Key.Key_0: "seek_percent_0",
+            Qt.Key.Key_1: "seek_percent_10",
+            Qt.Key.Key_2: "seek_percent_20",
+            Qt.Key.Key_3: "seek_percent_30",
+            Qt.Key.Key_4: "seek_percent_40",
+            Qt.Key.Key_5: "seek_percent_50",
+            Qt.Key.Key_6: "seek_percent_60",
+            Qt.Key.Key_7: "seek_percent_70",
+            Qt.Key.Key_8: "seek_percent_80",
+            Qt.Key.Key_9: "seek_percent_90",
             # Fallback for Cyrillic layout (Russian)
             0x410: "toggle_fullscreen",  # RU A (where F is)
             0x44C: "toggle_mute",  # RU softign (where M is)
@@ -165,6 +176,20 @@ class HotkeyManager(QObject):
             Qt.Key.Key_Down: "speed_down",
         }
 
+        # Numpad percentage seeking
+        self.numpad_mappings = {
+            Qt.Key.Key_0: "seek_percent_0",
+            Qt.Key.Key_1: "seek_percent_10",
+            Qt.Key.Key_2: "seek_percent_20",
+            Qt.Key.Key_3: "seek_percent_30",
+            Qt.Key.Key_4: "seek_percent_40",
+            Qt.Key.Key_5: "seek_percent_50",
+            Qt.Key.Key_6: "seek_percent_60",
+            Qt.Key.Key_7: "seek_percent_70",
+            Qt.Key.Key_8: "seek_percent_80",
+            Qt.Key.Key_9: "seek_percent_90",
+        }
+
         # Windows-specific layout independent mappings (Virtual Keys)
         self.win_vk_mappings = {
             0x46: "toggle_fullscreen",  # F
@@ -186,6 +211,17 @@ class HotkeyManager(QObject):
             0x54: "toggle_always_on_top",  # T
             0x45: "expand_tree",  # E
             0x57: "collapse_tree",  # W
+            # Percentage seeking (VK codes for 0-9)
+            0x30: "seek_percent_0",  # 0
+            0x31: "seek_percent_10",  # 1
+            0x32: "seek_percent_20",  # 2
+            0x33: "seek_percent_30",  # 3
+            0x34: "seek_percent_40",  # 4
+            0x35: "seek_percent_50",  # 5
+            0x36: "seek_percent_60",  # 6
+            0x37: "seek_percent_70",  # 7
+            0x38: "seek_percent_80",  # 8
+            0x39: "seek_percent_90",  # 9
         }
 
         # Start global listener thread
@@ -225,6 +261,11 @@ class HotkeyManager(QObject):
         if modifiers == Qt.KeyboardModifier.NoModifier:
             if key in self.plain_arrow_mappings:
                 return self.plain_arrow_mappings[key]
+
+        # Check for numpad keys
+        if modifiers == Qt.KeyboardModifier.KeypadModifier:
+            if key in self.numpad_mappings:
+                return self.numpad_mappings[key]
 
         # Check standard mappings
         action = self.mappings.get(key)

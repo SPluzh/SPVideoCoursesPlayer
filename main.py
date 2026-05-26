@@ -639,6 +639,26 @@ class VideoCourseBrowser(QMainWindow):
             self.collapse_tree()
         elif action == "toggle_always_on_top":
             self.toggle_always_on_top()
+        elif action == "seek_percent_0":
+            self.video_player.seek_to_percent(0)
+        elif action == "seek_percent_10":
+            self.video_player.seek_to_percent(10)
+        elif action == "seek_percent_20":
+            self.video_player.seek_to_percent(20)
+        elif action == "seek_percent_30":
+            self.video_player.seek_to_percent(30)
+        elif action == "seek_percent_40":
+            self.video_player.seek_to_percent(40)
+        elif action == "seek_percent_50":
+            self.video_player.seek_to_percent(50)
+        elif action == "seek_percent_60":
+            self.video_player.seek_to_percent(60)
+        elif action == "seek_percent_70":
+            self.video_player.seek_to_percent(70)
+        elif action == "seek_percent_80":
+            self.video_player.seek_to_percent(80)
+        elif action == "seek_percent_90":
+            self.video_player.seek_to_percent(90)
 
     def locate_active_video(self):
         """Scroll the library to the currently playing video."""
