@@ -3,6 +3,7 @@
 All notable changes to this project will be documented in this file.
 
 ## [1.5.11]
+- **UI**: Completely disabled the grey background highlight when hovering over video and folder items in the library tree.
 - **UI**: Made the video duration badge background on thumbnails opaque for better readability.
 - **Fix**: Fixed the seek bar preview popup showing a black/corrupted image on first hover — the preview now correctly displays the actual video frame at the hovered position.
 

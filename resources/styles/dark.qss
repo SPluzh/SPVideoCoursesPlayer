@@ -368,8 +368,7 @@ QTreeWidget::item[playing="true"] {
     color: @text-light !important;
 }
 
-/* Убираем выделение для элементов библиотеки (HoverTreeWidget) */
-/* Убираем выделение для элементов библиотеки (HoverTreeWidget) */
+/* Убираем выделение и подсветку при наведении для элементов библиотеки (HoverTreeWidget) */
 HoverTreeWidget::item:selected:active {
     background-color: transparent;
     color: @text-item;
@@ -382,10 +381,14 @@ HoverTreeWidget::item:selected:!active {
     border: none;
 }
 
+HoverTreeWidget::item:hover {
+    background-color: transparent;
+    color: @text-item;
+}
+
 HoverTreeWidget::item:selected:hover {
-    background-color: @bg-hover;
-    color: @text-light;
-    border-radius: 0px;
+    background-color: transparent;
+    color: @text-item;
 }
 
 
