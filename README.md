@@ -1,3 +1,5 @@
+<img width="2150" height="1035" alt="image" src="https://github.com/user-attachments/assets/880f39be-1094-4c79-a70b-0c88f7e71a83" />
+
 # SP Video Courses Player
 
 [![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)](https://www.python.org/downloads/)
@@ -8,14 +10,9 @@
 [![Downloads](https://img.shields.io/github/downloads/SPluzh/SPVideoCoursesPlayer/total)](https://github.com/SPluzh/SPVideoCoursesPlayer/releases)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 
-<img width="2150" height="1035" alt="image" src="https://github.com/user-attachments/assets/880f39be-1094-4c79-a70b-0c88f7e71a83" />
+Video player for local courses with hierarchical library, progress tracking, bookmarks, tags, and learning statistics. Includes video zoom, audio enhancement, custom subtitle settings, and instant thumbnail previews on the timeline
 
 ![](attachments/SP_Video_Courses_Player.gif)
-
-
-<p align="center">
-  <strong>Video player for local courses with hierarchical library, progress tracking, bookmarks, tags, and learning statistics. Includes video zoom, audio enhancement, custom subtitle settings, and instant thumbnail previews on the timeline</strong>
-</p>
 
 <p align="center">
   <a href="#english">English</a> •
