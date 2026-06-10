@@ -74,22 +74,34 @@ class PreviewPopup(QWidget):
         # Debounce Timer
         self.debounce_timer = QTimer()
         self.debounce_timer.setSingleShot(True)
-        self.debounce_timer.setInterval(15)  # Optimized: 15ms
+        self.debounce_timer.setInterval(80)  # 80ms debounce to reduce seek spam
         self.debounce_timer.timeout.connect(self._fetch_frame)
+
+        # Pre-load timer: init MPV shortly after set_video() to avoid black first frame
+        self._preload_timer = QTimer()
+        self._preload_timer.setSingleShot(True)
+        self._preload_timer.setInterval(300)
+        self._preload_timer.timeout.connect(self._ensure_preview_mpv)
+
+        self._capture_retry_count = 0
+        self._capture_retry_max = 4  # Max retries for frame capture
 
         self.resources_dir = Path(__file__).parent / "resources"
         self.ffmpeg_path = None  # Kept for compatibility if external ffmpeg logic is ever needed, but unused now
 
     def set_video(self, file_path):
-        """Update current video path, clear cache. MPV will load lazily on hover."""
+        """Update current video path, clear cache and pre-load into preview MPV."""
         if self.current_video_path != file_path:
             self.current_video_path = file_path
             self.cache.clear()
             self._mpv_video_loaded = False
             # Stop any pending operations
             self.debounce_timer.stop()
+            self._preload_timer.stop()
             self.pending_time = None
-            # Don't init MPV here — it will happen lazily on first hover
+            # Pre-load MPV after a short delay so it's ready on first hover
+            if file_path:
+                self._preload_timer.start()
 
     def _ensure_preview_mpv(self):
         """Lazily initialize preview MPV and load the current video."""
@@ -208,15 +220,40 @@ class PreviewPopup(QWidget):
             return
 
         try:
-            # Level 1 Optimization: Keyframe seek (faster but less precise)
+            # Keyframe seek for speed
             self.preview_mpv.seek(time_key, "absolute+keyframes")
+            self._capture_retry_count = 0
 
-            # Level 1 Optimization: Reduced wait time (5ms)
-            QTimer.singleShot(5, lambda: self._capture_frame(time_key))
+            # Wait 80ms for MPV to decode the frame, then attempt capture with retries
+            QTimer.singleShot(80, lambda: self._capture_frame_with_retry(time_key))
 
         except Exception as e:
             # Silently ignore errors during video switching
             logging.debug(f"Preview seek error (likely during video switch): {e}")
+
+    def _capture_frame_with_retry(self, time_key):
+        """Verify MPV has decoded the frame near time_key before capturing. Retries if not ready."""
+        if not self.preview_mpv or not self._mpv_video_loaded:
+            return
+
+        # If user moved to a different position, abandon this capture
+        if self.pending_time is not None and self.pending_time != time_key:
+            return
+
+        try:
+            current_pos = self.preview_mpv.time_pos
+        except Exception:
+            current_pos = None
+
+        # Check if MPV has seeked close enough to our target (within 2 seconds)
+        if current_pos is not None and abs(current_pos - time_key) <= 2.0:
+            self._capture_frame(time_key)
+        elif self._capture_retry_count < self._capture_retry_max:
+            self._capture_retry_count += 1
+            QTimer.singleShot(60, lambda: self._capture_frame_with_retry(time_key))
+        else:
+            # Timed out waiting — capture anyway (may still have a valid frame)
+            self._capture_frame(time_key)
 
     def _capture_frame(self, time_key):
         """Capture screenshot to temp file and load it."""

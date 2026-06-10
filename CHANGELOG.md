@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.5.11]
+- **UI**: Made the video duration badge background on thumbnails opaque for better readability.
+- **Fix**: Fixed the seek bar preview popup showing a black/corrupted image on first hover — the preview now correctly displays the actual video frame at the hovered position.
+
 ## [1.5.10]
 - **Hotkeys**: Added YouTube-style percentage seeking with keys 0-9:
     - **Number Keys**: Press `0-9` on the main keyboard or numpad to instantly jump to 0%, 10%, 20%... 90% of the video.

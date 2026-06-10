@@ -714,9 +714,7 @@ class VideoItemDelegate(QStyledItemDelegate):
                         QPalette.ColorRole.Window
                     )
 
-                # Apply opacity if it's a solid color from statusOk/statusWarning
-                if bg_color.alpha() == 255:
-                    bg_color.setAlpha(180)
+
 
                 painter.setBrush(bg_color)
                 painter.setPen(Qt.PenStyle.NoPen)
