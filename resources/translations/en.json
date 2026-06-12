@@ -415,7 +415,8 @@
         "folder_stats": "Course Statistics",
         "open_pureref": "Open PureRef",
         "create_pureref": "Create PureRef",
-        "delete_pureref": "Delete PureRef"
+        "delete_pureref": "Delete PureRef",
+        "remove_all_tags": "Remove all tags"
     },
     "pureref": {
         "exe_not_found": "PureRef not found at: {path}",

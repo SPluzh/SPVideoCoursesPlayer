@@ -986,6 +986,27 @@ class DatabaseManager:
             logging.error(f"Error removing tag from video: {e}", exc_info=True)
             return False
 
+    def remove_all_tags_from_video(self, file_path):
+        """Removes all tags associated with a video."""
+        try:
+            with self.get_connection() as conn:
+                c = conn.cursor()
+                c.execute(
+                    "SELECT id FROM video_files WHERE file_path = ?", (str(file_path),)
+                )
+                row = c.fetchone()
+                if row:
+                    video_id = row[0]
+                    c.execute(
+                        "DELETE FROM video_tags WHERE video_id = ?",
+                        (video_id,),
+                    )
+                    conn.commit()
+                    return True
+        except Exception as e:
+            logging.error(f"Error removing all tags from video: {e}", exc_info=True)
+            return False
+
     def get_video_tags(self, file_path):
         """Gets all tags for a specific video."""
         try:

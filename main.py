@@ -2411,6 +2411,11 @@ class VideoCourseBrowser(QMainWindow):
             )
             tag_action.triggered.connect(lambda: self.edit_tags(item))
 
+            remove_tags_action = tags_menu.addAction(
+                tr("context_menu.remove_all_tags") or "Remove all tags"
+            )
+            remove_tags_action.triggered.connect(lambda: self.remove_all_tags_from_video(item))
+
             menu.addSeparator()
             open_dir_action = menu.addAction(
                 self.icons.get("context_open_folder", QIcon()),
@@ -2661,6 +2666,39 @@ class VideoCourseBrowser(QMainWindow):
 
         if any_success:
             self.course_tree.viewport().update()  # Fallback
+
+    def remove_all_tags_from_video(self, item):
+        """Remove all tags from the video (and selected ones if mass-selection is active)."""
+        try:
+            checked_items = self.get_checked_items()
+            target_items = [item]
+            if item in checked_items:
+                target_items = checked_items
+
+            any_success = False
+            for target_item in target_items:
+                file_path = target_item.data(0, Qt.ItemDataRole.UserRole)
+                if self.db.remove_all_tags_from_video(file_path):
+                    any_success = True
+                    data = target_item.data(0, Qt.ItemDataRole.UserRole + 2)
+                    if isinstance(data, VideoItemData):
+                        data.tags = []
+                        target_item.setData(0, Qt.ItemDataRole.UserRole + 2, data)
+                    elif isinstance(data, (tuple, list)) and len(data) >= 11:
+                        lst = list(data)
+                        lst[10] = []
+                        target_item.setData(0, Qt.ItemDataRole.UserRole + 2, tuple(lst))
+                    else:
+                        self.load_courses()
+                        return
+
+            if any_success:
+                self.course_tree.viewport().update()
+        except Exception as e:
+            logging.error(f"Error in remove_all_tags_from_video: {e}", exc_info=True)
+            QMessageBox.critical(
+                self, tr("error.title"), f"Error removing tags: {e}"
+            )
 
     def item_double_clicked(self, item):
         item_type = item.data(0, Qt.ItemDataRole.UserRole + 1)
