@@ -5,10 +5,8 @@ from PyQt6.QtWidgets import (
     QFrame,
     QLabel,
     QPushButton,
-    QScrollArea,
-    QWidget,
-    QGridLayout,
     QHBoxLayout,
+    QApplication,
 )
 from PyQt6.QtCore import Qt, QUrl
 from PyQt6.QtGui import QDesktopServices, QIcon
@@ -32,13 +30,14 @@ class AboutDialog(QDialog):
         super().showEvent(event)
 
     def get_app_version(self):
+        """Load version from version.txt or return default"""
         try:
-            version_file = RESOURCES_DIR / "version.txt"
+            version_file = Path(__file__).parent / "resources" / "version.txt"
             if version_file.exists():
                 return version_file.read_text("utf-8").strip()
         except Exception:
             pass
-        return "1.0.0"
+        return "1.0"
 
     def setup_ui(self):
         # Main layout with dark background
@@ -48,18 +47,11 @@ class AboutDialog(QDialog):
         # Container frame
         self.container = QFrame()
         self.container.setObjectName("aboutContainer")
-        self.container.setFixedWidth(900)  # Make window wider
-        self.container.setFixedHeight(750)  # Increase height
+        self.container.setFixedWidth(800)  # Make window clean and wide enough for 2 columns
 
         container_layout = QVBoxLayout(self.container)
-        container_layout.setContentsMargins(25, 30, 25, 25)
-        container_layout.setSpacing(12)
-
-        # Header Layout (Title + Version + GitHub)
-        header_layout = QHBoxLayout()
-        header_layout.setContentsMargins(0, 0, 0, 0)
-        header_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        header_layout.setSpacing(15)  # Spacing between major elements
+        container_layout.setContentsMargins(25, 20, 25, 20)
+        container_layout.setSpacing(10)
 
         # Title (App Name + Version)
         app_title = tr("app.title")
@@ -67,28 +59,59 @@ class AboutDialog(QDialog):
         
         title = QLabel(f"{app_title} {version_text}")
         title.setObjectName("aboutTitle")
-        header_layout.addWidget(title)
+        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        container_layout.addWidget(title)
+
+        # GitHub and Feedback Links Layout
+        links_layout = QHBoxLayout()
+        links_layout.setContentsMargins(0, 0, 0, 0)
+        links_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         # GitHub Link Group
         github_link_group = QHBoxLayout()
         github_link_group.setSpacing(5)
-        github_link_group.setAlignment(Qt.AlignmentFlag.AlignVCenter)
 
-        # GitHub Icon
+        # Icon Label
         github_icon_label = QLabel()
         github_icon_path = str(RESOURCES_DIR / "icons" / "github.png")
-        github_icon_label.setPixmap(QIcon(github_icon_path).pixmap(20, 20))
+        github_icon_label.setPixmap(QIcon(github_icon_path).pixmap(16, 16))
         github_link_group.addWidget(github_icon_label)
 
-        # GitHub Text Link
+        # Text Label
         github_text_label = QLabel(tr("about.github"))
         github_text_label.setObjectName("aboutGithubLink")
         github_text_label.setCursor(Qt.CursorShape.PointingHandCursor)
         github_text_label.mousePressEvent = lambda e: self.open_github()
         github_link_group.addWidget(github_text_label)
 
-        header_layout.addLayout(github_link_group)
-        container_layout.addLayout(header_layout)
+        links_layout.addLayout(github_link_group)
+
+        links_layout.addSpacing(15)
+
+        # Feedback Link Group
+        feedback_link_group = QHBoxLayout()
+        feedback_link_group.setSpacing(5)
+
+        # Icon Label
+        feedback_icon_label = QLabel()
+        feedback_icon_label.setPixmap(QIcon(github_icon_path).pixmap(16, 16))
+        feedback_link_group.addWidget(feedback_icon_label)
+
+        # Text Label
+        feedback_text_label = QLabel(tr("about.feedback"))
+        feedback_text_label.setObjectName("aboutGithubLink")
+        feedback_text_label.setCursor(Qt.CursorShape.PointingHandCursor)
+        feedback_text_label.mousePressEvent = lambda e: self.open_feedback()
+        feedback_link_group.addWidget(feedback_text_label)
+
+        links_layout.addLayout(feedback_link_group)
+        container_layout.addLayout(links_layout)
+
+        # Separator Line
+        line = QFrame()
+        line.setObjectName("aboutSeparator")
+        line.setFrameShape(QFrame.Shape.HLine)
+        container_layout.addWidget(line)
 
         # Description
         desc = QLabel(tr("about.description"))
@@ -97,37 +120,10 @@ class AboutDialog(QDialog):
         desc.setWordWrap(True)
         container_layout.addWidget(desc)
 
-        # Hotkeys Section
-        hotkey_title = QLabel(tr("hotkeys.title"))
-        hotkey_title.setObjectName("aboutHotkeyTitle")
-        hotkey_title.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        container_layout.addWidget(hotkey_title)
+        # Hotkeys columns layout
+        self.build_hotkeys_columns(container_layout)
 
-        scroll = QScrollArea()
-        scroll.setWidgetResizable(True)
-        scroll.setObjectName("aboutHotkeyScroll")
-        scroll.setFrameShape(QFrame.Shape.NoFrame)
-        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        scroll.setVerticalScrollBarPolicy(
-            Qt.ScrollBarPolicy.ScrollBarAsNeeded
-        )  # Enable scrollbar when needed
-
-        hotkey_widget = QWidget()
-        hotkey_widget.setObjectName("hotkeyWidget")
-        hotkey_layout = QGridLayout(hotkey_widget)
-        hotkey_layout.setContentsMargins(5, 5, 5, 5)
-        hotkey_layout.setSpacing(8)
-        # 3 columns for hotkeys
-        hotkey_layout.setColumnStretch(1, 1)
-        hotkey_layout.setColumnStretch(3, 1)
-        hotkey_layout.setColumnStretch(5, 1)
-
-        self.populate_hotkeys(hotkey_layout)
-
-        scroll.setWidget(hotkey_widget)
-        container_layout.addWidget(scroll)
-
-        container_layout.addSpacing(10)
+        container_layout.addSpacing(5)
 
         # Close Button
         close_btn = QPushButton(tr("about.close"))
@@ -139,8 +135,22 @@ class AboutDialog(QDialog):
 
         layout.addWidget(self.container)
 
-    def populate_hotkeys(self, layout):
-        # Structure: [(category_key, [(key, desc), ...]), ...]
+    def build_hotkeys_columns(self, container_layout):
+        # Columns layout
+        columns_layout = QHBoxLayout()
+        columns_layout.setSpacing(30)
+        columns_layout.setContentsMargins(0, 0, 0, 0)
+
+        # Left Column
+        left_column = QVBoxLayout()
+        left_column.setSpacing(4)
+        left_column.setAlignment(Qt.AlignmentFlag.AlignTop)
+        
+        # Right Column
+        right_column = QVBoxLayout()
+        right_column.setSpacing(4)
+        right_column.setAlignment(Qt.AlignmentFlag.AlignTop)
+
         categories = [
             (
                 "category_playback",
@@ -221,51 +231,34 @@ class AboutDialog(QDialog):
             ),
         ]
 
-        row = 0
-        for category_key, hotkeys in categories:
+        # Distribute: Left column gets 1-4, Right column gets 5-8
+        for i, (category_key, hotkeys) in enumerate(categories):
+            col_layout = left_column if i < 4 else right_column
+
             # Category title
             category_label = QLabel(tr(f"hotkeys.{category_key}"))
             category_label.setObjectName("hotkeyCategoryTitle")
             category_label.setAlignment(Qt.AlignmentFlag.AlignLeft)
-            layout.addWidget(category_label, row, 0, 1, 6)  # span 6 columns
-            row += 1
+            col_layout.addWidget(category_label)
 
-            # Separator line
-            separator = QFrame()
-            separator.setObjectName("hotkeyCategorySeparator")
-            separator.setFrameShape(QFrame.Shape.HLine)
-            layout.addWidget(separator, row, 0, 1, 6)
-            row += 1
+            # Format hotkeys text
+            hotkey_lines = []
+            for key, desc in hotkeys:
+                hotkey_lines.append(f"{key}  —  {desc}")
+            
+            content_label = QLabel("\n".join(hotkey_lines))
+            content_label.setObjectName("aboutSectionContent")
+            content_label.setWordWrap(True)
+            content_label.setAlignment(Qt.AlignmentFlag.AlignLeft)
+            col_layout.addWidget(content_label)
 
-            # Hotkeys in 3 columns
-            start_row = row
-            for i, (key, desc) in enumerate(hotkeys):
-                col = (i % 3) * 2
-                current_row = start_row + (i // 3)
+            # Spacing between categories
+            if (i < 3 and col_layout == left_column) or (i < 7 and col_layout == right_column):
+                col_layout.addSpacing(6)
 
-                # Key container
-                key_container = QWidget()
-                key_item_layout = QVBoxLayout(key_container)
-                key_item_layout.setContentsMargins(0, 0, 0, 0)
-
-                key_label = QLabel(key)
-                key_label.setObjectName("hotkeyKey")
-                key_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-                key_item_layout.addWidget(key_label)
-
-                desc_label = QLabel(desc)
-                desc_label.setObjectName("hotkeyDesc")
-                desc_label.setWordWrap(True)
-                desc_label.setAlignment(
-                    Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter
-                )
-
-                layout.addWidget(key_container, current_row, col)
-                layout.addWidget(desc_label, current_row, col + 1)
-
-            # Move to next category
-            row = start_row + ((len(hotkeys) - 1) // 3) + 1
-            row += 1  # Extra spacing between categories
+        columns_layout.addLayout(left_column, 1)
+        columns_layout.addLayout(right_column, 1)
+        container_layout.addLayout(columns_layout)
 
     def center_window(self):
         if self.parent():
@@ -273,7 +266,16 @@ class AboutDialog(QDialog):
             self_geo = self.frameGeometry()
             self_geo.moveCenter(parent_geo.center())
             self.move(self_geo.topLeft())
+        else:
+            screen = QApplication.primaryScreen().geometry()
+            self_geo = self.frameGeometry()
+            self_geo.moveCenter(screen.center())
+            self.move(self_geo.topLeft())
 
     def open_github(self):
         """Open project GitHub repository in default browser"""
         QDesktopServices.openUrl(QUrl("https://github.com/SPluzh/SPVideoCoursesPlayer"))
+
+    def open_feedback(self):
+        """Open project feedback page in default browser"""
+        QDesktopServices.openUrl(QUrl("https://github.com/SPluzh/SPVideoCoursesPlayer/issues"))

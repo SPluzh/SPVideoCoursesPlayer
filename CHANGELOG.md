@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.5.13]
+- **UI**: Modernized the About dialog layout to match the SPAudiobookPlayer design, utilizing a vertical stack with a centered title/version, a dedicated horizontal separator, and a detailed description.
+- **UI**: Added a "Feedback, Suggestions & Bugs" link row next to the GitHub link, with icon and cursor pointer pointing to the project issues tracker.
+- **UI**: Replaced the scroll-area grid-based hotkey display with a clean, two-column list showing categorized hotkeys grouped by function.
+- **UI**: Refined the hotkey list layout by removing horizontal category separators and reducing vertical spacing and margins to achieve a more compact and balanced look.
+- **UI**: Adjusted font sizes of the About dialog elements (app title to 24px, links and category titles to 13px, hotkey descriptions to 12px) to match the SPAudiobookPlayer typography.
+- **Localization**: Added the "feedback" translation key to Russian and English language files.
+
 ## [1.5.12]
 - **UI**: Added a "Show Mass Selection" option to the View menu, enabling checkboxes next to course covers.
 - **Library**: Enabled bulk operations for selected items, allowing users to add/remove tags and toggle favorite status for multiple items at once.
