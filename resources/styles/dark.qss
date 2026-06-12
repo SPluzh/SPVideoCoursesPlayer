@@ -472,11 +472,7 @@ QLabel {
     color: @text-main;
 }
 
-QLabel#aboutTitle, QLabel#aboutVersion, QLabel#aboutGithubLink {
-    font-size: 16px;
-    font-weight: bold;
-    color: @text-light;
-}
+
 
 QLabel#titleLabel {
     font-size: 18px;
@@ -950,58 +946,6 @@ QDialog#FolderStatsDialog {
     font-family: 'Segoe UI', Arial, sans-serif;
 }
 
-/* ============================================================
-   ABOUT DIALOG
-   ============================================================ */
-
-#aboutContainer {
-    background-color: #2b2b2b;
-    border: 1px solid #444;
-    border-radius: 3px;
-}
-
-#aboutContainer QLabel {
-    color: #ccc;
-}
-
-#aboutTitle {
-    font-size: 24px;
-    font-weight: bold;
-    color: white;
-}
-
-#aboutVersion {
-    font-size: 14px;
-    color: #888;
-    margin-bottom: 10px;
-}
-
-#aboutSeparator {
-    background-color: #444;
-}
-
-#aboutDescription {
-    font-size: 13px;
-    line-height: 140%;
-    margin: 10px 0;
-}
-
-#aboutCloseBtn {
-    background-color: #444;
-    color: white;
-    border: none;
-    padding: 8px;
-    border-radius: 3px;
-    font-weight: bold;
-}
-
-#aboutCloseBtn:hover {
-    background-color: #555;
-}
-
-#aboutCloseBtn:pressed {
-    background-color: #333;
-}
 
 /* ============================================================
    PICTURE-IN-PICTURE (PIP)
@@ -1436,6 +1380,8 @@ QLabel#TagBadge {
     background-color: @bg-darker;
     border: 1px solid @bg-main;
     border-radius: 3px;
+    padding: 40px 30px 30px 30px;
+    min-width: 780px;
 }
 
 #aboutContainer QLabel {
@@ -1453,7 +1399,7 @@ QLabel#TagBadge {
     line-height: 16px;
 }
 
-#aboutGithubLink {
+QLabel#aboutGithubLink {
     color: @accent;
     font-weight: bold;
     font-size: 13px;
@@ -1461,8 +1407,8 @@ QLabel#TagBadge {
     text-decoration: none;
 }
 
-#aboutGithubLink:hover {
-    color: @text-light;
+QLabel#aboutGithubLink:hover {
+    color: white;
 }
 
 #aboutSeparator {
@@ -1476,6 +1422,8 @@ QLabel#TagBadge {
 #aboutHotkeyTitle { 
     font-weight: bold; 
     font-size: 14px;
+    margin-top: 10px;
+    margin-bottom: 5px;
 }
 
 #hotkeyCategoryTitle {

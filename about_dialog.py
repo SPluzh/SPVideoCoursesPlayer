@@ -42,16 +42,13 @@ class AboutDialog(QDialog):
     def setup_ui(self):
         # Main layout with dark background
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(0, 0, 0, 0)
 
         # Container frame
         self.container = QFrame()
         self.container.setObjectName("aboutContainer")
-        self.container.setFixedWidth(800)  # Make window clean and wide enough for 2 columns
 
         container_layout = QVBoxLayout(self.container)
-        container_layout.setContentsMargins(25, 20, 25, 20)
-        container_layout.setSpacing(10)
+        container_layout.setSpacing(15)
 
         # Title (App Name + Version)
         app_title = tr("app.title")
@@ -136,6 +133,12 @@ class AboutDialog(QDialog):
         layout.addWidget(self.container)
 
     def build_hotkeys_columns(self, container_layout):
+        # General hotkeys title
+        hotkeys_title = QLabel(tr("hotkeys.title"))
+        hotkeys_title.setObjectName("aboutHotkeyTitle")
+        hotkeys_title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        container_layout.addWidget(hotkeys_title)
+
         # Columns layout
         columns_layout = QHBoxLayout()
         columns_layout.setSpacing(30)
@@ -231,30 +234,32 @@ class AboutDialog(QDialog):
             ),
         ]
 
-        # Distribute: Left column gets 1-4, Right column gets 5-8
-        for i, (category_key, hotkeys) in enumerate(categories):
-            col_layout = left_column if i < 4 else right_column
+        # Distribute: Left column gets 1-3 (Playback, Audio, Video), Right column gets 4-8 (Bookmarks, Library, Window, System, Mouse)
+        left_cats = categories[:3]
+        right_cats = categories[3:]
 
-            # Category title
-            category_label = QLabel(tr(f"hotkeys.{category_key}"))
-            category_label.setObjectName("hotkeyCategoryTitle")
-            category_label.setAlignment(Qt.AlignmentFlag.AlignLeft)
-            col_layout.addWidget(category_label)
+        for col_layout, cats in [(left_column, left_cats), (right_column, right_cats)]:
+            for idx, (category_key, hotkeys) in enumerate(cats):
+                # Category title
+                category_label = QLabel(tr(f"hotkeys.{category_key}"))
+                category_label.setObjectName("hotkeyCategoryTitle")
+                category_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                col_layout.addWidget(category_label)
 
-            # Format hotkeys text
-            hotkey_lines = []
-            for key, desc in hotkeys:
-                hotkey_lines.append(f"{key}  —  {desc}")
-            
-            content_label = QLabel("\n".join(hotkey_lines))
-            content_label.setObjectName("aboutSectionContent")
-            content_label.setWordWrap(True)
-            content_label.setAlignment(Qt.AlignmentFlag.AlignLeft)
-            col_layout.addWidget(content_label)
+                # Format hotkeys text
+                hotkey_lines = []
+                for key, desc in hotkeys:
+                    hotkey_lines.append(f"{key}  —  {desc}")
+                
+                content_label = QLabel("\n".join(hotkey_lines))
+                content_label.setObjectName("aboutSectionContent")
+                content_label.setWordWrap(True)
+                content_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                col_layout.addWidget(content_label)
 
-            # Spacing between categories
-            if (i < 3 and col_layout == left_column) or (i < 7 and col_layout == right_column):
-                col_layout.addSpacing(6)
+                # Spacing between categories (add spacing if not the last item in this column)
+                if idx < len(cats) - 1:
+                    col_layout.addSpacing(6)
 
         columns_layout.addLayout(left_column, 1)
         columns_layout.addLayout(right_column, 1)
