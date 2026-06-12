@@ -502,6 +502,7 @@
         "add_marker": "Добавить закладку",
         "toggle_marker_gallery": "Галерея закладок",
         "toggle_library": "Показать/скрыть библиотеку",
+        "toggle_mass_selection": "Показать/скрыть чекбоксы выбора",
         "locate_video": "Показать текущее видео в библиотеке",
         "toggle_always_on_top": "Поверх всех окон",
         "toggle_pip": "Картинка в картинке (PiP)",

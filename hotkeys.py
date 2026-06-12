@@ -160,6 +160,9 @@ class HotkeyManager(QObject):
         # Actions strictly requiring Ctrl modifier
         self.ctrl_mappings = {
             Qt.Key.Key_L: "toggle_library",
+            Qt.Key.Key_M: "toggle_mass_selection",
+            0x44C: "toggle_mass_selection",  # RU softsign (where M is)
+            0x42C: "toggle_mass_selection",  # RU SOFTSIGN (where M is)
         }
 
         # Actions strictly requiring Shift modifier

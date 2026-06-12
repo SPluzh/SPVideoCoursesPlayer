@@ -4,6 +4,7 @@ All notable changes to this project will be documented in this file.
 
 ## [1.5.13]
 - **UI**: Modernized the About dialog layout and styling.
+- **Hotkeys**: Added `Ctrl + M` shortcut to toggle library selection checkboxes.
 
 ## [1.5.12]
 - **UI**: Added a "Show Mass Selection" option to the View menu, enabling checkboxes next to course covers.

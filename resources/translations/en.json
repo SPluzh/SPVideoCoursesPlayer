@@ -502,6 +502,7 @@
         "add_marker": "Add Marker",
         "toggle_marker_gallery": "Marker Gallery",
         "toggle_library": "Show/Hide Library",
+        "toggle_mass_selection": "Show/Hide Selection Checkboxes",
         "locate_video": "Locate Active Video in Library",
         "toggle_always_on_top": "Always on Top",
         "toggle_pip": "Picture-in-Picture",

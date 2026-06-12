@@ -632,6 +632,8 @@ class VideoCourseBrowser(QMainWindow):
             self.video_player.adjust_audio_delay(-0.05)
         elif action == "toggle_library":
             self.toggle_library()
+        elif action == "toggle_mass_selection":
+            self.show_mass_selection_action.trigger()
         elif action == "locate_video":
             self.locate_active_video()
         elif action == "expand_tree":
@@ -1276,6 +1278,7 @@ class VideoCourseBrowser(QMainWindow):
         self.show_mass_selection_action = QAction(tr("menu.show_mass_selection"), self)
         self.show_mass_selection_action.setCheckable(True)
         self.show_mass_selection_action.setChecked(False)
+        self.show_mass_selection_action.setShortcut("Ctrl+M")
         self.show_mass_selection_action.triggered.connect(self.toggle_mass_selection)
         view_menu.addAction(self.show_mass_selection_action)
 

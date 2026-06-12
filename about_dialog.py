@@ -203,6 +203,7 @@ class AboutDialog(QDialog):
                 "category_library",
                 [
                     ("Ctrl + L", tr("hotkeys.toggle_library")),
+                    ("Ctrl + M", tr("hotkeys.toggle_mass_selection")),
                     ("L", tr("hotkeys.locate_video")),
                     ("E", tr("hotkeys.expand_tree")),
                     ("W", tr("hotkeys.collapse_tree")),
