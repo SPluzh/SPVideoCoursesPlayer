@@ -3,7 +3,7 @@ import logging
 import zlib
 from collections import OrderedDict
 
-from PyQt6.QtWidgets import QTreeWidget, QStyledItemDelegate, QWidget, QLabel
+from PyQt6.QtWidgets import QTreeWidget, QStyledItemDelegate, QWidget, QLabel, QStyle, QStyleOptionButton
 from PyQt6.QtCore import Qt, QTimer, QRect, QPoint, QRectF, QPointF, QEvent, QModelIndex
 from PyQt6.QtGui import (
     QAction,
@@ -130,6 +130,40 @@ class VideoItemDelegate(QStyledItemDelegate):
         self.hovered_index = index
         self.current_thumbnail_index = thumbnail_index
         self.mouse_pos = mouse_pos
+
+    def get_checkbox_rect(self, rect, index):
+        item_type = index.data(Qt.ItemDataRole.UserRole + 1)
+        chain = self._get_nesting_chain(index)
+        nesting_offset = self._draw_nesting_lines(None, rect, chain, index)
+        
+        checkbox_size = 18
+        if item_type == "folder":
+            icon_height = self.config.get("folder_row_height", 70) - 14
+            icon_width = int(icon_height * 16 / 9)
+            center_y = rect.center().y()
+            icon_rect = QRectF(
+                rect.left() + nesting_offset + 5,
+                center_y - icon_height / 2 - 2,
+                icon_width,
+                icon_height,
+            )
+            checkbox_x = int(icon_rect.right() + 10)
+            checkbox_y = int(icon_rect.top() + (icon_rect.height() - checkbox_size) // 2)
+        else:
+            display_width = self.config["display_width"]
+            display_height = self.config["display_height"]
+            base_height = self.config["video_row_height"]
+            thumb_y = rect.top() + (base_height - display_height) // 2
+            thumb_rect = QRect(
+                rect.left() + nesting_offset + 5,
+                thumb_y,
+                display_width,
+                display_height,
+            )
+            checkbox_x = thumb_rect.right() + 10
+            checkbox_y = thumb_rect.top() + (thumb_rect.height() - checkbox_size) // 2
+            
+        return QRect(checkbox_x, checkbox_y, checkbox_size, checkbox_size)
 
     def get_play_button_rect(self, rect, index=None):
         """Return Play button area on thumbnail."""
@@ -726,7 +760,37 @@ class VideoItemDelegate(QStyledItemDelegate):
                 )
                 painter.drawText(bg_rect, Qt.AlignmentFlag.AlignCenter, duration_str)
 
-            text_x = thumb_rect.right() + 12
+            if self.config.get("show_mass_selection", False):
+                checkbox_rect = self.get_checkbox_rect(option.rect, index)
+                
+                tree = option.widget
+                item = tree.itemFromIndex(index) if hasattr(tree, "itemFromIndex") else None
+                check_state = Qt.CheckState.Unchecked
+                if item:
+                    state_val = item.data(0, Qt.ItemDataRole.UserRole + 8)
+                    if state_val is not None:
+                        check_state = Qt.CheckState(state_val)
+
+                style = tree.style()
+                opt = QStyleOptionButton()
+                opt.rect = checkbox_rect
+                opt.state = QStyle.StateFlag.State_Enabled
+                if check_state == Qt.CheckState.Checked:
+                    opt.state |= QStyle.StateFlag.State_On
+                elif check_state == Qt.CheckState.PartiallyChecked:
+                    opt.state |= QStyle.StateFlag.State_NoChange
+                else:
+                    opt.state |= QStyle.StateFlag.State_Off
+
+                style.drawPrimitive(
+                    QStyle.PrimitiveElement.PE_IndicatorCheckBox,
+                    opt,
+                    painter,
+                    tree,
+                )
+                text_x = checkbox_rect.right() + 10
+            else:
+                text_x = thumb_rect.right() + 12
             text_y = option.rect.top() + 8
 
             # NOTE: available_width must be calculated carefully to avoid negative values
@@ -1213,7 +1277,37 @@ class VideoItemDelegate(QStyledItemDelegate):
                 painter.fillRect(fill_rect, QColor("#2ecc71"))
 
         # Draw Text
-        text_x = icon_rect.right() + 10
+        if self.config.get("show_mass_selection", False):
+            checkbox_rect = self.get_checkbox_rect(option.rect, index)
+            
+            tree = option.widget
+            item = tree.itemFromIndex(index) if hasattr(tree, "itemFromIndex") else None
+            check_state = Qt.CheckState.Unchecked
+            if item:
+                state_val = item.data(0, Qt.ItemDataRole.UserRole + 8)
+                if state_val is not None:
+                    check_state = Qt.CheckState(state_val)
+
+            style = tree.style()
+            opt = QStyleOptionButton()
+            opt.rect = checkbox_rect
+            opt.state = QStyle.StateFlag.State_Enabled
+            if check_state == Qt.CheckState.Checked:
+                opt.state |= QStyle.StateFlag.State_On
+            elif check_state == Qt.CheckState.PartiallyChecked:
+                opt.state |= QStyle.StateFlag.State_NoChange
+            else:
+                opt.state |= QStyle.StateFlag.State_Off
+
+            style.drawPrimitive(
+                QStyle.PrimitiveElement.PE_IndicatorCheckBox,
+                opt,
+                painter,
+                tree,
+            )
+            text_x = checkbox_rect.right() + 10
+        else:
+            text_x = icon_rect.right() + 10
         text_width = option.rect.right() - text_x - 10
 
         if text_width > 0:
@@ -1569,6 +1663,16 @@ class HoverTreeWidget(QTreeWidget):
         if index.isValid():
             delegate = self.itemDelegate()
             if isinstance(delegate, VideoItemDelegate):
+                if delegate.config.get("show_mass_selection", False) and event.button() == Qt.MouseButton.LeftButton:
+                    checkbox_rect = delegate.get_checkbox_rect(self.visualRect(index), index)
+                    if checkbox_rect.contains(event.pos()):
+                        item = self.itemFromIndex(index)
+                        if item:
+                            main_window = self.window()
+                            if hasattr(main_window, "toggle_item_check_state"):
+                                main_window.toggle_item_check_state(item)
+                        return
+
                 item_type = index.data(Qt.ItemDataRole.UserRole + 1)
 
                 # Handle video play button clicks

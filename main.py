@@ -431,6 +431,7 @@ class VideoCourseBrowser(QMainWindow):
             "show_tree_lines": True,
             "show_pureref_badges": True,
             "show_pureref_badges_when_missing": False,
+            "show_mass_selection": self.config.get_show_mass_selection(),
             "tree_line_colors": self.config.get_tree_line_colors(),
         }
         delegate = VideoItemDelegate(delegate_config, self.course_tree)
@@ -1012,6 +1013,18 @@ class VideoCourseBrowser(QMainWindow):
                     logging.error(
                         f"Error restoring show_pureref_badges_when_missing state: {e}"
                     )
+
+            if "show_mass_selection" in state:
+                try:
+                    show = state["show_mass_selection"]
+                    if isinstance(show, str):
+                        show = show.lower() == "true"
+                    self.show_mass_selection_action.setChecked(bool(show))
+                    delegate = self.course_tree.itemDelegate()
+                    if hasattr(delegate, "config"):
+                        delegate.config["show_mass_selection"] = bool(show)
+                except Exception as e:
+                    logging.error(f"Error restoring show_mass_selection state: {e}")
         else:
             self.resize(self.window_width, self.window_height)
 
@@ -1259,6 +1272,12 @@ class VideoCourseBrowser(QMainWindow):
         self.show_tree_lines_action.setChecked(True)
         self.show_tree_lines_action.triggered.connect(self.toggle_tree_lines)
         view_menu.addAction(self.show_tree_lines_action)
+
+        self.show_mass_selection_action = QAction(tr("menu.show_mass_selection"), self)
+        self.show_mass_selection_action.setCheckable(True)
+        self.show_mass_selection_action.setChecked(False)
+        self.show_mass_selection_action.triggered.connect(self.toggle_mass_selection)
+        view_menu.addAction(self.show_mass_selection_action)
 
         self.show_pureref_badges_action = QAction(tr("menu.show_pureref_badges"), self)
         self.show_pureref_badges_action.setCheckable(True)
@@ -1900,6 +1919,89 @@ class VideoCourseBrowser(QMainWindow):
         self.course_tree.viewport().update()
         self.config.set_show_tree_lines(checked)
 
+    def toggle_mass_selection(self):
+        checked = self.show_mass_selection_action.isChecked()
+        delegate = self.course_tree.itemDelegate()
+        if hasattr(delegate, "config"):
+            delegate.config["show_mass_selection"] = checked
+        if not checked:
+            from PyQt6.QtWidgets import QTreeWidgetItemIterator
+            iterator = QTreeWidgetItemIterator(self.course_tree)
+            while iterator.value():
+                item = iterator.value()
+                item.setData(0, Qt.ItemDataRole.UserRole + 8, Qt.CheckState.Unchecked.value)
+                iterator += 1
+        self.course_tree.viewport().update()
+        self.config.set_show_mass_selection(checked)
+
+    def toggle_item_check_state(self, item):
+        current_state_val = item.data(0, Qt.ItemDataRole.UserRole + 8)
+        current_state = Qt.CheckState.Unchecked
+        if current_state_val is not None:
+            current_state = Qt.CheckState(current_state_val)
+
+        new_state = Qt.CheckState.Checked if current_state != Qt.CheckState.Checked else Qt.CheckState.Unchecked
+        
+        self.set_item_check_state_recursive(item, new_state)
+        
+        parent = item.parent()
+        if parent:
+            self.update_parent_check_states(parent)
+            
+        self.course_tree.viewport().update()
+
+    def set_item_check_state_recursive(self, item, state):
+        item.setData(0, Qt.ItemDataRole.UserRole + 8, state.value)
+        for i in range(item.childCount()):
+            self.set_item_check_state_recursive(item.child(i), state)
+
+    def update_parent_check_states(self, parent_item):
+        if not parent_item:
+            return
+        checked_count = 0
+        unchecked_count = 0
+        partially_checked_count = 0
+        child_count = parent_item.childCount()
+        
+        for i in range(child_count):
+            child = parent_item.child(i)
+            state_val = child.data(0, Qt.ItemDataRole.UserRole + 8)
+            state = Qt.CheckState.Unchecked
+            if state_val is not None:
+                state = Qt.CheckState(state_val)
+                
+            if state == Qt.CheckState.Checked:
+                checked_count += 1
+            elif state == Qt.CheckState.Unchecked:
+                unchecked_count += 1
+            else:
+                partially_checked_count += 1
+                
+        if checked_count == child_count:
+            parent_item.setData(0, Qt.ItemDataRole.UserRole + 8, Qt.CheckState.Checked.value)
+        elif unchecked_count == child_count:
+            parent_item.setData(0, Qt.ItemDataRole.UserRole + 8, Qt.CheckState.Unchecked.value)
+        else:
+            parent_item.setData(0, Qt.ItemDataRole.UserRole + 8, Qt.CheckState.PartiallyChecked.value)
+            
+        grandparent = parent_item.parent()
+        if grandparent:
+            self.update_parent_check_states(grandparent)
+
+    def get_checked_items(self) -> list:
+        from PyQt6.QtWidgets import QTreeWidgetItemIterator
+        checked_items = []
+        iterator = QTreeWidgetItemIterator(self.course_tree)
+        while iterator.value():
+            item = iterator.value()
+            state_val = item.data(0, Qt.ItemDataRole.UserRole + 8)
+            if state_val == Qt.CheckState.Checked.value:
+                item_type = item.data(0, Qt.ItemDataRole.UserRole + 1)
+                if item_type == "video":
+                    checked_items.append(item)
+            iterator += 1
+        return checked_items
+
     def toggle_pureref_badges(self):
         checked = self.show_pureref_badges_action.isChecked()
         delegate = self.course_tree.itemDelegate()
@@ -2454,44 +2556,36 @@ class VideoCourseBrowser(QMainWindow):
         """Toggle favorite status for item."""
         try:
             logging.debug(f"toggle_favorite called for item: {item}")
-            file_path = item.data(0, Qt.ItemDataRole.UserRole)
-            logging.debug(f"file_path: {file_path}")
-            data = item.data(0, Qt.ItemDataRole.UserRole + 2)
-            logging.debug(f"current data type: {type(data)}")
+            checked_items = self.get_checked_items()
+            target_items = [item]
+            if item in checked_items:
+                target_items = checked_items
 
-            # Determine current state
+            data = item.data(0, Qt.ItemDataRole.UserRole + 2)
             is_fav = False
             if isinstance(data, VideoItemData):
                 is_fav = data.is_favorite
             elif data and len(data) >= 10:
                 is_fav = bool(data[9])
-
             new_state = not is_fav
-            logging.debug(f"Toggling favorite to: {new_state}")
+            logging.debug(f"Toggling favorite to: {new_state} for {len(target_items)} items")
 
-            if self.db.toggle_favorite(file_path, new_state):
-                # Refresh this item's data
-                if isinstance(data, VideoItemData):
-                    data.is_favorite = new_state
-                    item.setData(0, Qt.ItemDataRole.UserRole + 2, data)
-                elif data and len(data) >= 10:
-                    lst = list(data)
-                    # Ensure list is long enough
-                    while len(lst) < 10:
-                        lst.append(0)
-                    if len(lst) == 10:
-                        lst.append([])  # tags
-
-                    lst[9] = 1 if new_state else 0  # Toggle
-                    item.setData(0, Qt.ItemDataRole.UserRole + 2, tuple(lst))
-                else:
-                    logging.debug(
-                        "Data format not recognized or incomplete, reloading courses"
-                    )
-                    self.load_courses()  # Fallback
-                self.course_tree.viewport().update()
-            else:
-                logging.error("Failed to toggle favorite in DB")
+            for target_item in target_items:
+                file_path = target_item.data(0, Qt.ItemDataRole.UserRole)
+                target_data = target_item.data(0, Qt.ItemDataRole.UserRole + 2)
+                if self.db.toggle_favorite(file_path, new_state):
+                    if isinstance(target_data, VideoItemData):
+                        target_data.is_favorite = new_state
+                        target_item.setData(0, Qt.ItemDataRole.UserRole + 2, target_data)
+                    elif target_data and len(target_data) >= 10:
+                        lst = list(target_data)
+                        while len(lst) < 10:
+                            lst.append(0)
+                        if len(lst) == 10:
+                            lst.append([])
+                        lst[9] = 1 if new_state else 0
+                        target_item.setData(0, Qt.ItemDataRole.UserRole + 2, tuple(lst))
+            self.course_tree.viewport().update()
         except Exception as e:
             logging.error(f"Error in toggle_favorite: {e}", exc_info=True)
             QMessageBox.critical(
@@ -2521,48 +2615,52 @@ class VideoCourseBrowser(QMainWindow):
 
     def toggle_video_tag_from_menu(self, item, tag, checked):
         """Toggle a tag on a video from the context menu."""
-        file_path = item.data(0, Qt.ItemDataRole.UserRole)
+        checked_items = self.get_checked_items()
+        target_items = [item]
+        if item in checked_items:
+            target_items = checked_items
 
-        if checked:
-            success = self.db.add_tag_to_video(file_path, tag["id"])
-        else:
-            success = self.db.remove_tag_from_video(file_path, tag["id"])
-
-        if success:
-            # Update item data
-            data = item.data(0, Qt.ItemDataRole.UserRole + 2)
-
-            if isinstance(data, VideoItemData):
-                current_tags = list(data.tags)  # Copy
-                if checked:
-                    if not any(t["id"] == tag["id"] for t in current_tags):
-                        current_tags.append(tag)
-                else:
-                    current_tags = [t for t in current_tags if t["id"] != tag["id"]]
-
-                data.tags = current_tags
-                # Trigger update
-                item.setData(0, Qt.ItemDataRole.UserRole + 2, data)
-                self.course_tree.viewport().update()
-
-            elif isinstance(data, (tuple, list)) and len(data) >= 11:
-                lst = list(data)
-                current_tags = list(lst[10])  # Copy the list of tags
-
-                if checked:
-                    # Add if not exists (shouldn't exist if checked was false before)
-                    if not any(t["id"] == tag["id"] for t in current_tags):
-                        current_tags.append(tag)
-                else:
-                    # Remove
-                    current_tags = [t for t in current_tags if t["id"] != tag["id"]]
-
-                # Update list in tuple
-                lst[10] = current_tags
-                item.setData(0, Qt.ItemDataRole.UserRole + 2, tuple(lst))
-                self.course_tree.viewport().update()
+        any_success = False
+        for target_item in target_items:
+            file_path = target_item.data(0, Qt.ItemDataRole.UserRole)
+            if checked:
+                success = self.db.add_tag_to_video(file_path, tag["id"])
             else:
-                self.load_courses()  # Fallback
+                success = self.db.remove_tag_from_video(file_path, tag["id"])
+
+            if success:
+                any_success = True
+                data = target_item.data(0, Qt.ItemDataRole.UserRole + 2)
+
+                if isinstance(data, VideoItemData):
+                    current_tags = list(data.tags)
+                    if checked:
+                        if not any(t["id"] == tag["id"] for t in current_tags):
+                            current_tags.append(tag)
+                    else:
+                        current_tags = [t for t in current_tags if t["id"] != tag["id"]]
+
+                    data.tags = current_tags
+                    target_item.setData(0, Qt.ItemDataRole.UserRole + 2, data)
+
+                elif isinstance(data, (tuple, list)) and len(data) >= 11:
+                    lst = list(data)
+                    current_tags = list(lst[10])
+
+                    if checked:
+                        if not any(t["id"] == tag["id"] for t in current_tags):
+                            current_tags.append(tag)
+                    else:
+                        current_tags = [t for t in current_tags if t["id"] != tag["id"]]
+
+                    lst[10] = current_tags
+                    target_item.setData(0, Qt.ItemDataRole.UserRole + 2, tuple(lst))
+                else:
+                    self.load_courses()
+                    return
+
+        if any_success:
+            self.course_tree.viewport().update()  # Fallback
 
     def item_double_clicked(self, item):
         item_type = item.data(0, Qt.ItemDataRole.UserRole + 1)
@@ -2798,21 +2896,49 @@ class VideoCourseBrowser(QMainWindow):
             import os
 
             os.startfile(file_path)
-            self.mark_as_watched(item)
+            self.mark_as_watched(item, mass_op=False)
 
-    def mark_as_watched(self, item):
-        file_path = item.data(0, Qt.ItemDataRole.UserRole)
-        self.db.mark_video_as_watched(file_path)
+    def mark_as_watched(self, item, mass_op=True):
+        checked_items = self.get_checked_items()
+        if mass_op and checked_items and item in checked_items:
+            for target_item in checked_items:
+                file_path = target_item.data(0, Qt.ItemDataRole.UserRole)
+                self.db.mark_video_as_watched(file_path)
+        else:
+            file_path = item.data(0, Qt.ItemDataRole.UserRole)
+            self.db.mark_video_as_watched(file_path)
         self.load_courses()
 
     def mark_folder_as_watched(self, item):
-        folder_path = item.data(0, Qt.ItemDataRole.UserRole)
-        self.db.mark_folder_as_watched(folder_path)
+        checked_items = self.get_checked_items()
+        is_checked_op = False
+        state_val = item.data(0, Qt.ItemDataRole.UserRole + 8)
+        if checked_items and state_val in (Qt.CheckState.Checked.value, Qt.CheckState.PartiallyChecked.value):
+            is_checked_op = True
+
+        if is_checked_op:
+            for target_item in checked_items:
+                file_path = target_item.data(0, Qt.ItemDataRole.UserRole)
+                self.db.mark_video_as_watched(file_path)
+        else:
+            folder_path = item.data(0, Qt.ItemDataRole.UserRole)
+            self.db.mark_folder_as_watched(folder_path)
         self.load_courses()
 
     def reset_folder_progress(self, item):
-        folder_path = item.data(0, Qt.ItemDataRole.UserRole)
-        self.db.reset_folder_progress(folder_path)
+        checked_items = self.get_checked_items()
+        is_checked_op = False
+        state_val = item.data(0, Qt.ItemDataRole.UserRole + 8)
+        if checked_items and state_val in (Qt.CheckState.Checked.value, Qt.CheckState.PartiallyChecked.value):
+            is_checked_op = True
+
+        if is_checked_op:
+            for target_item in checked_items:
+                file_path = target_item.data(0, Qt.ItemDataRole.UserRole)
+                self.db.reset_video_progress(file_path)
+        else:
+            folder_path = item.data(0, Qt.ItemDataRole.UserRole)
+            self.db.reset_folder_progress(folder_path)
         self.load_courses()
 
     def play_folder(self, item):
@@ -2924,8 +3050,14 @@ class VideoCourseBrowser(QMainWindow):
             )
 
     def reset_video_progress(self, item):
-        file_path = item.data(0, Qt.ItemDataRole.UserRole)
-        self.db.reset_video_progress(file_path)
+        checked_items = self.get_checked_items()
+        if checked_items and item in checked_items:
+            for target_item in checked_items:
+                file_path = target_item.data(0, Qt.ItemDataRole.UserRole)
+                self.db.reset_video_progress(file_path)
+        else:
+            file_path = item.data(0, Qt.ItemDataRole.UserRole)
+            self.db.reset_video_progress(file_path)
         self.load_courses()
 
     def play_video_at_marker(self, file_path, position):
@@ -3065,6 +3197,21 @@ class VideoCourseBrowser(QMainWindow):
         # Safety: Disable progress timer and hover during reload
         if hasattr(self, "progress_save_timer"):
             self.progress_save_timer.stop()
+
+        # Save check states of all items
+        checked_states = {}
+        try:
+            from PyQt6.QtWidgets import QTreeWidgetItemIterator
+            iterator = QTreeWidgetItemIterator(self.course_tree)
+            while iterator.value():
+                item = iterator.value()
+                path = item.data(0, Qt.ItemDataRole.UserRole)
+                state_val = item.data(0, Qt.ItemDataRole.UserRole + 8)
+                if path and state_val is not None:
+                    checked_states[path] = state_val
+                iterator += 1
+        except Exception as e:
+            logging.error(f"Error saving check states: {e}")
 
         self.course_tree.stop_hover()
         self.course_tree.blockSignals(True)
@@ -3327,6 +3474,20 @@ class VideoCourseBrowser(QMainWindow):
                 video_item.setIcon(0, self.video_icon)
                 # Disable selection for video rows
                 video_item.setFlags(video_item.flags() & ~Qt.ItemFlag.ItemIsSelectable)
+
+        # Restore check states
+        if checked_states:
+            try:
+                from PyQt6.QtWidgets import QTreeWidgetItemIterator
+                iterator = QTreeWidgetItemIterator(self.course_tree)
+                while iterator.value():
+                    item = iterator.value()
+                    path = item.data(0, Qt.ItemDataRole.UserRole)
+                    if path in checked_states:
+                        item.setData(0, Qt.ItemDataRole.UserRole + 8, checked_states[path])
+                    iterator += 1
+            except Exception as e:
+                logging.error(f"Error restoring check states: {e}")
 
         self.course_tree.blockSignals(False)
 

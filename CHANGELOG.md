@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.5.12]
+- **UI**: Added a "Show Mass Selection" option to the View menu, enabling checkboxes next to course covers.
+- **Library**: Enabled bulk operations for selected items, allowing users to add/remove tags and toggle favorite status for multiple items at once.
+- **Library**: Added support for mass operations to "Mark as Watched" and "Reset Progress" (Mark as New) for all checked courses or videos.
+
 ## [1.5.11]
 - **UI**: Completely disabled the grey background highlight when hovering over video and folder items in the library tree.
 - **UI**: Made the video duration badge background on thumbnails opaque for better readability.

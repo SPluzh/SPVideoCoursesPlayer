@@ -32,7 +32,8 @@
         "show_tree_lines": "Show Tree Lines",
         "show_pureref_badges": "Show PureRef Icons",
         "show_pureref_badges_when_missing": "Show PureRef Icons When Missing",
-        "fullscreen": "Fullscreen"
+        "fullscreen": "Fullscreen",
+        "show_mass_selection": "Show Selection Checkboxes"
     },
     "library": {
         "search_placeholder": "Search...",

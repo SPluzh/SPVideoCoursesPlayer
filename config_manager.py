@@ -28,6 +28,7 @@ class ConfigManager:
             "show_pureref_badges": "True",
             "show_pureref_badges_when_missing": "False",
             "enable_debug_file": "False",
+            "show_mass_selection": "False",
         },
         "Paths": {
             "paths": "",
@@ -444,6 +445,13 @@ class ConfigManager:
                 )
             except (ValueError, TypeError):
                 pass
+        if config.has_option("General", "show_mass_selection"):
+            try:
+                state["show_mass_selection"] = config.getboolean(
+                    "General", "show_mass_selection"
+                )
+            except (ValueError, TypeError):
+                pass
 
         return state
 
@@ -559,6 +567,17 @@ class ConfigManager:
         if "General" not in config:
             config["General"] = {}
         config["General"]["show_pureref_badges_when_missing"] = str(value)
+        self._write_config(config)
+
+    def get_show_mass_selection(self) -> bool:
+        config = self._read_config()
+        return config.getboolean("General", "show_mass_selection", fallback=False)
+
+    def set_show_mass_selection(self, value: bool):
+        config = self._read_config()
+        if "General" not in config:
+            config["General"] = {}
+        config["General"]["show_mass_selection"] = str(value)
         self._write_config(config)
 
     def get_tree_line_colors(self) -> list:
