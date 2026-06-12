@@ -6,6 +6,8 @@ All notable changes to this project will be documented in this file.
 - **UI**: Completely disabled the grey background highlight when hovering over video and folder items in the library tree.
 - **UI**: Made the video duration badge background on thumbnails opaque for better readability.
 - **Fix**: Fixed the seek bar preview popup showing a black/corrupted image on first hover — the preview now correctly displays the actual video frame at the hovered position.
+- **Fix**: Fixed taskbar progress bar turning green when system wakes up from sleep while playback is paused.
+
 
 ## [1.5.10]
 - **Hotkeys**: Added YouTube-style percentage seeking with keys 0-9:

@@ -248,6 +248,11 @@ class TaskbarProgress:
         """Hides the progress bar in the taskbar."""
         self.set_state(self.TBPF_NOPROGRESS)
 
+    def refresh_state(self):
+        """Reset the current state cache to force update on next tick."""
+        self._current_state = -1
+
+
     def update_for_playback(self, is_playing: bool, current: float, total: float):
         """
         Complex update for the video player.

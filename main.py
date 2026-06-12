@@ -3823,6 +3823,9 @@ _THUMBBUTTON_NEXT = 4
 
 WM_COMMAND = 0x0111
 THBN_CLICKED = 0x1800
+WM_POWERBROADCAST = 0x0218
+PBT_APMRESUMEAUTOMATIC = 0x0012
+PBT_APMRESUMESUSPEND = 0x0007
 
 import ctypes
 
@@ -3868,6 +3871,20 @@ class TaskbarEventFilter(QAbstractNativeEventFilter):
                             elif button_id == _THUMBBUTTON_NEXT:
                                 w.play_next_video()
                                 return True, 0
+                    elif msg.message == WM_POWERBROADCAST:
+                        if msg.wParam in (PBT_APMRESUMEAUTOMATIC, PBT_APMRESUMESUSPEND):
+                            if hasattr(self.window, "taskbar_progress") and self.window.taskbar_progress:
+                                self.window.taskbar_progress.refresh_state()
+
+                                # Delayed update to give the OS taskbar time to restore
+                                def restore_taskbar():
+                                    if hasattr(self.window, "taskbar_progress") and self.window.taskbar_progress:
+                                        self.window.taskbar_progress.refresh_state()
+                                    if hasattr(self.window, "_refresh_taskbar_buttons"):
+                                        self.window._refresh_taskbar_buttons()
+
+                                QTimer.singleShot(1000, restore_taskbar)
+                                QTimer.singleShot(2000, restore_taskbar)
                     elif (
                         WM_TASKBARBUTTONCREATED
                         and msg.message == WM_TASKBARBUTTONCREATED
@@ -3878,6 +3895,7 @@ class TaskbarEventFilter(QAbstractNativeEventFilter):
             except Exception:
                 pass
         return False, 0
+
 
 
 def main():
