@@ -23,6 +23,7 @@ class SubtitleTextEdit(QTextEdit):
         palette = self.palette()
         palette.setColor(palette.ColorRole.Base, Qt.GlobalColor.transparent)
         self.setPalette(palette)
+        self.setStyleSheet("background: transparent; border: none; padding: 0px; margin: 0px;")
 
         self.hover_timer = QTimer(self)
         self.hover_timer.setSingleShot(True)
@@ -393,7 +394,8 @@ class SubtitleOverlayWidget(QFrame):
         
         # Calculate dynamic height based on document content height
         doc_height = int(self.text_edit.document().size().height())
-        height = max(50, doc_height + 20)  # padding/margins
+        # Height is doc_height + top_margin(8) + bottom_margin(8)
+        height = doc_height + 16
 
         # Centered horizontally, positioned near the bottom
         x = global_pos.x()
