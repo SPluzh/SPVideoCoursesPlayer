@@ -311,7 +311,8 @@ class TranslationPopup(QFrame):
         screen_geo = screen.availableGeometry()
 
         target_x = anchor_pos.x() - w // 2
-        target_y = anchor_pos.y() - h - 10  # 10px offset above word
+        # Align bottom of popup near the top of the word/phrase (with a tiny 4px safety gap)
+        target_y = anchor_pos.y() - h - 4
 
         # Clamp inside screen boundary
         margin = 15

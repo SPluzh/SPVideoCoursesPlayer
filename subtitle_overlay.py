@@ -98,7 +98,23 @@ class SubtitleTextEdit(QTextEdit):
                         if cleaned_word != self.current_hovered_word:
                             self.current_hovered_word = cleaned_word
                             self.current_hovered_cursor = cursor
-                            self.hover_pos = self.mapToGlobal(pos)
+                            
+                            # Calculate top-center of the hovered word
+                            start_cursor = QTextCursor(cursor)
+                            start_cursor.setPosition(cursor.selectionStart())
+                            end_cursor = QTextCursor(cursor)
+                            end_cursor.setPosition(cursor.selectionEnd())
+                            
+                            r_start = self.cursorRect(start_cursor)
+                            r_end = self.cursorRect(end_cursor)
+                            
+                            if abs(r_start.top() - r_end.top()) < 5:
+                                x = (r_start.left() + r_end.left()) // 2
+                            else:
+                                x = r_start.left()
+                            y = r_start.top()
+                            
+                            self.hover_pos = self.viewport().mapToGlobal(QPoint(x, y))
                             logging.debug(f"Subtitle word hovered: '{cleaned_word}', position: {self.hover_pos}")
                             # Reset timer
                             self.hover_timer.start(300) # 300ms debounce
@@ -119,7 +135,22 @@ class SubtitleTextEdit(QTextEdit):
                 selected_text = cursor.selectedText().strip()
                 # Clean punctuation and numbers if appropriate, or just strip
                 if selected_text:
-                    global_pos = self.mapToGlobal(event.position().toPoint())
+                    # Calculate top-center of the selected phrase
+                    start_cursor = QTextCursor(cursor)
+                    start_cursor.setPosition(cursor.selectionStart())
+                    end_cursor = QTextCursor(cursor)
+                    end_cursor.setPosition(cursor.selectionEnd())
+                    
+                    r_start = self.cursorRect(start_cursor)
+                    r_end = self.cursorRect(end_cursor)
+                    
+                    if abs(r_start.top() - r_end.top()) < 5:
+                        x = (r_start.left() + r_end.left()) // 2
+                    else:
+                        x = r_start.left()
+                    y = r_start.top()
+                    
+                    global_pos = self.viewport().mapToGlobal(QPoint(x, y))
                     logging.debug(f"Subtitle text selected: '{selected_text}', position: {global_pos}")
                     self.selectionSelected.emit(selected_text, global_pos)
         except Exception as e:
