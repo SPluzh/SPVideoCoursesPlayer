@@ -1,6 +1,6 @@
 import string
 import logging
-from PyQt6.QtWidgets import QFrame, QTextEdit, QVBoxLayout, QApplication, QWidget, QSizePolicy
+from PyQt6.QtWidgets import QFrame, QTextEdit, QVBoxLayout, QApplication, QWidget, QSizePolicy, QPushButton
 from PyQt6.QtCore import Qt, pyqtSignal, QTimer, QPoint, QRect, QEvent
 from PyQt6.QtGui import QFont, QColor, QTextCursor, QTextCharFormat
 
@@ -182,6 +182,7 @@ class SubtitleTextEdit(QTextEdit):
 class SubtitleOverlayWidget(QFrame):
     mouseEntered = pyqtSignal()
     mouseLeft = pyqtSignal()
+    translateRequested = pyqtSignal(str, QPoint)
 
     def __init__(self, video_widget, player_window):
         super().__init__(video_widget, Qt.WindowType.Window | Qt.WindowType.FramelessWindowHint | Qt.WindowType.NoDropShadowWindowHint)
@@ -216,6 +217,23 @@ class SubtitleOverlayWidget(QFrame):
         self.text_edit.setMinimumHeight(0)
         self.text_edit.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Ignored)
         layout.addWidget(self.text_edit)
+
+        # Translate entire subtitle button
+        self.translate_btn = QPushButton(self)
+        self.translate_btn.setObjectName("translateSubBtn")
+        self.translate_btn.setFixedSize(30, 30)
+        self.translate_btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self.translate_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        from icon_manager import load_icon
+        self.translate_btn.setIcon(load_icon("languages"))
+        from translator import tr
+        self.translate_btn.setToolTip(tr("translator.translate_subtitle"))
+        self.translate_btn.clicked.connect(self._on_translate_btn_clicked)
+        self.translate_btn.hide()
+
+        # Connect signals for showing/hiding translate button on hover
+        self.mouseEntered.connect(self._show_translate_btn)
+        self.mouseLeft.connect(self._hide_translate_btn)
 
         # Connect event filters to dynamically update geometry
         if self.video_widget:
@@ -295,6 +313,8 @@ class SubtitleOverlayWidget(QFrame):
         self.current_text = text
         if not text:
             self.text_edit.clear()
+            if hasattr(self, 'translate_btn') and self.translate_btn:
+                self.translate_btn.hide()
             self.hide()
             return
 
@@ -311,6 +331,17 @@ class SubtitleOverlayWidget(QFrame):
         # Ensure geometry is updated for the new text
         self.update_geometry()
         
+        # Check hover to show/hide translate button
+        from PyQt6.QtGui import QCursor
+        try:
+            is_hovered = self.rect().contains(self.mapFromGlobal(QCursor.pos()))
+            if is_hovered:
+                self._show_translate_btn()
+            else:
+                self._hide_translate_btn()
+        except Exception:
+            pass
+
         # Check visibility conditions
         if self._should_be_visible():
             self.show()
@@ -412,6 +443,34 @@ class SubtitleOverlayWidget(QFrame):
         if actual_height > height:
             y = global_pos.y() + vh - actual_height - bottom_margin
             self.setGeometry(x, y, width, actual_height)
+
+        # Position translate button at the right side of the widget
+        if hasattr(self, 'translate_btn') and self.translate_btn:
+            btn_width = 30
+            btn_height = 30
+            actual_height = self.height()
+            btn_x = width - btn_width - 10
+            btn_y = (actual_height - btn_height) // 2
+            self.translate_btn.setGeometry(btn_x, btn_y, btn_width, btn_height)
+
+    def _show_translate_btn(self):
+        if hasattr(self, 'translate_btn') and self.translate_btn and self.current_text:
+            self.translate_btn.show()
+
+    def _hide_translate_btn(self):
+        if hasattr(self, 'translate_btn') and self.translate_btn:
+            self.translate_btn.hide()
+
+    def _on_translate_btn_clicked(self):
+        try:
+            if not self.current_text:
+                return
+            center_x = self.mapToGlobal(QPoint(self.width() // 2, 0)).x()
+            top_y = self.mapToGlobal(QPoint(0, 0)).y()
+            anchor_pos = QPoint(center_x, top_y)
+            self.translateRequested.emit(self.current_text, anchor_pos)
+        except Exception as e:
+            logging.error(f"Error in _on_translate_btn_clicked: {e}", exc_info=True)
 
     def eventFilter(self, obj, event):
         if obj == self.video_widget:

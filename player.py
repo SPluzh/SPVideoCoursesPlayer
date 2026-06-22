@@ -307,6 +307,7 @@ class VideoPlayerWidget(QWidget):
         self.subtitle_overlay.text_edit.selectionSelected.connect(self._on_subtitle_selection_selected)
         self.subtitle_overlay.text_edit.hoverCleared.connect(self._on_subtitle_hover_cleared)
         self.subtitle_overlay.mouseEntered.connect(self._on_subtitle_area_entered)
+        self.subtitle_overlay.translateRequested.connect(self._on_subtitle_selection_selected)
 
         # Marker Gallery Overlay (Horizontal) - Independent window to avoid Airspace issue
         self.marker_gallery = MarkerGalleryWidget(self)

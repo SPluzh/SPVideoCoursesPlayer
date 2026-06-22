@@ -1521,3 +1521,21 @@ QPushButton#dictBtn[added="true"]:hover {
 QPushButton#dictBtn[added="true"]:pressed {
     background-color: @accent-pressed;
 }
+
+/* Subtitle overlay translate entire subtitle button */
+QPushButton#translateSubBtn {
+    background-color: rgba(255, 255, 255, 20);
+    border: 1px solid rgba(255, 255, 255, 40);
+    border-radius: 15px;
+    padding: 0px;
+}
+
+QPushButton#translateSubBtn:hover {
+    background-color: @accent;
+    border-color: @accent;
+}
+
+QPushButton#translateSubBtn:pressed {
+    background-color: @accent-pressed;
+    border-color: @accent-pressed;
+}

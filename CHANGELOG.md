@@ -4,6 +4,7 @@ All notable changes to this project will be documented in this file.
 
 ## [1.6.0]
 - **Interactive Subtitles**: Click on any word in the subtitles to translate it.
+- **Translate Entire Subtitle**: Added a button to translate the entire current subtitle without manual highlighting.
 - **Pronunciation Audio**: Added a button to the translation window to hear how words are pronounced.
 - **Fast Translation**: Hovering or selecting text instantly displays translation, part of speech, and synonyms.
 - **Offline Cache**: Previously translated words load instantly without requiring an internet connection.

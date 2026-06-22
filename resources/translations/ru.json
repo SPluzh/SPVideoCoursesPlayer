@@ -587,6 +587,7 @@
         "add_to_dictionary": "Добавить в словарь",
         "added_to_dictionary": "Добавлено в словарь",
         "already_in_dictionary": "Уже в словаре",
-        "listen_pronunciation": "Прослушать произношение"
+        "listen_pronunciation": "Прослушать произношение",
+        "translate_subtitle": "Перевести весь субтитр"
     }
 }
