@@ -100,12 +100,21 @@ class TranslationPopup(QFrame):
         self.original_label.setWordWrap(True)
         self.top_layout.addWidget(self.original_label, 1)
 
+        # Listen pronunciation button
+        self.pronounce_btn = QPushButton(self)
+        self.pronounce_btn.setObjectName("pronounceBtn")
+        self.pronounce_btn.setFixedSize(30, 30)
+        self.pronounce_btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self.pronounce_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.pronounce_btn.setIcon(load_icon("volume_medium"))
+        self.top_layout.addWidget(self.pronounce_btn, 0, Qt.AlignmentFlag.AlignTop)
+        self.pronounce_btn.clicked.connect(self._on_pronounce_btn_clicked)
+        self.pronounce_btn.hide()
+
         # Add to dictionary button
-        from PyQt6.QtCore import QSize
         self.dict_btn = QPushButton(self)
         self.dict_btn.setObjectName("dictBtn")
-        self.dict_btn.setFixedSize(24, 24)
-        self.dict_btn.setIconSize(QSize(14, 14))
+        self.dict_btn.setFixedSize(30, 30)
         self.dict_btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.dict_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self.top_layout.addWidget(self.dict_btn, 0, Qt.AlignmentFlag.AlignTop)
@@ -178,6 +187,7 @@ class TranslationPopup(QFrame):
             self.original_label.setText(text)
             self.translation_label.setText("")
             self.dict_btn.hide()
+            self.pronounce_btn.hide()
             self.adjustSize()
             self.position_popup(anchor_pos)
             self.show()
@@ -212,6 +222,7 @@ class TranslationPopup(QFrame):
         self.original_label.setText(text)
         self.translation_label.setText("...")
         self.dict_btn.hide()
+        self.pronounce_btn.hide()
         self.adjustSize()
         self.position_popup(anchor_pos)
         self.show()
@@ -324,6 +335,13 @@ class TranslationPopup(QFrame):
         self.dict_btn.style().polish(self.dict_btn)
         self.dict_btn.show()
 
+        from translator import tr
+        tooltip_pronounce = tr("translator.listen_pronunciation")
+        if tooltip_pronounce == "translator.listen_pronunciation":
+            tooltip_pronounce = "Listen pronunciation"
+        self.pronounce_btn.setToolTip(tooltip_pronounce)
+        self.pronounce_btn.show()
+
         self.adjustSize()
         if hasattr(self, "last_anchor_pos") and self.last_anchor_pos:
             self.position_popup(self.last_anchor_pos)
@@ -334,6 +352,7 @@ class TranslationPopup(QFrame):
         self.current_original = None
         self.current_translation = None
         self.dict_btn.hide()
+        self.pronounce_btn.hide()
         self.adjustSize()
         if hasattr(self, "last_anchor_pos") and self.last_anchor_pos:
             self.position_popup(self.last_anchor_pos)
@@ -364,6 +383,35 @@ class TranslationPopup(QFrame):
         self.adjustSize()
         if hasattr(self, "last_anchor_pos") and self.last_anchor_pos:
             self.position_popup(self.last_anchor_pos)
+
+    def _on_pronounce_btn_clicked(self):
+        if not self.current_original:
+            return
+        
+        if not hasattr(self, "tts"):
+            try:
+                from PyQt6.QtTextToSpeech import QTextToSpeech
+                self.tts = QTextToSpeech(self)
+            except Exception as e:
+                logging.error(f"Failed to initialize QTextToSpeech: {e}")
+                self.tts = None
+                
+        if self.tts:
+            try:
+                self.tts.stop()
+                
+                # Check characters to determine locale (defaulting to English if Latin, Russian if Cyrillic)
+                import re
+                if re.search(r'[\u0400-\u04FF]', self.current_original):
+                    from PyQt6.QtCore import QLocale
+                    self.tts.setLocale(QLocale("ru_RU"))
+                else:
+                    from PyQt6.QtCore import QLocale
+                    self.tts.setLocale(QLocale("en_US"))
+                    
+                self.tts.say(self.current_original)
+            except Exception as e:
+                logging.error(f"Error during speech synthesis: {e}")
 
     def position_popup(self, anchor_pos):
         """Move the popup to be centered horizontally above the anchor point."""

@@ -1507,23 +1507,7 @@ QLabel#aboutGithubLink:hover {
     border: none;
 }
 
-QPushButton#dictBtn {
-    background-color: transparent;
-    border: 1px solid transparent;
-    border-radius: 12px;
-    width: 24px;
-    height: 24px;
-    padding: 0px;
-}
 
-QPushButton#dictBtn:hover {
-    background-color: @bg-dark;
-    border-color: @border;
-}
-
-QPushButton#dictBtn:pressed {
-    background-color: @bg-main;
-}
 
 QPushButton#dictBtn[added="true"] {
     background-color: @accent;

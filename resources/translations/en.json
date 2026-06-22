@@ -586,6 +586,7 @@
         "phrase": "Phrase",
         "add_to_dictionary": "Add to dictionary",
         "added_to_dictionary": "Added to dictionary",
-        "already_in_dictionary": "Already in dictionary"
+        "already_in_dictionary": "Already in dictionary",
+        "listen_pronunciation": "Listen pronunciation"
     }
 }
