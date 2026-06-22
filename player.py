@@ -2932,11 +2932,13 @@ class VideoPlayerWidget(QWidget):
         # Hide the translation popup if the mouse is not over the popup
         over_popup = False
         if hasattr(self, "translation_popup") and self.translation_popup and self.translation_popup.isVisible():
-            over_popup = self.translation_popup.geometry().contains(QCursor.pos())
+            over_popup = self.translation_popup.rect().contains(self.translation_popup.mapFromGlobal(QCursor.pos()))
             
         if not over_popup:
             if self.translation_popup:
-                self.translation_popup.hide()
+                # Start a 300ms grace period instead of hiding immediately.
+                # This gives the user time to move the cursor across the 4px gap.
+                self.translation_popup.hide_timer.start(300)
 
     def _on_subtitle_area_entered(self):
         if not self.player:
@@ -2976,6 +2978,12 @@ class VideoPlayerWidget(QWidget):
             over_popup = self.translation_popup.rect().contains(self.translation_popup.mapFromGlobal(QCursor.pos()))
             
         if not over_overlay and not over_popup:
+            # Check if we are in the grace period
+            if (hasattr(self, "translation_popup") and self.translation_popup 
+                    and self.translation_popup.hide_timer.isActive()):
+                # Still in grace period, do nothing (keep waiting)
+                return
+                
             self.hover_check_timer.stop()
             if self.translation_popup:
                 self.translation_popup.hide()

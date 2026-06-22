@@ -583,6 +583,9 @@
         "pronoun": "Pronoun",
         "preposition": "Preposition",
         "conjunction": "Conjunction",
-        "phrase": "Phrase"
+        "phrase": "Phrase",
+        "add_to_dictionary": "Add to dictionary",
+        "added_to_dictionary": "Added to dictionary",
+        "already_in_dictionary": "Already in dictionary"
     }
 }

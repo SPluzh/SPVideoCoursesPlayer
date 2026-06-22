@@ -169,6 +169,16 @@ class DatabaseManager:
                 )
             """)
 
+            # Dictionary table
+            c.execute("""
+                CREATE TABLE IF NOT EXISTS dictionary (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    word TEXT UNIQUE NOT NULL,
+                    translation TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+
             # Indices
             c.execute(
                 "CREATE INDEX IF NOT EXISTS idx_parent_path ON folders(parent_path)"
@@ -1163,3 +1173,61 @@ class DatabaseManager:
                 conn.commit()
         except Exception as e:
             logging.error(f"Error writing to translation cache: {e}", exc_info=True)
+
+    # ===================== USER DICTIONARY =====================
+    def add_to_dictionary(self, word: str, translation: str) -> bool:
+        """
+        Adds a word and its translation to the user dictionary.
+        Returns True if added successfully, False otherwise.
+        """
+        cleaned_word = word.strip()
+        cleaned_trans = translation.strip()
+        if not cleaned_word:
+            return False
+        try:
+            with self.get_connection() as conn:
+                c = conn.cursor()
+                c.execute(
+                    "INSERT OR IGNORE INTO dictionary (word, translation) VALUES (?, ?)",
+                    (cleaned_word, cleaned_trans)
+                )
+                conn.commit()
+                return True
+        except Exception as e:
+            logging.error(f"Error adding to dictionary: {e}", exc_info=True)
+            return False
+
+    def is_in_dictionary(self, word: str) -> bool:
+        """Checks if a word is already in the dictionary."""
+        cleaned_word = word.strip()
+        if not cleaned_word:
+            return False
+        try:
+            with self.get_connection() as conn:
+                c = conn.cursor()
+                c.execute(
+                    "SELECT 1 FROM dictionary WHERE LOWER(word) = LOWER(?)",
+                    (cleaned_word,)
+                )
+                return c.fetchone() is not None
+        except Exception as e:
+            logging.error(f"Error checking dictionary: {e}", exc_info=True)
+            return False
+
+    def remove_from_dictionary(self, word: str) -> bool:
+        """Removes a word from the dictionary."""
+        cleaned_word = word.strip()
+        if not cleaned_word:
+            return False
+        try:
+            with self.get_connection() as conn:
+                c = conn.cursor()
+                c.execute(
+                    "DELETE FROM dictionary WHERE LOWER(word) = LOWER(?)",
+                    (cleaned_word,)
+                )
+                conn.commit()
+                return True
+        except Exception as e:
+            logging.error(f"Error removing from dictionary: {e}", exc_info=True)
+            return False

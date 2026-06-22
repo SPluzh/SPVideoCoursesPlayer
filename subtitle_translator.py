@@ -2,9 +2,10 @@ import urllib.request
 import urllib.parse
 import json
 import logging
-from PyQt6.QtWidgets import QFrame, QVBoxLayout, QLabel, QHBoxLayout
+from PyQt6.QtWidgets import QFrame, QVBoxLayout, QLabel, QHBoxLayout, QPushButton
 from PyQt6.QtCore import Qt, QThread, pyqtSignal, QPoint, QTimer, QRect
 from PyQt6.QtGui import QFont, QPalette, QColor
+from icon_manager import load_icon
 
 class TranslationWorker(QThread):
     finished = pyqtSignal(str, dict)  # (original, translation_details)
@@ -83,20 +84,33 @@ class TranslationPopup(QFrame):
 
         self.setObjectName("TranslationPopup")
 
-        # Style the widget to look premium and match SPVideoCoursesPlayer's dark theme
-        self.setStyleSheet("""
-            QLabel {
-                background: transparent;
-                border: none;
-            }
-        """)
+        self.current_original = None
+        self.current_translation = None
+
+        # Top row layout for original text and dictionary button
+        self.top_layout = QHBoxLayout()
+        self.top_layout.setContentsMargins(0, 0, 0, 0)
+        self.top_layout.setSpacing(6)
+        self.layout.addLayout(self.top_layout)
 
         # Original Text Label
         self.original_label = QLabel(self)
         self.original_label.setFont(QFont("Segoe UI", 10, QFont.Weight.Medium))
         self.original_label.setStyleSheet("color: rgba(255, 255, 255, 180);")
         self.original_label.setWordWrap(True)
-        self.layout.addWidget(self.original_label)
+        self.top_layout.addWidget(self.original_label, 1)
+
+        # Add to dictionary button
+        from PyQt6.QtCore import QSize
+        self.dict_btn = QPushButton(self)
+        self.dict_btn.setObjectName("dictBtn")
+        self.dict_btn.setFixedSize(24, 24)
+        self.dict_btn.setIconSize(QSize(14, 14))
+        self.dict_btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self.dict_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.top_layout.addWidget(self.dict_btn, 0, Qt.AlignmentFlag.AlignTop)
+        self.dict_btn.clicked.connect(self._on_dict_btn_clicked)
+        self.dict_btn.hide()
 
         # Translation Text Label
         self.translation_label = QLabel(self)
@@ -163,6 +177,7 @@ class TranslationPopup(QFrame):
         if not cleaned:
             self.original_label.setText(text)
             self.translation_label.setText("")
+            self.dict_btn.hide()
             self.adjustSize()
             self.position_popup(anchor_pos)
             self.show()
@@ -196,6 +211,7 @@ class TranslationPopup(QFrame):
         # Cache miss - proceed to async translation
         self.original_label.setText(text)
         self.translation_label.setText("...")
+        self.dict_btn.hide()
         self.adjustSize()
         self.position_popup(anchor_pos)
         self.show()
@@ -284,6 +300,30 @@ class TranslationPopup(QFrame):
             html += f"</div>"
 
         self.translation_label.setText(html)
+        
+        # Dictionary button configuration
+        self.current_original = original.strip()
+        self.current_translation = translation.strip()
+        
+        db = self._get_db()
+        is_added = False
+        if db and self.current_original:
+            is_added = db.is_in_dictionary(self.current_original)
+            
+        from translator import tr
+        if is_added:
+            self.dict_btn.setIcon(load_icon("check"))
+            self.dict_btn.setToolTip(tr("translator.already_in_dictionary"))
+            self.dict_btn.setProperty("added", "true")
+        else:
+            self.dict_btn.setIcon(load_icon("add"))
+            self.dict_btn.setToolTip(tr("translator.add_to_dictionary"))
+            self.dict_btn.setProperty("added", "false")
+            
+        self.dict_btn.style().unpolish(self.dict_btn)
+        self.dict_btn.style().polish(self.dict_btn)
+        self.dict_btn.show()
+
         self.adjustSize()
         if hasattr(self, "last_anchor_pos") and self.last_anchor_pos:
             self.position_popup(self.last_anchor_pos)
@@ -291,10 +331,39 @@ class TranslationPopup(QFrame):
 
     def _on_translation_error(self, err_msg):
         self.translation_label.setText("Translation failed")
+        self.current_original = None
+        self.current_translation = None
+        self.dict_btn.hide()
         self.adjustSize()
         if hasattr(self, "last_anchor_pos") and self.last_anchor_pos:
             self.position_popup(self.last_anchor_pos)
         self.raise_()
+
+    def _on_dict_btn_clicked(self):
+        db = self._get_db()
+        if not db or not self.current_original:
+            return
+        
+        is_added = db.is_in_dictionary(self.current_original)
+        from translator import tr
+        if is_added:
+            db.remove_from_dictionary(self.current_original)
+            self.dict_btn.setIcon(load_icon("add"))
+            self.dict_btn.setToolTip(tr("translator.add_to_dictionary"))
+            self.dict_btn.setProperty("added", "false")
+        else:
+            db.add_to_dictionary(self.current_original, self.current_translation)
+            self.dict_btn.setIcon(load_icon("check"))
+            self.dict_btn.setToolTip(tr("translator.already_in_dictionary"))
+            self.dict_btn.setProperty("added", "true")
+            
+        self.dict_btn.style().unpolish(self.dict_btn)
+        self.dict_btn.style().polish(self.dict_btn)
+        self.dict_btn.update()
+        
+        self.adjustSize()
+        if hasattr(self, "last_anchor_pos") and self.last_anchor_pos:
+            self.position_popup(self.last_anchor_pos)
 
     def position_popup(self, anchor_pos):
         """Move the popup to be centered horizontally above the anchor point."""
@@ -322,10 +391,10 @@ class TranslationPopup(QFrame):
         self.move(target_x, target_y)
 
     def leaveEvent(self, event):
-        # Auto hide after 2 seconds when mouse leaves translation window
-        self.hide_timer.start(2000)
         from PyQt6.QtGui import QCursor
-        if not self.geometry().contains(QCursor.pos()):
+        # Only handle leave event if mouse is actually outside the popup geometry
+        if not self.rect().contains(self.mapFromGlobal(QCursor.pos())):
+            self.hide()
             self.mouseLeft.emit()
         super().leaveEvent(event)
 
