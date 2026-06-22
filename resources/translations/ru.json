@@ -109,6 +109,7 @@
         "tooltip_zoom": "Сбросить масштаб",
         "tooltip_subtitle_track": "Субтитры\nЛКМ — вкл/выкл\nПКМ — настройки",
         "subtitle_tracks": "Дорожки субтитров",
+        "interactive_subtitles": "Интерактивные субтитры",
         "tooltip_volume": "Громкость\nЛКМ — без звука\nПКМ — настройки",
         "tooltip_speed": "Скорость воспроизведения (0.5x - 3.0x)",
         "audio_tracks": "Аудиодорожки",
@@ -572,5 +573,16 @@
         "pause": "Пауза",
         "seek_fwd": "Перемотать вперёд на 10 секунд",
         "next": "Следующее видео"
+    },
+    "translator": {
+        "synonyms": "Синонимы",
+        "adjective": "Прилагательное",
+        "noun": "Существительное",
+        "adverb": "Наречие",
+        "verb": "Глагол",
+        "pronoun": "Местоимение",
+        "preposition": "Предлог",
+        "conjunction": "Союз",
+        "phrase": "Фраза"
     }
 }

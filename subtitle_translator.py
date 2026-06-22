@@ -1,0 +1,333 @@
+import urllib.request
+import urllib.parse
+import json
+import logging
+from PyQt6.QtWidgets import QFrame, QVBoxLayout, QLabel, QHBoxLayout
+from PyQt6.QtCore import Qt, QThread, pyqtSignal, QPoint, QTimer, QRect
+from PyQt6.QtGui import QFont, QPalette, QColor
+
+class TranslationWorker(QThread):
+    finished = pyqtSignal(str, dict)  # (original, translation_details)
+    error = pyqtSignal(str)
+
+    def __init__(self, text, target_lang="ru"):
+        super().__init__()
+        self.text = text
+        self.target_lang = target_lang
+
+    def run(self):
+        try:
+            cleaned = self.text.strip()
+            if not cleaned:
+                self.finished.emit(self.text, {"translation": ""})
+                return
+
+            url = f"https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl={self.target_lang}&dt=t&dt=bd&dt=ss&q={urllib.parse.quote(cleaned)}"
+            req = urllib.request.Request(
+                url,
+                headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
+            )
+            import ssl
+            context = ssl._create_unverified_context()
+            with urllib.request.urlopen(req, timeout=5, context=context) as response:
+                data = json.loads(response.read().decode('utf-8'))
+                if data and data[0]:
+                    translated = "".join([part[0] for part in data[0] if part[0]])
+                    
+                    parts_of_speech = {}
+                    if len(data) > 1 and data[1]:
+                        for entry in data[1]:
+                            if len(entry) >= 2:
+                                pos = entry[0]
+                                words = entry[1]
+                                if pos and words:
+                                    parts_of_speech[pos] = words
+                                    
+                    synonyms = {}
+                    if len(data) > 11 and data[11]:
+                        for entry in data[11]:
+                            if len(entry) >= 2:
+                                pos = entry[0]
+                                syn_list = []
+                                for item in entry[1]:
+                                    if item and isinstance(item, list) and len(item) > 0:
+                                        syn_list.extend(item[0])
+                                if pos and syn_list:
+                                    synonyms[pos] = syn_list
+
+                    result = {
+                        "translation": translated,
+                        "parts_of_speech": parts_of_speech,
+                        "synonyms": synonyms
+                    }
+                    self.finished.emit(cleaned, result)
+                else:
+                    self.error.emit("Empty response from translation API")
+        except Exception as e:
+            logging.error(f"Translation error: {e}")
+            self.error.emit(str(e))
+
+
+class TranslationPopup(QFrame):
+    mouseLeft = pyqtSignal()
+
+    def __init__(self, parent=None):
+        super().__init__(parent, Qt.WindowType.ToolTip | Qt.WindowType.FramelessWindowHint)
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+        self.setAttribute(Qt.WidgetAttribute.WA_ShowWithoutActivating)
+
+        # Main Layout
+        self.layout = QVBoxLayout(self)
+        self.layout.setContentsMargins(12, 10, 12, 10)
+        self.layout.setSpacing(6)
+
+        self.setObjectName("TranslationPopup")
+
+        # Style the widget to look premium and match SPVideoCoursesPlayer's dark theme
+        self.setStyleSheet("""
+            QLabel {
+                background: transparent;
+                border: none;
+            }
+        """)
+
+        # Original Text Label
+        self.original_label = QLabel(self)
+        self.original_label.setFont(QFont("Segoe UI", 10, QFont.Weight.Medium))
+        self.original_label.setStyleSheet("color: rgba(255, 255, 255, 180);")
+        self.original_label.setWordWrap(True)
+        self.layout.addWidget(self.original_label)
+
+        # Translation Text Label
+        self.translation_label = QLabel(self)
+        self.translation_label.setFont(QFont("Segoe UI", 12, QFont.Weight.Bold))
+        # Premium Gold/Cyan Accent
+        self.translation_label.setStyleSheet("color: #FFD700;")
+        self.translation_label.setWordWrap(True)
+        self.translation_label.setTextFormat(Qt.TextFormat.RichText)
+        self.layout.addWidget(self.translation_label)
+
+        self.active_workers = []
+        self._memory_cache = {}
+        self.last_anchor_pos = QPoint()
+        self.hide_timer = QTimer(self)
+        self.hide_timer.setSingleShot(True)
+        self.hide_timer.timeout.connect(self.hide)
+
+    def paintEvent(self, event):
+        from PyQt6.QtGui import QPainter, QPen
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        
+        # Use main app background color (#444444)
+        bg_color = QColor("#444444")
+        painter.setBrush(bg_color)
+        
+        # Use main app border color (#808080)
+        border_color = QColor("#808080")
+        painter.setPen(QPen(border_color, 1))
+        
+        rect = self.rect()
+        adjusted_rect = QRect(rect.x(), rect.y(), rect.width() - 1, rect.height() - 1)
+        painter.drawRoundedRect(adjusted_rect, 8.0, 8.0)
+
+    def _get_db(self):
+        """Retrieve the database manager from parent elements."""
+        parent = self.parent()
+        if parent and hasattr(parent, "player_window"):
+            player = parent.player_window
+            if player and hasattr(player, "db"):
+                return player.db
+        return None
+
+    def show_translation(self, text, target_lang="ru", anchor_pos=QPoint()):
+        """Starts asynchronous translation and positions the popup above anchor_pos."""
+        logging.debug(f"show_translation called with text='{text}', target_lang='{target_lang}'")
+        
+        # Clean up old running workers by disconnecting signals to avoid updates
+        for worker in list(self.active_workers):
+            if worker.isRunning():
+                try:
+                    worker.finished.disconnect()
+                    worker.error.disconnect()
+                except TypeError:
+                    pass
+            else:
+                try:
+                    self.active_workers.remove(worker)
+                except ValueError:
+                    pass
+
+        self.last_anchor_pos = anchor_pos
+        cleaned = text.strip()
+        if not cleaned:
+            self.original_label.setText(text)
+            self.translation_label.setText("")
+            self.adjustSize()
+            self.position_popup(anchor_pos)
+            self.show()
+            self.raise_()
+            return
+
+        cache_key = (cleaned, target_lang)
+
+        # 1. Check L1 Memory Cache
+        if cache_key in self._memory_cache:
+            logging.info(f"Translation cache hit (L1 memory) for: '{cleaned}' -> '{target_lang}'")
+            self.original_label.setText(text)
+            self.show()
+            self.raise_()
+            self._on_translation_success(text, self._memory_cache[cache_key])
+            return
+
+        # 2. Check L2 Database Cache
+        db = self._get_db()
+        if db:
+            cached_result = db.get_cached_translation(cleaned, target_lang)
+            if cached_result:
+                logging.info(f"Translation cache hit (L2 database) for: '{cleaned}' -> '{target_lang}'")
+                self._memory_cache[cache_key] = cached_result
+                self.original_label.setText(text)
+                self.show()
+                self.raise_()
+                self._on_translation_success(text, cached_result)
+                return
+
+        # Cache miss - proceed to async translation
+        self.original_label.setText(text)
+        self.translation_label.setText("...")
+        self.adjustSize()
+        self.position_popup(anchor_pos)
+        self.show()
+        self.raise_()
+
+        worker = TranslationWorker(text, target_lang)
+        
+        # Create safe wrappers for connection
+        def on_success(orig, trans, w=worker):
+            try:
+                if w in self.active_workers:
+                    self.active_workers.remove(w)
+            except ValueError:
+                pass
+            
+            # Save to L1 and L2 caches
+            self._memory_cache[cache_key] = trans
+            db_inst = self._get_db()
+            if db_inst:
+                db_inst.save_cached_translation(cleaned, target_lang, trans)
+
+            self._on_translation_success(orig, trans)
+            
+        def on_error(err, w=worker):
+            try:
+                if w in self.active_workers:
+                    self.active_workers.remove(w)
+            except ValueError:
+                pass
+            self._on_translation_error(err)
+
+        worker.finished.connect(on_success)
+        worker.error.connect(on_error)
+        self.active_workers.append(worker)
+        worker.start()
+
+    def _on_translation_success(self, original, result_dict):
+        translation = result_dict.get("translation", "")
+        parts_of_speech = result_dict.get("parts_of_speech", {})
+        synonyms = result_dict.get("synonyms", {})
+        
+        # Build HTML content
+        html = f"<div style='color: #FFD700;'>{translation}</div>"
+        
+        # 1. Parts of Speech translations
+        pos_lines = []
+        for pos_name, words in parts_of_speech.items():
+            from translator import tr
+            translated_pos = tr(f"translator.{pos_name}")
+            if translated_pos == f"translator.{pos_name}":
+                translated_pos = pos_name.capitalize()
+            
+            word_list_str = ", ".join(words[:5])
+            pos_lines.append(
+                f"<tr>"
+                f"<td style='color: #808080; font-weight: bold; padding-right: 8px; vertical-align: top;'>{translated_pos}:</td>"
+                f"<td style='color: #eaeaea;'>{word_list_str}</td>"
+                f"</tr>"
+            )
+            
+        if pos_lines:
+            html += f"<table style='margin-top: 6px; margin-bottom: 6px; font-size: 10pt;'>"
+            html += "".join(pos_lines)
+            html += "</table>"
+            
+        # 2. Synonyms
+        all_synonyms = []
+        for pos_name, syn_list in synonyms.items():
+            all_synonyms.extend(syn_list)
+            
+        # Remove duplicates while maintaining order
+        seen = set()
+        unique_synonyms = [x for x in all_synonyms if not (x in seen or seen.add(x))]
+        
+        if unique_synonyms:
+            from translator import tr
+            label_synonyms = tr("translator.synonyms")
+            if label_synonyms == "translator.synonyms":
+                label_synonyms = "Synonyms"
+            syn_str = ", ".join(unique_synonyms[:8])
+            
+            if pos_lines:
+                html += f"<hr style='border: 0; border-top: 1px solid #555555; margin: 4px 0;'/>"
+            html += f"<div style='font-size: 9pt; color: #a0a0a0; margin-top: 4px;'>"
+            html += f"<b style='color: #808080;'>{label_synonyms}:</b> {syn_str}"
+            html += f"</div>"
+
+        self.translation_label.setText(html)
+        self.adjustSize()
+        if hasattr(self, "last_anchor_pos") and self.last_anchor_pos:
+            self.position_popup(self.last_anchor_pos)
+        self.raise_()
+
+    def _on_translation_error(self, err_msg):
+        self.translation_label.setText("Translation failed")
+        self.adjustSize()
+        if hasattr(self, "last_anchor_pos") and self.last_anchor_pos:
+            self.position_popup(self.last_anchor_pos)
+        self.raise_()
+
+    def position_popup(self, anchor_pos):
+        """Move the popup to be centered horizontally above the anchor point."""
+        self.adjustSize()
+        w = self.width()
+        h = self.height()
+        
+        # Determine current screen based on anchor point
+        from PyQt6.QtWidgets import QApplication
+        screen = QApplication.screenAt(anchor_pos)
+        if not screen:
+            screen = QApplication.primaryScreen()
+            
+        screen_geo = screen.availableGeometry()
+
+        target_x = anchor_pos.x() - w // 2
+        target_y = anchor_pos.y() - h - 10  # 10px offset above word
+
+        # Clamp inside screen boundary
+        margin = 15
+        target_x = max(screen_geo.left() + margin, min(target_x, screen_geo.right() - w - margin))
+        target_y = max(screen_geo.top() + margin, min(target_y, screen_geo.bottom() - h - margin))
+
+        self.move(target_x, target_y)
+
+    def leaveEvent(self, event):
+        # Auto hide after 2 seconds when mouse leaves translation window
+        self.hide_timer.start(2000)
+        from PyQt6.QtGui import QCursor
+        if not self.geometry().contains(QCursor.pos()):
+            self.mouseLeft.emit()
+        super().leaveEvent(event)
+
+    def enterEvent(self, event):
+        self.hide_timer.stop()
+        super().enterEvent(event)

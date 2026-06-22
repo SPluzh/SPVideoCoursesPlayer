@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.6.0]
+- **Interactive Subtitles**: Clickable subtitle overlays that pause video on hover or text selection.
+- **Fast Translation**: Hover or select words to instantly see translations, synonyms, and parts of speech.
+- **Translation Caching**: Previously translated words load instantly without network requests.
+
 ## [1.5.13]
 - **UI**: Modernized the About dialog layout and styling.
 - **Hotkeys**: Added `Ctrl + M` shortcut to toggle library selection checkboxes.

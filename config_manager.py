@@ -63,6 +63,7 @@ class ConfigManager:
             "outline_color": "#000000",
             "font_scale": "1.0",
             "extensions": ".srt,.ass,.ssa,.sub,.idx,.vtt,.sup,.stl,.smi,.txt",
+            "interactive": "False",
         },
         "Audio": {
             "extensions": ".mp3,.aac,.ac3,.dts,.flac,.wav,.ogg,.m4a,.wma,.eac3,.opus,.mka",
@@ -385,6 +386,19 @@ class ConfigManager:
         elif property_name == "sub-scale":
             config["Subtitles"]["font_scale"] = f"{value:.2f}"
 
+        self._write_config(config)
+
+    def get_interactive_subtitles(self) -> bool:
+        """Returns True if interactive subtitle overlay should be used."""
+        config = self._read_config()
+        return config.getboolean("Subtitles", "interactive", fallback=False)
+
+    def set_interactive_subtitles(self, enabled: bool):
+        """Sets whether interactive subtitle overlay should be used."""
+        config = self._read_config()
+        if "Subtitles" not in config:
+            config["Subtitles"] = {}
+        config["Subtitles"]["interactive"] = str(enabled)
         self._write_config(config)
 
     # --- Window state ---

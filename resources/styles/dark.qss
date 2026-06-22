@@ -1098,6 +1098,13 @@ PreviewPopup QLabel {
     border-radius: 3px;
 }
 
+QCheckBox#interactiveSubtitlesCheckBox {
+    color: #eaeaea;
+    font-size: 11px;
+    margin-top: 4px;
+    margin-left: 2px;
+}
+
 #subtitleList, #audioList, #tagFilterList {
     background-color: #3a3a3a;
     border: none;

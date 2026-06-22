@@ -156,6 +156,19 @@ class DatabaseManager:
                 )
             """)
 
+            # Subtitle translation cache table
+            c.execute("""
+                CREATE TABLE IF NOT EXISTS translations_cache (
+                    original_text TEXT NOT NULL,
+                    target_lang TEXT NOT NULL,
+                    translation TEXT NOT NULL,
+                    parts_of_speech_json TEXT,
+                    synonyms_json TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    PRIMARY KEY (original_text, target_lang)
+                )
+            """)
+
             # Indices
             c.execute(
                 "CREATE INDEX IF NOT EXISTS idx_parent_path ON folders(parent_path)"
@@ -1106,3 +1119,47 @@ class DatabaseManager:
                 conn.commit()
         except Exception as e:
             logging.error(f"Error marking folders unavailable: {e}", exc_info=True)
+
+    # ===================== TRANSLATIONS CACHE =====================
+    def get_cached_translation(self, text, target_lang):
+        """Retrieves a cached translation from the database."""
+        cleaned = text.strip()
+        try:
+            with self.get_connection() as conn:
+                conn.row_factory = sqlite3.Row
+                c = conn.cursor()
+                c.execute(
+                    "SELECT translation, parts_of_speech_json, synonyms_json FROM translations_cache WHERE original_text = ? AND target_lang = ?",
+                    (cleaned, target_lang)
+                )
+                row = c.fetchone()
+                if row:
+                    return {
+                        "translation": row["translation"],
+                        "parts_of_speech": json.loads(row["parts_of_speech_json"]) if row["parts_of_speech_json"] else {},
+                        "synonyms": json.loads(row["synonyms_json"]) if row["synonyms_json"] else {}
+                    }
+        except Exception as e:
+            logging.error(f"Error reading translation cache: {e}", exc_info=True)
+        return None
+
+    def save_cached_translation(self, text, target_lang, result_dict):
+        """Saves a translation result to the database cache."""
+        cleaned = text.strip()
+        translation = result_dict.get("translation", "")
+        parts_of_speech_json = json.dumps(result_dict.get("parts_of_speech", {}))
+        synonyms_json = json.dumps(result_dict.get("synonyms", {}))
+        try:
+            with self.get_connection() as conn:
+                c = conn.cursor()
+                c.execute(
+                    """
+                    INSERT OR REPLACE INTO translations_cache 
+                    (original_text, target_lang, translation, parts_of_speech_json, synonyms_json)
+                    VALUES (?, ?, ?, ?, ?)
+                    """,
+                    (cleaned, target_lang, translation, parts_of_speech_json, synonyms_json)
+                )
+                conn.commit()
+        except Exception as e:
+            logging.error(f"Error writing to translation cache: {e}", exc_info=True)

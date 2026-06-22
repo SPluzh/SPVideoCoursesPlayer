@@ -23,6 +23,8 @@ from PyQt6.QtGui import QIcon, QColor, QPalette, QPainter, QPen, QBrush
 from mpv_handler import setup_mpv_dll, MPVVideoWidget
 from translator import tr
 from subtitle_popup import SubtitleButton
+from subtitle_overlay import SubtitleOverlayWidget
+from subtitle_translator import TranslationPopup
 from volume_popup import VolumeButton
 from preview_popup import PreviewPopup
 from marker_dialog import MarkerDialog
@@ -188,6 +190,7 @@ class VideoPlayerWidget(QWidget):
     mpv_duration_changed = pyqtSignal(int)
     mpv_pause_changed = pyqtSignal(bool)
     mpv_file_loaded = pyqtSignal()  # Emitted from MPV thread when file is loaded
+    mpv_sub_text_changed = pyqtSignal(str)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -213,6 +216,10 @@ class VideoPlayerWidget(QWidget):
         self.sub_scale = 1.0
         self.markers = []
         self._restoring_state = False  # Flag to suppress OSD during state restoration
+        self._paused_by_hover = False
+        self.hover_check_timer = QTimer(self)
+        self.hover_check_timer.setInterval(100)
+        self.hover_check_timer.timeout.connect(self._on_hover_check_timeout)
 
         # Marker Gallery & Thumbnailing
         self.thumb_provider = ThumbnailProvider(self)
@@ -253,6 +260,11 @@ class VideoPlayerWidget(QWidget):
         if hasattr(self, "thumb_provider"):
             self.thumb_provider.stop()
 
+        if hasattr(self, "subtitle_overlay") and self.subtitle_overlay:
+            self.subtitle_overlay.close()
+        if hasattr(self, "translation_popup") and self.translation_popup:
+            self.translation_popup.close()
+
         # Shutdown main player
         if self.player:
             try:
@@ -283,6 +295,18 @@ class VideoPlayerWidget(QWidget):
             self.toggle_fullscreen_requested.emit
         )
         container_layout.addWidget(self.video_widget, 1)
+
+        # Subtitle interactive overlay and translation popup
+        self.subtitle_overlay = SubtitleOverlayWidget(self.video_widget, self)
+        self.translation_popup = TranslationPopup(self.subtitle_overlay)
+        self.subtitle_overlay.hide()
+        self.translation_popup.hide()
+
+        # Connect overlay signals for hover/selection
+        self.subtitle_overlay.text_edit.wordHovered.connect(self._on_subtitle_word_hovered)
+        self.subtitle_overlay.text_edit.selectionSelected.connect(self._on_subtitle_selection_selected)
+        self.subtitle_overlay.text_edit.hoverCleared.connect(self._on_subtitle_hover_cleared)
+        self.subtitle_overlay.mouseEntered.connect(self._on_subtitle_area_entered)
 
         # Marker Gallery Overlay (Horizontal) - Independent window to avoid Airspace issue
         self.marker_gallery = MarkerGalleryWidget(self)
@@ -354,6 +378,7 @@ class VideoPlayerWidget(QWidget):
         self.subtitle_btn.subtitleToggled.connect(self.toggle_subtitles)
         self.subtitle_btn.subtitleChanged.connect(self.change_subtitle_track)
         self.subtitle_btn.popup.styleChanged.connect(self.change_subtitle_style)
+        self.subtitle_btn.popup.interactiveToggled.connect(self.toggle_interactive_subtitles)
         panel_layout.addWidget(self.subtitle_btn)
 
         self.volume_btn = VolumeButton()
@@ -418,6 +443,7 @@ class VideoPlayerWidget(QWidget):
         self.mpv_time_pos_changed.connect(self.position_updated)
         self.mpv_duration_changed.connect(self.duration_changed)
         self.mpv_pause_changed.connect(self.state_changed)
+        self.mpv_sub_text_changed.connect(self._on_sub_text_changed)
 
         # Preview Popup
         self.preview_popup = PreviewPopup(self.video_widget)
@@ -1307,6 +1333,10 @@ class VideoPlayerWidget(QWidget):
                 # self.state_changed(value)
                 self.mpv_pause_changed.emit(value)
 
+            @self.player.property_observer("sub-text")
+            def sub_text_observer(_name, value):
+                self.mpv_sub_text_changed.emit(value or "")
+
             @self.player.property_observer("eof-reached")
             def eof_observer(_name, value):
                 if value:
@@ -1594,6 +1624,15 @@ class VideoPlayerWidget(QWidget):
 
             if hasattr(self, "video_widget"):
                 self.video_widget.update()
+
+            if hasattr(self, "subtitle_overlay") and self.subtitle_overlay:
+                self.subtitle_overlay.set_text("")
+                self.subtitle_overlay.hide()
+            if hasattr(self, "translation_popup") and self.translation_popup:
+                self.translation_popup.hide()
+            self._paused_by_hover = False
+            if hasattr(self, "hover_check_timer"):
+                self.hover_check_timer.stop()
 
         except Exception as e:
             logging.error(f"Error unloading video: {e}")
@@ -2113,6 +2152,8 @@ class VideoPlayerWidget(QWidget):
         if self.current_file and self.db:
             self.db.update_subtitle_enabled(self.current_file, enabled)
 
+        self._update_subtitle_visibility()
+
     def toggle_subtitles_hotkey(self):
         """Toggle subtitles on/off via hotkey."""
         if not self.player:
@@ -2148,6 +2189,9 @@ class VideoPlayerWidget(QWidget):
                 self.sub_scale = new_scale
                 self.subtitle_style_changed.emit("sub-scale", new_scale)
                 logging.info(f"📝 Subtitle scale: {new_scale:.2f}")
+
+            if hasattr(self, "subtitle_overlay") and self.subtitle_overlay:
+                self.subtitle_overlay.set_subtitle_style(self.sub_color, self.sub_border_color, self.sub_scale)
         except Exception as e:
             logging.error(f"Error changing subtitle style: {e}", exc_info=True)
 
@@ -2363,9 +2407,15 @@ class VideoPlayerWidget(QWidget):
             self.subtitle_btn.popup.outline_color = border_color
             self.subtitle_btn.popup._update_text_color_btn()
             self.subtitle_btn.popup._update_outline_color_btn()
+            if self.config:
+                interactive = self.config.get_interactive_subtitles()
+                self.subtitle_btn.popup.setInteractiveSubtitlesEnabled(interactive)
 
         if self.player:
             self._apply_subtitle_styles()
+
+        if hasattr(self, "subtitle_overlay") and self.subtitle_overlay:
+            self.subtitle_overlay.set_subtitle_style(color, border_color, scale)
 
     def _apply_subtitle_styles(self):
         """Apply stored subtitle styles to MPV player."""
@@ -2385,6 +2435,9 @@ class VideoPlayerWidget(QWidget):
             self.player.sub_scale = self.sub_scale
         except Exception as e:
             logging.error(f"Error applying subtitle styles: {e}", exc_info=True)
+
+        if hasattr(self, "subtitle_overlay") and self.subtitle_overlay:
+            self.subtitle_overlay.set_subtitle_style(self.sub_color, self.sub_border_color, self.sub_scale)
 
     def change_subtitle_track(self, index):
         """Switch subtitles on selection."""
@@ -2457,6 +2510,8 @@ class VideoPlayerWidget(QWidget):
 
         except Exception as e:
             logging.error(f"Error changing subtitle track: {e}", exc_info=True)
+
+        self._update_subtitle_visibility()
 
     def _save_selected_subtitle(self, track_id):
         """Save selected subtitles to DB."""
@@ -2564,6 +2619,8 @@ class VideoPlayerWidget(QWidget):
 
         except Exception as e:
             logging.error(f"📝 ❌ Subtitle restore error: {e}", exc_info=True)
+
+        self._update_subtitle_visibility()
 
     def duration_changed(self, duration_ms):
         self.progress_slider.setRange(0, duration_ms)
@@ -2797,3 +2854,149 @@ class VideoPlayerWidget(QWidget):
             h,
         )
         self.marker_gallery.raise_()
+
+    def _update_subtitle_visibility(self):
+        if not self.player:
+            return
+        try:
+            is_interactive = self.config.get_interactive_subtitles() if self.config else False
+            is_enabled = self.subtitle_btn.subtitles_enabled
+            
+            if is_enabled and is_interactive:
+                self.player.sub_visibility = "no"
+                sub_text = self.player.sub_text or ""
+                self.subtitle_overlay.set_text(sub_text)
+            else:
+                self.player.sub_visibility = "yes" if is_enabled else "no"
+                self.subtitle_overlay.set_text("")
+                self.subtitle_overlay.hide()
+                if self.translation_popup:
+                    self.translation_popup.hide()
+        except Exception as e:
+            logging.error(f"Error updating subtitle visibility: {e}")
+
+    def toggle_interactive_subtitles(self, enabled):
+        """Toggles interactive subtitle mode."""
+        if self.config:
+            self.config.set_interactive_subtitles(enabled)
+            
+        self._update_subtitle_visibility()
+
+    def _on_subtitle_word_hovered(self, word, global_pos):
+        if not word or not self.player:
+            return
+
+        # Pause playback if playing
+        if not self.player.pause:
+            self._paused_by_hover = True
+            self.player.pause = True
+            if self.taskbar_progress:
+                self.taskbar_progress.set_paused()
+            if self.osd_manager:
+                self.osd_manager.show_pause_state(True)
+
+        # Show translation popup
+        if self.translation_popup:
+            from translator import tr as global_translator
+            target_lang = global_translator.current_lang
+            self.translation_popup.show_translation(word, target_lang, global_pos)
+
+        if hasattr(self, "hover_check_timer"):
+            self.hover_check_timer.start(100)
+
+    def _on_subtitle_selection_selected(self, text, global_pos):
+        if not text or not self.player:
+            return
+
+        # Pause playback if playing
+        if not self.player.pause:
+            self._paused_by_hover = True
+            self.player.pause = True
+            if self.taskbar_progress:
+                self.taskbar_progress.set_paused()
+            if self.osd_manager:
+                self.osd_manager.show_pause_state(True)
+
+        # Show translation popup
+        if self.translation_popup:
+            from translator import tr as global_translator
+            target_lang = global_translator.current_lang
+            self.translation_popup.show_translation(text, target_lang, global_pos)
+
+        if hasattr(self, "hover_check_timer"):
+            self.hover_check_timer.start(100)
+
+    def _on_subtitle_hover_cleared(self):
+        from PyQt6.QtGui import QCursor
+        
+        # Hide the translation popup if the mouse is not over the popup
+        over_popup = False
+        if hasattr(self, "translation_popup") and self.translation_popup and self.translation_popup.isVisible():
+            over_popup = self.translation_popup.geometry().contains(QCursor.pos())
+            
+        if not over_popup:
+            if self.translation_popup:
+                self.translation_popup.hide()
+
+    def _on_subtitle_area_entered(self):
+        if not self.player:
+            return
+        # Pause playback immediately
+        if not self.player.pause:
+            self._paused_by_hover = True
+            self.player.pause = True
+            if self.taskbar_progress:
+                self.taskbar_progress.set_paused()
+            if self.osd_manager:
+                self.osd_manager.show_pause_state(True)
+        # Start the hover check timer to track when the mouse leaves the area
+        if hasattr(self, "hover_check_timer"):
+            self.hover_check_timer.start(100)
+
+    def _on_hover_check_timeout(self):
+        if not self.player:
+            self.hover_check_timer.stop()
+            return
+            
+        # If player is not paused, we shouldn't do anything or check
+        if not self.player.pause:
+            self.hover_check_timer.stop()
+            self._paused_by_hover = False
+            return
+            
+        from PyQt6.QtGui import QCursor
+        
+        # Determine if mouse is over subtitle overlay or translation popup
+        over_overlay = False
+        if hasattr(self, "subtitle_overlay") and self.subtitle_overlay and self.subtitle_overlay.isVisible():
+            over_overlay = self.subtitle_overlay.rect().contains(self.subtitle_overlay.mapFromGlobal(QCursor.pos()))
+            
+        over_popup = False
+        if hasattr(self, "translation_popup") and self.translation_popup and self.translation_popup.isVisible():
+            over_popup = self.translation_popup.rect().contains(self.translation_popup.mapFromGlobal(QCursor.pos()))
+            
+        if not over_overlay and not over_popup:
+            self.hover_check_timer.stop()
+            if self.translation_popup:
+                self.translation_popup.hide()
+            self._resume_playback_if_paused_by_hover()
+
+    def _resume_playback_if_paused_by_hover(self):
+        if getattr(self, "_paused_by_hover", False):
+            self._paused_by_hover = False
+            if self.player:
+                self.player.pause = False
+                if self.taskbar_progress:
+                    self.taskbar_progress.set_normal()
+                if self.osd_manager:
+                    self.osd_manager.show_pause_state(False)
+
+    def _on_sub_text_changed(self, text):
+        is_interactive = self.config.get_interactive_subtitles() if self.config else False
+        is_enabled = self.subtitle_btn.subtitles_enabled
+        if is_interactive and is_enabled:
+            if self.translation_popup:
+                self.translation_popup.hide()
+            self.subtitle_overlay.set_text(text)
+            if not text:
+                self._resume_playback_if_paused_by_hover()

@@ -109,6 +109,7 @@
         "tooltip_zoom": "Reset zoom",
         "tooltip_subtitle_track": "Subtitles\nL-click to toggle\nR-click for settings",
         "subtitle_tracks": "Subtitle Tracks",
+        "interactive_subtitles": "Interactive Subtitles",
         "tooltip_volume": "Volume\nL-click to mute\nR-click for settings",
         "tooltip_speed": "Playback speed (0.5x - 3.0x)",
         "audio_tracks": "Audio Tracks",
@@ -572,5 +573,16 @@
         "pause": "Pause",
         "seek_fwd": "Forward 10 seconds",
         "next": "Next video"
+    },
+    "translator": {
+        "synonyms": "Synonyms",
+        "adjective": "Adjective",
+        "noun": "Noun",
+        "adverb": "Adverb",
+        "verb": "Verb",
+        "pronoun": "Pronoun",
+        "preposition": "Preposition",
+        "conjunction": "Conjunction",
+        "phrase": "Phrase"
     }
 }

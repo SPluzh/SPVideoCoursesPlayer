@@ -4108,6 +4108,30 @@ def main():
         Qt.HighDpiScaleFactorRoundingPolicy.PassThrough
     )
 
+    def excepthook(exc_type, exc_value, exc_tb):
+        import traceback
+        tb = "".join(traceback.format_exception(exc_type, exc_value, exc_tb))
+        logging.critical(f"Unhandled exception:\n{tb}")
+        try:
+            with open("crash_log.txt", "w", encoding="utf-8") as f:
+                f.write(tb)
+        except:
+            pass
+        try:
+            from PyQt6.QtWidgets import QMessageBox
+            msg = QMessageBox()
+            msg.setIcon(QMessageBox.Icon.Critical)
+            msg.setText("Application Crashed (Excepthook)")
+            msg.setInformativeText(str(exc_value))
+            msg.setDetailedText(tb)
+            msg.setWindowTitle("Error")
+            msg.exec()
+        except:
+            pass
+        sys.exit(1)
+
+    sys.excepthook = excepthook
+
     app = QApplication(sys.argv)
     app.setStyle("Fusion")
     app.setStyleSheet(DARK_STYLE)
