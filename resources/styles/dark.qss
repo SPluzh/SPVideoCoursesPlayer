@@ -1154,6 +1154,64 @@ PreviewPopup QLabel {
     border-color: @accent;
 }
 
+QPushButton#translationLangBtn {
+    background-color: @bg-dark;
+    color: @text-main;
+    border: 1px solid @border;
+    border-radius: 3px;
+    font-weight: 500;
+    font-size: 11px;
+    padding: 4px;
+}
+
+QPushButton#translationLangBtn:hover {
+    background-color: @accent;
+    border-color: @accent;
+    color: @text-light;
+}
+
+/* Language Selection Dialog */
+QDialog#languageSelectDialog {
+    background-color: @bg-darker;
+    border: 1px solid @border;
+    border-radius: 3px;
+}
+
+QLineEdit#langSearchInput {
+    background-color: @bg-console;
+    color: @text-main;
+    border: 1px solid @border;
+    border-radius: 3px;
+    padding: 4px;
+    font-size: 11px;
+}
+
+QLineEdit#langSearchInput:focus {
+    border-color: @accent;
+}
+
+QListWidget#langSearchList {
+    background-color: transparent;
+    border: none;
+    color: @text-main;
+    font-size: 11px;
+}
+
+QListWidget#langSearchList::item {
+    padding: 4px;
+    border-radius: 2px;
+}
+
+QListWidget#langSearchList::item:hover {
+    background-color: @bg-hover;
+    color: @text-light;
+}
+
+QListWidget#langSearchList::item:selected {
+    background-color: @accent;
+    color: @text-light;
+}
+
 #volumeSlider::groove:vertical {
     background: #808080;
     width: 11px;

@@ -147,6 +147,7 @@
         "zoom_level": "Масштаб: {percent}%",
         "volume": "Громкость",
         "audio_track": "Аудиодорожка",
+        "search_placeholder": "Поиск...",
         "osd": {
             "audio": "Звук",
             "normal": "Норма",
@@ -582,6 +583,9 @@
         "pause": "Пауза",
         "seek_fwd": "Перемотать вперёд на 10 секунд",
         "next": "Следующее видео"
+    },
+    "subtitle_popup": {
+        "translation_lang": "Язык перевода"
     },
     "translator": {
         "synonyms": "Синонимы",

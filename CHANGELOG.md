@@ -3,6 +3,7 @@
 All notable changes to this project will be documented in this file.
 
 ## [1.6.1]
+- **Subtitles**: Added translation language selection settings.
 - **Subtitles**: Added support for dual (secondary) subtitles to display two languages simultaneously.
 - **Subtitles**: Added independent color customization and track selection for secondary subtitles.
 - **Subtitles**: Fixed an issue where the selected subtitle language was not loaded or remembered correctly.

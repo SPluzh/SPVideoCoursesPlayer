@@ -65,6 +65,7 @@ class ConfigManager:
             "font_scale": "1.0",
             "extensions": ".srt,.ass,.ssa,.sub,.idx,.vtt,.sup,.stl,.smi,.txt",
             "interactive": "False",
+            "translation_target_lang": "ru",
         },
         "Audio": {
             "extensions": ".mp3,.aac,.ac3,.dts,.flac,.wav,.ogg,.m4a,.wma,.eac3,.opus,.mka",
@@ -389,7 +390,22 @@ class ConfigManager:
             config["Subtitles"]["font_scale"] = f"{value:.2f}"
         elif property_name == "sub-secondary-color":
             config["Subtitles"]["secondary_text_color"] = value
+        elif property_name == "translation-target-lang":
+            config["Subtitles"]["translation_target_lang"] = value
 
+        self._write_config(config)
+
+    def get_translation_target_lang(self) -> str:
+        """Returns the target language for subtitle translation (e.g. 'ru')."""
+        config = self._read_config()
+        return config.get("Subtitles", "translation_target_lang", fallback="ru")
+
+    def set_translation_target_lang(self, lang_code: str):
+        """Sets the target language for subtitle translation."""
+        config = self._read_config()
+        if "Subtitles" not in config:
+            config["Subtitles"] = {}
+        config["Subtitles"]["translation_target_lang"] = lang_code
         self._write_config(config)
 
     def get_interactive_subtitles(self) -> bool:

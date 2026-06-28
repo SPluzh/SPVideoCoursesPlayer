@@ -147,6 +147,7 @@
         "zoom_level": "Zoom: {percent}%",
         "volume": "Volume",
         "audio_track": "Audio Track",
+        "search_placeholder": "Search...",
         "osd": {
             "audio": "Audio",
             "normal": "Normal",
@@ -582,6 +583,9 @@
         "pause": "Pause",
         "seek_fwd": "Forward 10 seconds",
         "next": "Next video"
+    },
+    "subtitle_popup": {
+        "translation_lang": "Translation language"
     },
     "translator": {
         "synonyms": "Synonyms",

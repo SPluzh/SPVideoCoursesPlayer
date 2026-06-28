@@ -2283,6 +2283,9 @@ class VideoPlayerWidget(QWidget):
                 self.sub_scale = new_scale
                 self.subtitle_style_changed.emit("sub-scale", new_scale)
                 logging.info(f"📝 Subtitle scale: {new_scale:.2f}")
+            elif property_name == "translation-target-lang":
+                self.subtitle_style_changed.emit("translation-target-lang", value)
+                logging.info(f"📝 Subtitle translation target language: {value}")
 
             if hasattr(self, "subtitle_overlay") and self.subtitle_overlay:
                 self.subtitle_overlay.set_subtitle_style(
@@ -2513,6 +2516,8 @@ class VideoPlayerWidget(QWidget):
             if self.config:
                 interactive = self.config.get_interactive_subtitles()
                 self.subtitle_btn.popup.setInteractiveSubtitlesEnabled(interactive)
+                target_lang = self.config.get_translation_target_lang()
+                self.subtitle_btn.setTranslationTargetLang(target_lang)
 
         if self.player:
             self._apply_subtitle_styles()
@@ -3269,8 +3274,11 @@ class VideoPlayerWidget(QWidget):
 
         # Show translation popup
         if self.translation_popup:
-            from translator import tr as global_translator
-            target_lang = global_translator.current_lang
+            if self.config:
+                target_lang = self.config.get_translation_target_lang()
+            else:
+                from translator import tr as global_translator
+                target_lang = global_translator.current_lang
             self.translation_popup.show_translation(word, target_lang, global_pos)
 
         if hasattr(self, "hover_check_timer"):
@@ -3301,8 +3309,11 @@ class VideoPlayerWidget(QWidget):
 
         # Show translation popup
         if self.translation_popup:
-            from translator import tr as global_translator
-            target_lang = global_translator.current_lang
+            if self.config:
+                target_lang = self.config.get_translation_target_lang()
+            else:
+                from translator import tr as global_translator
+                target_lang = global_translator.current_lang
             self.translation_popup.show_translation(text, target_lang, global_pos)
 
         # Only start hover check timer if this is NOT a persistent translation
