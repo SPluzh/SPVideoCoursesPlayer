@@ -613,6 +613,12 @@ class VideoCourseBrowser(QMainWindow):
             self.play_next_video()
         elif action == "prev_video":
             self.play_prev_video()
+        elif action == "prev_phrase":
+            self.video_player.seek_prev_phrase()
+        elif action == "next_phrase":
+            self.video_player.seek_next_phrase()
+        elif action == "replay_phrase":
+            self.video_player.replay_current_phrase()
         elif action == "toggle_fullscreen":
             self.toggle_fullscreen()
         elif action == "exit_fullscreen_or_pip":

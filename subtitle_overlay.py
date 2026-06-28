@@ -183,6 +183,9 @@ class SubtitleOverlayWidget(QFrame):
     mouseEntered = pyqtSignal()
     mouseLeft = pyqtSignal()
     translateRequested = pyqtSignal(str, QPoint)
+    prevPhraseRequested = pyqtSignal()
+    nextPhraseRequested = pyqtSignal()
+    replayPhraseRequested = pyqtSignal()
 
     def __init__(self, video_widget, player_window):
         super().__init__(video_widget, Qt.WindowType.Window | Qt.WindowType.FramelessWindowHint | Qt.WindowType.NoDropShadowWindowHint)
@@ -205,7 +208,7 @@ class SubtitleOverlayWidget(QFrame):
 
         # Layout
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(50, 8, 50, 8)
+        layout.setContentsMargins(50, 8, 125, 8)
         layout.setSpacing(0)
 
         self.setMinimumHeight(0)
@@ -230,6 +233,39 @@ class SubtitleOverlayWidget(QFrame):
         self.translate_btn.setToolTip(tr("translator.translate_subtitle"))
         self.translate_btn.clicked.connect(self._on_translate_btn_clicked)
         self.translate_btn.hide()
+
+        # Previous subtitle phrase button
+        self.prev_phrase_btn = QPushButton(self)
+        self.prev_phrase_btn.setObjectName("prevPhraseBtn")
+        self.prev_phrase_btn.setFixedSize(30, 30)
+        self.prev_phrase_btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self.prev_phrase_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.prev_phrase_btn.setIcon(load_icon("prev_frame"))
+        self.prev_phrase_btn.setToolTip(tr("translator.prev_phrase"))
+        self.prev_phrase_btn.clicked.connect(self.prevPhraseRequested.emit)
+        self.prev_phrase_btn.hide()
+
+        # Next subtitle phrase button
+        self.next_phrase_btn = QPushButton(self)
+        self.next_phrase_btn.setObjectName("nextPhraseBtn")
+        self.next_phrase_btn.setFixedSize(30, 30)
+        self.next_phrase_btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self.next_phrase_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.next_phrase_btn.setIcon(load_icon("next_frame"))
+        self.next_phrase_btn.setToolTip(tr("translator.next_phrase"))
+        self.next_phrase_btn.clicked.connect(self.nextPhraseRequested.emit)
+        self.next_phrase_btn.hide()
+
+        # Replay current subtitle phrase button
+        self.replay_phrase_btn = QPushButton(self)
+        self.replay_phrase_btn.setObjectName("replayPhraseBtn")
+        self.replay_phrase_btn.setFixedSize(30, 30)
+        self.replay_phrase_btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self.replay_phrase_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.replay_phrase_btn.setIcon(load_icon("menu_reload"))
+        self.replay_phrase_btn.setToolTip(tr("translator.replay_phrase"))
+        self.replay_phrase_btn.clicked.connect(self.replayPhraseRequested.emit)
+        self.replay_phrase_btn.hide()
 
         # Connect signals for showing/hiding translate button on hover
         self.mouseEntered.connect(self._show_translate_btn)
@@ -315,6 +351,10 @@ class SubtitleOverlayWidget(QFrame):
             self.text_edit.clear()
             if hasattr(self, 'translate_btn') and self.translate_btn:
                 self.translate_btn.hide()
+            if hasattr(self, 'prev_phrase_btn') and self.prev_phrase_btn:
+                self.prev_phrase_btn.hide()
+            if hasattr(self, 'next_phrase_btn') and self.next_phrase_btn:
+                self.next_phrase_btn.hide()
             self.hide()
             return
 
@@ -420,7 +460,7 @@ class SubtitleOverlayWidget(QFrame):
                 self.text_edit.setHtml(html)
 
         # Adjust text width in the document to compute wrap height
-        text_width = width - 100  # Adjust for 50px left/right layout margins
+        text_width = width - 175  # Adjust for left (50px) and right (125px) margins
         self.text_edit.document().setTextWidth(text_width)
         
         # Calculate dynamic height based on document content height
@@ -444,22 +484,69 @@ class SubtitleOverlayWidget(QFrame):
             y = global_pos.y() + vh - actual_height - bottom_margin
             self.setGeometry(x, y, width, actual_height)
 
-        # Position translate button at the right side of the widget
-        if hasattr(self, 'translate_btn') and self.translate_btn:
+        # Position prev_phrase_btn at the left side of the widget
+        if hasattr(self, 'prev_phrase_btn') and self.prev_phrase_btn:
             btn_width = 30
             btn_height = 30
             actual_height = self.height()
+            btn_x = 10
+            btn_y = (actual_height - btn_height) // 2
+            self.prev_phrase_btn.setGeometry(btn_x, btn_y, btn_width, btn_height)
+
+        # Position next_phrase_btn, translate_btn, and replay_phrase_btn at the right side of the widget
+        actual_height = self.height()
+        btn_width = 30
+        btn_height = 30
+        
+        # next_phrase_btn is placed at the far right
+        if hasattr(self, 'next_phrase_btn') and self.next_phrase_btn:
             btn_x = width - btn_width - 10
+            btn_y = (actual_height - btn_height) // 2
+            self.next_phrase_btn.setGeometry(btn_x, btn_y, btn_width, btn_height)
+
+        # translate_btn is placed to the left of next_phrase_btn
+        if hasattr(self, 'translate_btn') and self.translate_btn:
+            btn_x = width - btn_width - 10 - btn_width - 5  # 5px spacing
             btn_y = (actual_height - btn_height) // 2
             self.translate_btn.setGeometry(btn_x, btn_y, btn_width, btn_height)
 
+        # replay_phrase_btn is placed to the left of translate_btn
+        if hasattr(self, 'replay_phrase_btn') and self.replay_phrase_btn:
+            btn_x = width - btn_width - 10 - btn_width - 5 - btn_width - 5  # 5px spacing
+            btn_y = (actual_height - btn_height) // 2
+            self.replay_phrase_btn.setGeometry(btn_x, btn_y, btn_width, btn_height)
+
     def _show_translate_btn(self):
-        if hasattr(self, 'translate_btn') and self.translate_btn and self.current_text:
-            self.translate_btn.show()
+        if self.current_text:
+            if hasattr(self, 'translate_btn') and self.translate_btn:
+                self.translate_btn.show()
+            if hasattr(self, 'prev_phrase_btn') and self.prev_phrase_btn:
+                self.prev_phrase_btn.show()
+            if hasattr(self, 'next_phrase_btn') and self.next_phrase_btn:
+                self.next_phrase_btn.show()
+            if hasattr(self, 'replay_phrase_btn') and self.replay_phrase_btn:
+                self.replay_phrase_btn.show()
 
     def _hide_translate_btn(self):
         if hasattr(self, 'translate_btn') and self.translate_btn:
             self.translate_btn.hide()
+        if hasattr(self, 'prev_phrase_btn') and self.prev_phrase_btn:
+            self.prev_phrase_btn.hide()
+        if hasattr(self, 'next_phrase_btn') and self.next_phrase_btn:
+            self.next_phrase_btn.hide()
+        if hasattr(self, 'replay_phrase_btn') and self.replay_phrase_btn:
+            self.replay_phrase_btn.hide()
+
+    def update_texts(self):
+        from translator import tr
+        if hasattr(self, 'translate_btn') and self.translate_btn:
+            self.translate_btn.setToolTip(tr("translator.translate_subtitle"))
+        if hasattr(self, 'prev_phrase_btn') and self.prev_phrase_btn:
+            self.prev_phrase_btn.setToolTip(tr("translator.prev_phrase"))
+        if hasattr(self, 'next_phrase_btn') and self.next_phrase_btn:
+            self.next_phrase_btn.setToolTip(tr("translator.next_phrase"))
+        if hasattr(self, 'replay_phrase_btn') and self.replay_phrase_btn:
+            self.replay_phrase_btn.setToolTip(tr("translator.replay_phrase"))
 
     def _on_translate_btn_clicked(self):
         try:

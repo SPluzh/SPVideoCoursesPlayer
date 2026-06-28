@@ -509,6 +509,9 @@
         "toggle_pip": "Картинка в картинке (PiP)",
         "prev_video": "Предыдущее видео",
         "next_video": "Следующее видео",
+        "prev_phrase": "Предыдущая фраза субтитров",
+        "next_phrase": "Следующая фраза субтитров",
+        "replay_phrase": "Повторить текущую фразу субтитров",
         "volume_up": "Громкость +",
         "volume_down": "Громкость -",
         "audio_delay_up": "Задержка звука +",
@@ -553,6 +556,7 @@
             "e": "E",
             "w": "W",
             "shift": "Shift",
+            "alt": "Alt",
             "0": "0",
             "1": "1",
             "2": "2",
@@ -588,6 +592,9 @@
         "added_to_dictionary": "Добавлено в словарь",
         "already_in_dictionary": "Уже в словаре",
         "listen_pronunciation": "Прослушать произношение",
-        "translate_subtitle": "Перевести весь субтитр"
+        "translate_subtitle": "Перевести весь субтитр",
+        "prev_phrase": "Предыдущая фраза (Alt+Left)",
+        "next_phrase": "Следующая фраза (Alt+Right)",
+        "replay_phrase": "Повторить текущую фразу (Alt+Down)"
     }
 }

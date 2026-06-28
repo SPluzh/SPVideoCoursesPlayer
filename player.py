@@ -308,6 +308,9 @@ class VideoPlayerWidget(QWidget):
         self.subtitle_overlay.text_edit.hoverCleared.connect(self._on_subtitle_hover_cleared)
         self.subtitle_overlay.mouseEntered.connect(self._on_subtitle_area_entered)
         self.subtitle_overlay.translateRequested.connect(self._on_subtitle_selection_selected)
+        self.subtitle_overlay.prevPhraseRequested.connect(self.seek_prev_phrase)
+        self.subtitle_overlay.nextPhraseRequested.connect(self.seek_next_phrase)
+        self.subtitle_overlay.replayPhraseRequested.connect(self.replay_current_phrase)
 
         # Marker Gallery Overlay (Horizontal) - Independent window to avoid Airspace issue
         self.marker_gallery = MarkerGalleryWidget(self)
@@ -1221,6 +1224,74 @@ class VideoPlayerWidget(QWidget):
                 self.osd_manager.show_seek(seconds)
         except Exception as e:
             logging.error(f"Error seeking: {e}")
+
+    def seek_prev_phrase(self):
+        """Seek to the previous subtitle phrase and resume playback."""
+        if not self.player:
+            return
+        try:
+            # Hide the translation popup and reset hover paused state
+            if self.translation_popup:
+                self.translation_popup.hide()
+            self._paused_by_hover = False
+
+            # Seek to previous subtitle
+            self.player.command("sub-seek", -1)
+            
+            # Resume playback
+            self.player.pause = False
+            if self.taskbar_progress:
+                self.taskbar_progress.set_normal()
+            if self.osd_manager:
+                self.osd_manager.show_pause_state(False)
+        except Exception as e:
+            logging.error(f"Error seeking to previous phrase: {e}")
+
+    def seek_next_phrase(self):
+        """Seek to the next subtitle phrase and resume playback."""
+        if not self.player:
+            return
+        try:
+            # Hide the translation popup and reset hover paused state
+            if self.translation_popup:
+                self.translation_popup.hide()
+            self._paused_by_hover = False
+
+            # Seek to next subtitle
+            self.player.command("sub-seek", 1)
+
+            # Resume playback
+            self.player.pause = False
+            if self.taskbar_progress:
+                self.taskbar_progress.set_normal()
+            if self.osd_manager:
+                self.osd_manager.show_pause_state(False)
+        except Exception as e:
+            logging.error(f"Error seeking to next phrase: {e}")
+
+    def replay_current_phrase(self):
+        """Replay the current subtitle phrase from the beginning."""
+        if not self.player:
+            return
+        try:
+            # Hide the translation popup and reset hover paused state
+            if self.translation_popup:
+                self.translation_popup.hide()
+            self._paused_by_hover = False
+
+            # To replay the current phrase reliably (even when already at the start),
+            # we seek forward to the next phrase, then seek backward to the start of the previous phrase.
+            self.player.command("sub-seek", 1)
+            self.player.command("sub-seek", -1)
+
+            # Resume playback
+            self.player.pause = False
+            if self.taskbar_progress:
+                self.taskbar_progress.set_normal()
+            if self.osd_manager:
+                self.osd_manager.show_pause_state(False)
+        except Exception as e:
+            logging.error(f"Error replaying current phrase: {e}")
 
     def seek_to_percent(self, percent):
         """Seek to a specific percentage of video duration."""
@@ -2864,6 +2935,8 @@ class VideoPlayerWidget(QWidget):
         self.pip_btn.setToolTip(tr("player.tooltip_pip"))
         self.fullscreen_btn.setToolTip(tr("player.tooltip_fullscreen"))
         self.speed_slider.setToolTip(tr("player.tooltip_speed"))
+        if hasattr(self, "subtitle_overlay") and self.subtitle_overlay:
+            self.subtitle_overlay.update_texts()
 
     def moveEvent(self, event):
         """Keep gallery overlay in sync when window moves."""

@@ -175,6 +175,13 @@ class HotkeyManager(QObject):
             Qt.Key.Key_Period: "audio_delay_up",  # Shift + >
         }
 
+        # Actions strictly requiring Alt modifier
+        self.alt_mappings = {
+            Qt.Key.Key_Left: "prev_phrase",
+            Qt.Key.Key_Right: "next_phrase",
+            Qt.Key.Key_Down: "replay_phrase",
+        }
+
         # Navigation/Speed (no shift)
         self.plain_arrow_mappings = {
             Qt.Key.Key_Up: "speed_up",
@@ -255,22 +262,29 @@ class HotkeyManager(QObject):
         modifiers = event.modifiers()
 
         # Check for Ctrl + key first
-        if modifiers == Qt.KeyboardModifier.ControlModifier:
+        if bool(modifiers & Qt.KeyboardModifier.ControlModifier):
             if key in self.ctrl_mappings:
                 return self.ctrl_mappings[key]
 
         # Check for Shift + Arrow keys first
-        if modifiers == Qt.KeyboardModifier.ShiftModifier:
+        if bool(modifiers & Qt.KeyboardModifier.ShiftModifier):
             if key in self.shift_mappings:
                 return self.shift_mappings[key]
 
+        # Check for Alt modifier
+        if bool(modifiers & Qt.KeyboardModifier.AltModifier):
+            if key in self.alt_mappings:
+                return self.alt_mappings[key]
+
         # Check for plain Arrow keys (Speed control)
-        if modifiers == Qt.KeyboardModifier.NoModifier:
+        if not bool(modifiers & (Qt.KeyboardModifier.ControlModifier | 
+                                 Qt.KeyboardModifier.ShiftModifier | 
+                                 Qt.KeyboardModifier.AltModifier)):
             if key in self.plain_arrow_mappings:
                 return self.plain_arrow_mappings[key]
 
         # Check for numpad keys
-        if modifiers == Qt.KeyboardModifier.KeypadModifier:
+        if bool(modifiers & Qt.KeyboardModifier.KeypadModifier):
             if key in self.numpad_mappings:
                 return self.numpad_mappings[key]
 
@@ -280,7 +294,9 @@ class HotkeyManager(QObject):
             return action
 
         # If not found by key, check by native virtual key (Windows layout independent)
-        if modifiers == Qt.KeyboardModifier.NoModifier:
+        if not bool(modifiers & (Qt.KeyboardModifier.ControlModifier | 
+                                 Qt.KeyboardModifier.ShiftModifier | 
+                                 Qt.KeyboardModifier.AltModifier)):
             if vk in self.win_vk_mappings:
                 return self.win_vk_mappings[vk]
 

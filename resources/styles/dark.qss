@@ -1523,19 +1523,19 @@ QPushButton#dictBtn[added="true"]:pressed {
 }
 
 /* Subtitle overlay translate entire subtitle button */
-QPushButton#translateSubBtn {
+QPushButton#translateSubBtn, QPushButton#prevPhraseBtn, QPushButton#nextPhraseBtn, QPushButton#replayPhraseBtn {
     background-color: rgba(255, 255, 255, 20);
     border: 1px solid rgba(255, 255, 255, 40);
     border-radius: 15px;
     padding: 0px;
 }
 
-QPushButton#translateSubBtn:hover {
+QPushButton#translateSubBtn:hover, QPushButton#prevPhraseBtn:hover, QPushButton#nextPhraseBtn:hover, QPushButton#replayPhraseBtn:hover {
     background-color: @accent;
     border-color: @accent;
 }
 
-QPushButton#translateSubBtn:pressed {
+QPushButton#translateSubBtn:pressed, QPushButton#prevPhraseBtn:pressed, QPushButton#nextPhraseBtn:pressed, QPushButton#replayPhraseBtn:pressed {
     background-color: @accent-pressed;
     border-color: @accent-pressed;
 }

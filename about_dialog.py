@@ -168,6 +168,9 @@ class AboutDialog(QDialog):
                     (".", tr("hotkeys.frame_step")),
                     (f"{tr('hotkeys.keys.shift')} + ←", tr("hotkeys.prev_video")),
                     (f"{tr('hotkeys.keys.shift')} + →", tr("hotkeys.next_video")),
+                    (f"{tr('hotkeys.keys.alt')} + ←", tr("hotkeys.prev_phrase")),
+                    (f"{tr('hotkeys.keys.alt')} + →", tr("hotkeys.next_phrase")),
+                    (f"{tr('hotkeys.keys.alt')} + ↓", tr("hotkeys.replay_phrase")),
                 ],
             ),
             (
