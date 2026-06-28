@@ -106,11 +106,7 @@ class SettingsDialog(QDialog):
         # Create Splitter
         content_splitter = QSplitter(Qt.Orientation.Horizontal)
         content_splitter.setHandleWidth(12)
-        content_splitter.setStyleSheet("""
-            QSplitter::handle {
-                margin: 0 3px;
-            }
-        """)
+        content_splitter.setObjectName("settingsSplitter")
         content_splitter.addWidget(library_group)
 
         deps_group = QGroupBox(tr("settings.dependencies_group"))
@@ -166,6 +162,7 @@ class SettingsDialog(QDialog):
         path_row.addWidget(self.pureref_path_btn)
 
         self.pureref_path_status = QLabel()
+        self.pureref_path_status.setObjectName("purerefPathStatus")
         path_row.addWidget(self.pureref_path_status, 1)
         pureref_layout.addLayout(path_row)
 
@@ -557,7 +554,7 @@ class SettingsDialog(QDialog):
 
             if pureref_path.exists():
                 self.pureref_path_status.setText(f"✓ {pureref_path.name}")
-                self.pureref_path_status.setStyleSheet("color: #4CAF50;")
+                self.pureref_path_status.setProperty("status", "valid")
                 self.pureref_path_btn.setIcon(self.icons.get("check", QIcon()))
                 self.pureref_path_status.setToolTip(
                     tr("settings.pureref_path_valid", path=str(pureref_path))
@@ -566,16 +563,19 @@ class SettingsDialog(QDialog):
                 self.pureref_path_status.setText(
                     f"✗ {tr('settings.pureref_not_found')}"
                 )
-                self.pureref_path_status.setStyleSheet("color: #F44336;")
+                self.pureref_path_status.setProperty("status", "invalid")
                 self.pureref_path_btn.setIcon(self.icons.get("fail", QIcon()))
                 self.pureref_path_status.setToolTip(
                     tr("settings.pureref_path_invalid", path=str(pureref_path))
                 )
         except Exception as e:
             self.pureref_path_status.setText(f"✗ Error")
-            self.pureref_path_status.setStyleSheet("color: #F44336;")
+            self.pureref_path_status.setProperty("status", "invalid")
             self.pureref_path_btn.setIcon(self.icons.get("fail", QIcon()))
             self.pureref_path_status.setToolTip(str(e))
+
+        self.pureref_path_status.style().unpolish(self.pureref_path_status)
+        self.pureref_path_status.style().polish(self.pureref_path_status)
 
     def update_texts(self):
         """Update all translatable texts when language changes."""

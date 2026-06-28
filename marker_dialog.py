@@ -1,3 +1,7 @@
+from PyQt6.QtCore import QSize
+from PyQt6.QtGui import QIcon
+from PyQt6.QtGui import QColor
+from PyQt6.QtGui import QPixmap
 import logging
 from PyQt6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton, QButtonGroup, QDialogButtonBox, QGridLayout
 from PyQt6.QtCore import QRegularExpression
@@ -72,10 +76,12 @@ class MarkerDialog(QDialog):
             
             # Use dynamic property for selection highlight
             btn.setProperty("selected", c == color)
-            
-            # Structural styles moved to QSS, only background color remains in Python
-            btn.setStyleSheet(f"background-color: {c};")
-            btn.setProperty("color_val", c)
+
+            # Set colored icon to avoid inline styleSheet
+            pixmap = QPixmap(32, 32)
+            pixmap.fill(QColor(c))
+            btn.setIcon(QIcon(pixmap))
+            btn.setIconSize(QSize(32, 32))
             btn.setProperty("color_val", c)
             btn.clicked.connect(self._on_color_selected)
             

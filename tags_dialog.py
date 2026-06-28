@@ -22,21 +22,6 @@ class ColorPickerPopup(QDialog):
     def setup_ui(self):
         self.container = QWidget(self)
         self.container.setObjectName("colorPickerContainer")
-        # Assuming styling is handled via globally loaded QSS, but adding some fallback style
-        self.container.setStyleSheet("""
-            QWidget#colorPickerContainer {
-                background-color: #2D2D2D;
-                border: 1px solid #444444;
-                border-radius: 4px;
-            }
-            QPushButton.colorCell {
-                border: 1px solid rgba(0,0,0,0.1);
-                border-radius: 0px;
-            }
-            QPushButton.colorCell:hover {
-                border: 1px solid white;
-            }
-        """)
         
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -59,7 +44,13 @@ class ColorPickerPopup(QDialog):
             btn = QPushButton()
             btn.setFixedSize(24, 24)
             btn.setProperty("class", "colorCell")
-            btn.setStyleSheet(f"background-color: {color_hex}; border: none;")
+            
+            # Use QIcon(pixmap) to set background color instead of setStyleSheet
+            pixmap = QPixmap(24, 24)
+            pixmap.fill(QColor(color_hex))
+            btn.setIcon(QIcon(pixmap))
+            btn.setIconSize(QSize(24, 24))
+            
             btn.clicked.connect(lambda checked, c=color_hex: self.on_color_clicked(c))
             # Align center within the grid cell to prevent any potential stretching
             self.grid.addWidget(btn, i // 4, i % 4, Qt.AlignmentFlag.AlignCenter)
@@ -150,18 +141,6 @@ class TagsDialog(QDialog):
         # Middle area (List)
         self.list_widget = QListWidget()
         self.list_widget.setObjectName("tagsList")
-        
-        # Add padding around the list and make border gray and permanent
-        self.list_widget.setStyleSheet("""
-            QListWidget {
-                padding: 5px;
-                border: 1px solid #555555;
-                outline: none;
-            }
-            QListWidget:focus {
-                border: 1px solid #555555;
-            }
-        """)
         
         self.list_widget.currentItemChanged.connect(self.on_selection_changed)
         layout.addWidget(self.list_widget)

@@ -1606,3 +1606,114 @@ QPushButton#translateSubBtn:pressed, QPushButton#prevPhraseBtn:pressed, QPushBut
     background-color: @accent-pressed;
     border-color: @accent-pressed;
 }
+
+#translationPopupOriginalLabel {
+    color: rgba(255, 255, 255, 180);
+    font-size: 10pt;
+    font-weight: 500;
+    font-family: "Segoe UI";
+}
+
+#translationPopupTranslationLabel {
+    color: #FFD700;
+    font-size: 12pt;
+    font-weight: bold;
+    font-family: "Segoe UI";
+}
+
+/* ============================================================
+   REFACTORED INLINE STYLES ENFORCEMENT
+   ============================================================ */
+
+#subtitleTextEdit {
+    background: transparent;
+    border: none;
+    padding: 0px;
+    margin: 0px;
+}
+
+#SubtitleOverlayWidget {
+    background: transparent;
+    border: none;
+}
+
+QSplitter#settingsSplitter::handle {
+    margin: 0 3px;
+}
+
+#purerefPathStatus[status="valid"] {
+    color: #4CAF50;
+}
+
+#purerefPathStatus[status="invalid"] {
+    color: #F44336;
+}
+
+QWidget#colorPickerContainer {
+    background-color: #2D2D2D;
+    border: 1px solid #444444;
+    border-radius: 4px;
+}
+
+QPushButton.colorCell {
+    border: 1px solid rgba(0,0,0,0.1);
+    border-radius: 0px;
+    background-color: transparent;
+    padding: 0px;
+}
+
+QPushButton.colorCell:hover {
+    border: 1px solid white;
+}
+
+QListWidget#tagsList {
+    padding: 5px;
+    border: 1px solid #555555;
+    outline: none;
+}
+
+QListWidget#tagsList:focus {
+    border: 1px solid #555555;
+}
+
+#colorPalette QPushButton {
+    background-color: transparent;
+    border: 1px solid rgba(0,0,0,0.1);
+    border-radius: 0px;
+    padding: 0px;
+}
+
+#colorPalette QPushButton:hover {
+    border: 1px solid white;
+}
+
+.MarkerColorBtn {
+    background-color: transparent;
+    padding: 0px;
+}
+
+QLabel#markerTitleLabel {
+    border: 1px solid #FFD700;
+}
+
+QLabel#markerTitleLabel[marker_color="#FFD700"] { border: 1px solid #FFD700; }
+QLabel#markerTitleLabel[marker_color="#FF4136"] { border: 1px solid #FF4136; }
+QLabel#markerTitleLabel[marker_color="#2ECC40"] { border: 1px solid #2ECC40; }
+QLabel#markerTitleLabel[marker_color="#0074D9"] { border: 1px solid #0074D9; }
+QLabel#markerTitleLabel[marker_color="#B10DC9"] { border: 1px solid #B10DC9; }
+QLabel#markerTitleLabel[marker_color="#FF851B"] { border: 1px solid #FF851B; }
+QLabel#markerTitleLabel[marker_color="#7FDBFF"] { border: 1px solid #7FDBFF; }
+QLabel#markerTitleLabel[marker_color="#F012BE"] { border: 1px solid #F012BE; }
+QLabel#markerTitleLabel[marker_color="#01FF70"] { border: 1px solid #01FF70; }
+QLabel#markerTitleLabel[marker_color="#39CCCC"] { border: 1px solid #39CCCC; }
+QLabel#markerTitleLabel[marker_color="#85144B"] { border: 1px solid #85144B; }
+QLabel#markerTitleLabel[marker_color="#AAAAAA"] { border: 1px solid #AAAAAA; }
+
+QLabel#updateDialogTitle {
+    font-size: 12pt;
+    font-weight: bold;
+}
+
+QLabel#updateDialogNewVersion {
+    font-weight: bold;
+}

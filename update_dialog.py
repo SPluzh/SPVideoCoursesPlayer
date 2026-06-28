@@ -8,7 +8,6 @@ from PyQt6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QTextEdit
 )
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QFont
 
 from translator import tr
 
@@ -36,10 +35,7 @@ class UpdateDialog(QDialog):
 
         # Title
         title = QLabel(tr('updater.available', version=self.update_info.get('latest', '?')))
-        title_font = QFont()
-        title_font.setPointSize(12)
-        title_font.setBold(True)
-        title.setFont(title_font)
+        title.setObjectName("updateDialogTitle")
         layout.addWidget(title)
 
         # Version info
@@ -47,9 +43,7 @@ class UpdateDialog(QDialog):
         layout.addWidget(current_label)
 
         new_label = QLabel(tr('updater.new_version', version=self.update_info.get('latest', '?')))
-        new_font = QFont()
-        new_font.setBold(True)
-        new_label.setFont(new_font)
+        new_label.setObjectName("updateDialogNewVersion")
         layout.addWidget(new_label)
 
         # Changelog

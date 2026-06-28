@@ -23,7 +23,7 @@ class SubtitleTextEdit(QTextEdit):
         palette = self.palette()
         palette.setColor(palette.ColorRole.Base, Qt.GlobalColor.transparent)
         self.setPalette(palette)
-        self.setStyleSheet("background: transparent; border: none; padding: 0px; margin: 0px;")
+        self.setObjectName("subtitleTextEdit")
 
         self.hover_timer = QTimer(self)
         self.hover_timer.setSingleShot(True)
@@ -196,15 +196,6 @@ class SubtitleOverlayWidget(QFrame):
         self.setAttribute(Qt.WidgetAttribute.WA_ShowWithoutActivating)
         
         self.setObjectName("SubtitleOverlayWidget")
-        
-        # Overlay Style: transparent background for QFrame to avoid double-painting,
-        # but let paintEvent handle the actual rounded translucent drawing.
-        self.setStyleSheet("""
-            #SubtitleOverlayWidget {
-                background: transparent;
-                border: none;
-            }
-        """)
 
         # Layout
         layout = QVBoxLayout(self)

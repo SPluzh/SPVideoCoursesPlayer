@@ -1,3 +1,6 @@
+from PyQt6.QtCore import QSize
+from PyQt6.QtGui import QColor
+from PyQt6.QtGui import QPixmap
 import time
 from pathlib import Path
 from PyQt6.QtWidgets import (
@@ -363,7 +366,11 @@ class SubtitlePopup(QWidget):
             col = i % cols
             btn = QPushButton()
             btn.setFixedSize(33, 33)
-            btn.setStyleSheet(f"background-color: {color};") # Keep background color in Python
+            # Use QIcon(pixmap) to set background color instead of setStyleSheet
+            pixmap = QPixmap(33, 33)
+            pixmap.fill(QColor(color))
+            btn.setIcon(QIcon(pixmap))
+            btn.setIconSize(QSize(33, 33))
             btn.clicked.connect(lambda checked, c=color: self._apply_color(c, target_btn, signal_name, palette))
             layout.addWidget(btn, row, col)
         
@@ -402,9 +409,15 @@ class SubtitlePopup(QWidget):
         palette.move(target_x, target_y)
         palette.show()
     
+    def _set_button_color_icon(self, btn, color_hex):
+        pixmap = QPixmap(64, 30)
+        pixmap.fill(QColor(color_hex))
+        btn.setIcon(QIcon(pixmap))
+        btn.setIconSize(QSize(64, 30))
+
     def _apply_color(self, color, target_btn, signal_name, palette):
         """Apply selected color."""
-        target_btn.setStyleSheet(f"background-color: {color};")
+        self._set_button_color_icon(target_btn, color)
         if signal_name == "sub-color":
             self.text_color = color
         elif signal_name == "sub-secondary-color":
@@ -492,14 +505,14 @@ class SubtitlePopup(QWidget):
         super().hideEvent(event)
 
     def _update_text_color_btn(self):
-        self.text_color_btn.setStyleSheet(f"background-color: {self.text_color};")
+        self._set_button_color_icon(self.text_color_btn, self.text_color)
 
     def _update_secondary_text_color_btn(self):
         if hasattr(self, "secondary_text_color_btn"):
-            self.secondary_text_color_btn.setStyleSheet(f"background-color: {self.secondary_text_color};")
+            self._set_button_color_icon(self.secondary_text_color_btn, self.secondary_text_color)
 
     def _update_outline_color_btn(self):
-        self.outline_color_btn.setStyleSheet(f"background-color: {self.outline_color};")
+        self._set_button_color_icon(self.outline_color_btn, self.outline_color)
 
     def _on_interactive_toggled(self, checked):
         self.interactiveToggled.emit(checked)

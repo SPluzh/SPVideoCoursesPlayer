@@ -57,8 +57,8 @@ class MarkerItem(QFrame):
         self.title_label = QLabel(self.label_text)
         self.title_label.setObjectName("markerTitleLabel")
         self.title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        # Structural styles in QSS, only border color (marker specific) remains here
-        self.title_label.setStyleSheet(f"border: 1px solid {self.color};")
+        # Structural styles in QSS, border color loaded via marker_color property
+        self.title_label.setProperty("marker_color", self.color.upper())
         self.title_label.setWordWrap(False)
         layout.addWidget(self.title_label, 0, Qt.AlignmentFlag.AlignCenter)
 

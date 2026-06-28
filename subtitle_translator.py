@@ -95,8 +95,7 @@ class TranslationPopup(QFrame):
 
         # Original Text Label
         self.original_label = QLabel(self)
-        self.original_label.setFont(QFont("Segoe UI", 10, QFont.Weight.Medium))
-        self.original_label.setStyleSheet("color: rgba(255, 255, 255, 180);")
+        self.original_label.setObjectName("translationPopupOriginalLabel")
         self.original_label.setWordWrap(True)
         self.top_layout.addWidget(self.original_label, 1)
 
@@ -123,9 +122,7 @@ class TranslationPopup(QFrame):
 
         # Translation Text Label
         self.translation_label = QLabel(self)
-        self.translation_label.setFont(QFont("Segoe UI", 12, QFont.Weight.Bold))
-        # Premium Gold/Cyan Accent
-        self.translation_label.setStyleSheet("color: #FFD700;")
+        self.translation_label.setObjectName("translationPopupTranslationLabel")
         self.translation_label.setWordWrap(True)
         self.translation_label.setTextFormat(Qt.TextFormat.RichText)
         self.layout.addWidget(self.translation_label)

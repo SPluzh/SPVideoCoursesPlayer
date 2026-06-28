@@ -178,19 +178,7 @@ class PiPCloseButton(QPushButton):
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.setToolTip(tr("pip.close_tooltip"))
-        self.setStyleSheet("""
-            QPushButton {
-                background-color: rgba(0, 0, 0, 100);
-                color: white;
-                border: none;
-                border-radius: 4px;
-                font-size: 18px;
-                font-weight: bold;
-            }
-            QPushButton:hover {
-                background-color: #018574;
-            }
-        """)
+        self.setObjectName("pipCloseBtn")
         # Make it a top-level window
         self.setWindowFlags(
             Qt.WindowType.Tool
