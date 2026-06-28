@@ -50,11 +50,11 @@ SP Video Courses Player is a desktop application for watching and managing local
 ### Installation
 
 #### Option 1: Standard Installation (Setup)
-1. Download the latest installer (`SP_Video_Courses_Player_Setup_v1.5.9.exe`) from the [Releases](../../releases) page
+1. Download the latest installer (`SP_Video_Courses_Player_Setup_vX.Y.Z.exe`) from the [Releases](../../releases) page
 2. Run the executable to install the player on your system
 
 #### Option 2: Portable Version
-1. Download the latest portable archive (`SP_Video_Courses_Player_v1.5.9.zip`) from the [Releases](../../releases) page
+1. Download the latest portable archive (`SP_Video_Courses_Player_vX.Y.Z.zip`) from the [Releases](../../releases) page
 2. Extract the archive to your desired location
 3. Run `SP Video Courses Player.exe`
 
@@ -170,11 +170,11 @@ SP Video Courses Player — плеер для локальных видеоку�
 ### Установка
 
 #### Вариант 1: Стандартная установка (Setup)
-1. Скачайте последний установщик (`SP_Video_Courses_Player_Setup_v1.5.9.exe`) со страницы [Releases](../../releases)
+1. Скачайте последний установщик (`SP_Video_Courses_Player_Setup_vX.Y.Z.exe`) со страницы [Releases](../../releases)
 2. Запустите файл установки для инсталляции плеера в систему
 
 #### Вариант 2: Портативная версия (Portable)
-1. Скачайте последний архив портативной версии (`SP_Video_Courses_Player_v1.5.9.zip`) со страницы [Releases](../../releases)
+1. Скачайте последний архив портативной версии (`SP_Video_Courses_Player_vX.Y.Z.zip`) со страницы [Releases](../../releases)
 2. Распакуйте архив в удобное место
 3. Запустите `SP Video Courses Player.exe`
 
