@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.6.1]
+- **Subtitles**: Fixed an issue where the selected subtitle language was not loaded or remembered correctly.
+
 ## [1.6.0]
 - **Interactive Subtitles**: Click on any word in the subtitles to translate it.
 - **Translate Entire Subtitle**: Added a button to translate the entire current subtitle without manual highlighting.

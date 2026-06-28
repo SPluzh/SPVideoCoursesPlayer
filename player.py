@@ -2143,7 +2143,6 @@ class VideoPlayerWidget(QWidget):
                 logging.info("🔇 Subtitles disabled")
             except:
                 pass
-            self._save_selected_subtitle(None)
 
             # Show OSD notification for subtitles disabled
             if self.osd_manager:
@@ -2440,6 +2439,34 @@ class VideoPlayerWidget(QWidget):
         if hasattr(self, "subtitle_overlay") and self.subtitle_overlay:
             self.subtitle_overlay.set_subtitle_style(self.sub_color, self.sub_border_color, self.sub_scale)
 
+    def _map_ffprobe_to_mpv_sid(self, ffprobe_stream_index):
+        """Map ffprobe global stream index to MPV subtitle track id."""
+        if not self.player or ffprobe_stream_index is None:
+            return None
+        try:
+            tracks = self.player.track_list or []
+            logging.info(f"📝 MPV track-list: {tracks}")
+            for t in tracks:
+                if t.get("type") == "sub":
+                    ff_idx = t.get("ff-index") if t.get("ff-index") is not None else t.get("ff_index")
+                    if ff_idx is not None and int(ff_idx) == int(ffprobe_stream_index):
+                        logging.info(f"📝 Mapped ffprobe stream index {ffprobe_stream_index} to MPV SID {t.get('id')}")
+                        return t.get("id")
+            
+            # Fallback: if ff-index is not found, map by order of subtitle streams in the database
+            if self.db and self.current_file:
+                db_tracks, _, _ = self.db.load_subtitle_tracks(self.current_file)
+                embedded_db_tracks = [t for t in db_tracks if t.get("track_type") == "embedded"]
+                embedded_db_tracks.sort(key=lambda x: x.get("stream_index", 0))
+                for i, track in enumerate(embedded_db_tracks):
+                    if int(track.get("stream_index", 0)) == int(ffprobe_stream_index):
+                        fallback_sid = i + 1
+                        logging.info(f"📝 Fallback mapped stream index {ffprobe_stream_index} to order-based SID {fallback_sid}")
+                        return fallback_sid
+        except Exception as e:
+            logging.error(f"Error mapping ffprobe stream index to MPV SID: {e}", exc_info=True)
+        return None
+
     def change_subtitle_track(self, index):
         """Switch subtitles on selection."""
         if not self.player:
@@ -2481,10 +2508,17 @@ class VideoPlayerWidget(QWidget):
             if track_type == "embedded":
                 # Use sid for embedded subtitles
                 try:
-                    self.player.sid = stream_index
-                    logging.info(
-                        f"📝 Switched to embedded subtitle track {stream_index}"
-                    )
+                    mpv_sid = self._map_ffprobe_to_mpv_sid(stream_index)
+                    if mpv_sid is not None:
+                        self.player.sid = mpv_sid
+                        logging.info(
+                            f"📝 Switched to embedded subtitle track (ffprobe={stream_index}, mpv_sid={mpv_sid})"
+                        )
+                    else:
+                        self.player.sid = stream_index
+                        logging.warning(
+                            f"📝 Switched to embedded subtitle track using raw stream_index {stream_index} (mapping failed)"
+                        )
                 except Exception as e:
                     logging.error(f"Error setting subtitle track: {e}", exc_info=True)
             else:
@@ -2590,11 +2624,19 @@ class VideoPlayerWidget(QWidget):
 
             if track_type == "embedded":
                 try:
-                    logging.info(f"📝 Setting MPV sid={stream_index}")
-                    self.player.sid = stream_index
-                    logging.info(
-                        f"📝 ✅ Restored embedded subtitle track (sid={stream_index})"
-                    )
+                    mpv_sid = self._map_ffprobe_to_mpv_sid(stream_index)
+                    if mpv_sid is not None:
+                        logging.info(f"📝 Setting MPV sid={mpv_sid}")
+                        self.player.sid = mpv_sid
+                        logging.info(
+                            f"📝 ✅ Restored embedded subtitle track (ffprobe={stream_index}, mpv_sid={mpv_sid})"
+                        )
+                    else:
+                        logging.info(f"📝 Setting MPV sid={stream_index} (raw)")
+                        self.player.sid = stream_index
+                        logging.info(
+                            f"📝 ✅ Restored embedded subtitle track using raw stream_index (sid={stream_index})"
+                        )
                 except Exception as e:
                     logging.error(f"📝 ❌ Error restoring subtitle: {e}", exc_info=True)
             else:
