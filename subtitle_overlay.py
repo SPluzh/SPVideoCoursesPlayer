@@ -326,8 +326,13 @@ class SubtitleOverlayWidget(QFrame):
         from PyQt6.QtGui import QPainter
         painter = QPainter(self)
         
-        # Premium dark translucent background (alpha = 170)
-        bg_color = QColor(0, 0, 0, 170)
+        # Use user-defined outline_color as base, with alpha=170 for translucency
+        base_color = getattr(self, "outline_color", "#000000")
+        bg_color = QColor(base_color)
+        if not bg_color.isValid():
+            bg_color = QColor(0, 0, 0)
+        bg_color.setAlpha(170)
+        
         painter.fillRect(self.rect(), bg_color)
 
     def _should_be_visible(self) -> bool:
@@ -469,6 +474,7 @@ class SubtitleOverlayWidget(QFrame):
         self.set_text(self.current_text)
         if getattr(self, 'secondary_text', None):
             self.set_secondary_text(self.secondary_text)
+        self.update()
 
     def _check_install_window_filter(self):
         if self.video_widget:

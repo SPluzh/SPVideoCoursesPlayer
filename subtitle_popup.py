@@ -477,6 +477,10 @@ class SubtitlePopup(QWidget):
     def _update_toggle_icon(self):
         icon_name = "subtitle_on" if self.subtitles_enabled else "subtitle_off"
         self.toggle_btn.setIcon(self.icons[icon_name])
+        if hasattr(self, "secondary_enabled_cb"):
+            self.secondary_enabled_cb.setEnabled(self.subtitles_enabled)
+        if hasattr(self, "secondary_container"):
+            self.secondary_container.setEnabled(self.subtitles_enabled)
         
     def setSubtitlesEnabled(self, enabled):
         self.subtitles_enabled = enabled
@@ -725,6 +729,7 @@ class SubtitleButton(QPushButton):
         """Set enabled state (for synchronization with combo)."""
         self.subtitles_enabled = enabled
         self._update_icon()
+        self.popup.setSubtitlesEnabled(enabled)
 
     def update_texts(self):
         """Update texts on language change."""

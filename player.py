@@ -3026,6 +3026,7 @@ class VideoPlayerWidget(QWidget):
             is_interactive = self.config.get_interactive_subtitles() if self.config else False
             is_enabled = self.subtitle_btn.subtitles_enabled
             is_secondary_enabled = self.subtitle_btn.popup.secondary_enabled_cb.isChecked()
+            is_secondary_effective = is_secondary_enabled and is_enabled
             
             if is_enabled and is_interactive:
                 self.player.sub_visibility = "no"
@@ -3034,19 +3035,19 @@ class VideoPlayerWidget(QWidget):
             else:
                 self.player.sub_visibility = "yes" if is_enabled else "no"
                 self.subtitle_overlay.set_text("")
-                if not is_secondary_enabled or not is_interactive:
+                if not is_secondary_effective or not is_interactive:
                     self.subtitle_overlay.hide()
                     if self.translation_popup:
                         self.translation_popup.hide()
 
             # Handle secondary subtitles
             try:
-                if is_secondary_enabled and is_interactive:
+                if is_secondary_effective and is_interactive:
                     self.player['secondary-sub-visibility'] = "no"
                     sub2_text = self.player['secondary-sub-text'] or ""
                     self.subtitle_overlay.set_secondary_text(sub2_text)
                 else:
-                    self.player['secondary-sub-visibility'] = "yes" if is_secondary_enabled else "no"
+                    self.player['secondary-sub-visibility'] = "yes" if is_secondary_effective else "no"
                     self.subtitle_overlay.set_secondary_text("")
             except Exception as e:
                 logging.debug(f"Could not set secondary-sub-visibility or get secondary-sub-text: {e}")
@@ -3063,9 +3064,13 @@ class VideoPlayerWidget(QWidget):
 
     def _on_secondary_sub_text_changed(self, text):
         is_interactive = self.config.get_interactive_subtitles() if self.config else False
+        is_enabled = self.subtitle_btn.subtitles_enabled
         is_secondary_enabled = self.subtitle_btn.popup.secondary_enabled_cb.isChecked()
-        if is_interactive and is_secondary_enabled:
+        is_secondary_effective = is_secondary_enabled and is_enabled
+        if is_interactive and is_secondary_effective:
             self.subtitle_overlay.set_secondary_text(text or "")
+        else:
+            self.subtitle_overlay.set_secondary_text("")
 
     def _on_secondary_subtitle_toggled(self, enabled):
         """Enable/disable secondary subtitle."""
