@@ -51,7 +51,7 @@ class TestStyleRules(unittest.TestCase):
         """Verify that no inline setStyleSheet or widget setFont calls exist in the python code.
         All UI styling and font definitions must be handled via the centralized resources/styles/dark.qss file.
         """
-        project_root = Path(__file__).resolve().parent.parent
+        project_root = Path(__file__).resolve().parent.parent / "src"
         violations_found = []
         
         # Scan all python files in project root (excluding tests, .venv, etc.)

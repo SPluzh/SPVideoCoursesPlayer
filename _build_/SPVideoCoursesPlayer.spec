@@ -3,23 +3,23 @@
 block_cipher = None
 
 a = Analysis(
-    ['../main.py'],
-    pathex=[],
+    ['../src/main.py'],
+    pathex=['../src'],
     binaries=[
-        ('../resources/bin/ffprobe.exe', 'resources/bin'),
-        ('../resources/bin/ffmpeg.exe', 'resources/bin'),
-        ('../resources/bin/libmpv-2.dll', 'resources/bin'),
-        ('../resources/bin/libmpv.version', 'resources/bin'),
+        ('../src/resources/bin/ffprobe.exe', 'resources/bin'),
+        ('../src/resources/bin/ffmpeg.exe', 'resources/bin'),
+        ('../src/resources/bin/libmpv-2.dll', 'resources/bin'),
+        ('../src/resources/bin/libmpv.version', 'resources/bin'),
     ],
     datas=[
-        ('../resources/styles/dark.qss', 'resources/styles'),
+        ('../src/resources/styles/dark.qss', 'resources/styles'),
         # --- Translations (editable after build) ---
-        ('../resources/translations/ru.json', 'resources/translations'),
-        ('../resources/translations/en.json', 'resources/translations'),
+        ('../src/resources/translations/ru.json', 'resources/translations'),
+        ('../src/resources/translations/en.json', 'resources/translations'),
         # --- icons ---
-        ('../resources/icons/*.png', 'resources/icons'),
-        ('../resources/icons/*.ico', 'resources/icons'),
-        ('../resources/version.txt', 'resources'),
+        ('../src/resources/icons/*.png', 'resources/icons'),
+        ('../src/resources/icons/*.ico', 'resources/icons'),
+        ('../src/resources/version.txt', 'resources'),
     ],
     hiddenimports=[
         'mutagen.mp3',
@@ -84,7 +84,7 @@ exe = EXE(
     strip=True,
     upx=True,
     console=False,
-    icon='../resources/icons/app_icon.ico',
+    icon='../src/resources/icons/app_icon.ico',
 )
 
 coll = COLLECT(

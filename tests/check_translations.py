@@ -43,7 +43,7 @@ def main():
     # Assuming the script is in SPVideoCoursesPlayer/tests/
     script_path = Path(__file__).resolve()
     project_root = script_path.parent.parent
-    translations_dir = project_root / 'resources' / 'translations'
+    translations_dir = project_root / 'src' / 'resources' / 'translations'
     
     print(f"Project root: {project_root}")
     print(f"Translations dir: {translations_dir}")

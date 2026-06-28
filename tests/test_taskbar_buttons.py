@@ -1,7 +1,7 @@
 """Тест добавления кнопок в таскбар"""
 import sys
-import time
 from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 from PyQt6.QtWidgets import QApplication, QMainWindow, QPushButton
 from PyQt6.QtCore import QTimer
@@ -16,7 +16,7 @@ class TestWindow(QMainWindow):
         
         self.taskbar_progress = TaskbarProgress()
         self.thumbnail_buttons = None
-        self.icons_dir = Path(__file__).parent / 'resources' / 'icons'
+        self.icons_dir = Path(__file__).parent.parent / 'src' / 'resources' / 'icons'
         
         btn = QPushButton("Добавить кнопки", self)
         btn.setGeometry(100, 80, 200, 40)

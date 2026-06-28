@@ -1,7 +1,9 @@
 import unittest
 import tempfile
 import os
+import sys
 from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 from database import DatabaseManager
 
 class TestDatabaseSecondarySubtitles(unittest.TestCase):

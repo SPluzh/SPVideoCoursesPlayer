@@ -2,6 +2,9 @@
 __pycache__/
 *.py[cod]
 *$py.class
+.pytest_cache/
+.coverage
+.ruff_cache/
 
 # VS Code
 .vscode/
@@ -22,7 +25,7 @@ _build_/installer_output/
 _build_/*.exe
 
 # Application Data
-data/
+src/data/
 *.log
 settings.ini
 

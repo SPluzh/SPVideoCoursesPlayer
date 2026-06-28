@@ -263,7 +263,7 @@ def print_report(results: Dict[str, Dict[str, TooltipAnalyzer]]):
 def main():
     """Main entry point."""
     script_path = Path(__file__).resolve()
-    project_root = script_path.parent.parent
+    project_root = script_path.parent.parent / "src"
     
     print(f"Project root: {project_root}")
     print(f"Scanning for tooltip usage...")
