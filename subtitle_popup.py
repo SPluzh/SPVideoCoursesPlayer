@@ -50,6 +50,17 @@ class SubtitlePopup(QWidget):
         self.toggle_btn.clicked.connect(self._toggle_subtitles)
         self.toggle_btn.setObjectName("popupSubtitleToggle")
         toggle_col.addWidget(self.toggle_btn)
+        
+        toggle_col.addSpacing(6)
+        
+        self.interactive_btn = QPushButton()
+        self.interactive_btn.setFixedSize(30, 30)
+        self.interactive_btn.setCheckable(True)
+        self.interactive_btn.setObjectName("interactiveSubtitlesBtn")
+        self.interactive_btn.setToolTip(tr('player.interactive_subtitles'))
+        self.interactive_btn.toggled.connect(self._on_interactive_toggled)
+        toggle_col.addWidget(self.interactive_btn)
+        
         toggle_col.addStretch()
         left_panel.addLayout(toggle_col)
 
@@ -76,7 +87,8 @@ class SubtitlePopup(QWidget):
         main_layout.addLayout(left_panel)
         
         # Load icons
-        self.icons = load_icons_dict(["subtitle_on", "subtitle_off"])
+        self.icons = load_icons_dict(["subtitle_on", "subtitle_off", "languages"])
+        self.interactive_btn.setIcon(self.icons["languages"])
         
         self.subtitles_enabled = False
         self._update_toggle_icon()
@@ -140,12 +152,6 @@ class SubtitlePopup(QWidget):
         outline_layout.addWidget(self.outline_title_label)
         outline_layout.addWidget(self.outline_color_btn)
         right_panel.addLayout(outline_layout)
-        
-        # Interactive subtitles checkbox
-        self.interactive_checkbox = QCheckBox(tr('player.interactive_subtitles'))
-        self.interactive_checkbox.setObjectName("interactiveSubtitlesCheckBox")
-        self.interactive_checkbox.toggled.connect(self._on_interactive_toggled)
-        right_panel.addWidget(self.interactive_checkbox)
         
         right_panel.addStretch()
         main_layout.addLayout(right_panel)
@@ -314,9 +320,9 @@ class SubtitlePopup(QWidget):
         self.interactiveToggled.emit(checked)
 
     def setInteractiveSubtitlesEnabled(self, enabled):
-        self.interactive_checkbox.blockSignals(True)
-        self.interactive_checkbox.setChecked(enabled)
-        self.interactive_checkbox.blockSignals(False)
+        self.interactive_btn.blockSignals(True)
+        self.interactive_btn.setChecked(enabled)
+        self.interactive_btn.blockSignals(False)
 
     def update_texts(self):
         """Update texts on language change."""
@@ -324,7 +330,7 @@ class SubtitlePopup(QWidget):
         self.size_title_label.setText(tr('player.subtitle_size'))
         self.text_title_label.setText(tr('player.subtitle_text'))
         self.outline_title_label.setText(tr('player.subtitle_outline'))
-        self.interactive_checkbox.setText(tr('player.interactive_subtitles'))
+        self.interactive_btn.setToolTip(tr('player.interactive_subtitles'))
 
 
 class SubtitleButton(QPushButton):
