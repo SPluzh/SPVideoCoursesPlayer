@@ -23,38 +23,43 @@ Video player for local courses with hierarchical library, progress tracking, boo
 
 <a name="english"></a>
 
-## 🇬🇧 English
+## English
 
 ### Overview
 
 SP Video Courses Player is a desktop application for watching and managing local video courses with hierarchical library organization, progress tracking, and learning statistics. Includes video zoom, audio enhancement, custom subtitle settings, and instant thumbnail previews on the timeline.
 
-### ✨ Features
+### Features
 
-- **📚 Library Management** - Hierarchical tree structure with **Favorites** and **Tags** filtering
-- **▶️ Advanced Player** - Built on **libmpv** with **Picture-in-Picture (PiP)** mode
-- **🔊 Professional Audio Tools** - **AI Noise Reduction**, Compressor, De-esser, Mono mix, and precise Sync Delay
-- **📊 Detailed Statistics** - Folder completion progress, watched duration, and remaining time
-- **🔖 Smart Markers** - Visual marker gallery, custom colors, and timeline previews
-- **🖼️ Instant Previews** - Hover over the timeline to see instantaneous video thumbnails
-- **📝 Subtitle Support** - Customizable subtitles with size, color, and outline settings
-- **⏩ Speed Control** - Adjust playback speed (0.5x - 3.0x) with pitch correction
-- **🎨 Modern UI** - Dark theme with custom icons and responsive layout
+- **Library Management** - Hierarchical tree structure with **Favorites** and **Tags** filtering, bulk operations (checkboxes), and fuzzy search
+- **Advanced Player** - Built on **libmpv** with **Picture-in-Picture (PiP)** mode and YouTube-style percentage seeking (`0`-`9`)
+- **Professional Audio Tools** - **AI Noise Reduction**, Compressor, De-esser, Mono mix, and precise Sync Delay
+- **Detailed Statistics** - Folder completion progress, watched duration, and remaining time
+- **Smart Markers** - Visual marker gallery, custom colors, and timeline previews
+- **Subtitle Support & Dual Tracks** - Support for primary and secondary subtitles simultaneously with independent color/size settings and track selection
+- **Interactive Translation** - Click on subtitle words for instant translations, synonyms, and pronunciation audio, plus offline caching and full-phrase translation
+- **Subtitle Navigation** - Dedicated hotkeys to seek between subtitle phrases (`Alt + ←/→`), replay (`Alt + ↓`), or translate (`Alt + ↑`)
+- **Speed Control** - Adjust playback speed (0.5x - 3.0x) with pitch correction
+- **Modern UI** - Dark theme with custom QSS styling, clean icons, and responsive layout
 
-### 📖 Usage
+### Usage
 
 1. **Add Library Paths**: Go to `Library → Settings` and add folders containing your video courses
 2. **Scan Library**: Click `Library → Scan` to index your videos
 
-### 🚀 Installation
+### Installation
 
-#### Option 1: Download Executable (Recommended)
-1. Download the latest release from the [Releases](../../releases) page
+#### Option 1: Standard Installation (Setup)
+1. Download the latest installer (`setup.exe` / `SP.Video.Courses.Player.Setup.exe`) from the [Releases](../../releases) page
+2. Run the executable to install the player on your system
+
+#### Option 2: Portable Version
+1. Download the latest portable archive (`.zip` / `SP.Video.Courses.Player.Portable.zip`) from the [Releases](../../releases) page
 2. Extract the archive to your desired location
 3. Run `SP Video Courses Player.exe`
 
 <details>
-<summary><strong>Option 2: Run from Source</strong></summary>
+<summary><strong>Option 3: Run from Source</strong></summary>
 
 1. Clone the repository:
    ```bash
@@ -67,7 +72,7 @@ SP Video Courses Player is a desktop application for watching and managing local
    pip install -r requirements.txt
    ```
 
-   **📦 Dependencies:**
+   **Dependencies:**
    ```
    PyQt6
    python-mpv
@@ -83,22 +88,22 @@ SP Video Courses Player is a desktop application for watching and managing local
 
 </details>
 
-### 🔄 Manual Update
+### Manual Update (for Portable Version)
 
 1. **Close** SP Video Courses Player completely
-2. Download the latest `.zip` archive from the [Releases](https://github.com/SPluzh/SPVideoCoursesPlayer/releases/latest) page
+2. Download the latest portable `.zip` archive from the [Releases](https://github.com/SPluzh/SPVideoCoursesPlayer/releases/latest) page
 3. Extract the archive into the application folder **with file replacement**
 
 > **Note:** Your personal data is preserved during the update — `settings.ini` contains your application settings, and the `data/` folder stores the database, viewing progress, bookmarks, and cache. These files are not included in the release archive and will not be overwritten.
 
 
-### 📋 Requirements
+### Requirements
 
 - **Operating System**: Windows 10/11
 - **Python**: 3.10+ (for source installation)
 
 
-### 🔧 Additional Components
+### Additional Components
 
 The application will automatically download these components on first run. If the automatic download fails, you can download them manually and place them in the `resources/bin/` directory:
 
@@ -119,7 +124,7 @@ SP Video Courses Player/
             └── ffprobe.exe
 ```
 
-### 🖼️ PureRef Integration (Optional)
+### PureRef Integration (Optional)
 
 To use the PureRef integration feature for managing reference images alongside your video courses:
 
@@ -132,7 +137,7 @@ Once configured, you'll see PureRef badges on folder items in your library, allo
 
 ---
 
-### 📜 Credits
+### Credits
 
 - [PyQt6](https://pypi.org/project/PyQt6/) - GUI framework
 - [libmpv](https://mpv.io/) - Video playback engine
@@ -144,38 +149,44 @@ Once configured, you'll see PureRef badges on folder items in your library, allo
 
 <a name="russian"></a>
 
-## 🇷🇺 Русский
+## Русский
 
 ### Обзор
 
 SP Video Courses Player — плеер для локальных видеокурсов с древовидной библиотекой, сохранением прогресса, закладками, тегами и статистикой обучения. Включает масштабирование кадра, улучшение звука, настройку субтитров и мгновенные превью на таймлайне.
 
-### ✨ Возможности
+### Возможности
 
-- **📚 Управление библиотекой** — Древовидная структура с фильтрацией по **Избранному** и **Тегам**
-- **▶️ Продвинутый плеер** — На базе **libmpv** с режимом **Картинка-в-картинке (PiP)**
-- **🔊 Профессиональный звук** — **AI Шумоподавление**, Компрессор, Де-эссер, Моно-микс и точная настройка задержки
-- **📊 Детальная статистика** — Прогресс по папкам, просмотренное время и остаток
-- **🔖 Умные закладки** — Визуальная галерея маркеров, цветные метки и превью на таймлайне
-- **🖼️ Мгновенное превью** — Наведение на таймлайн показывает кадр из видео
-- **📝 Поддержка субтитров** — Настройка размера, цвета и обводки текста
-- **⏩ Управление скоростью** — Регулировка (0.5x - 3.0x) без искажения тона
-- **🎨 Современный UI** — Тёмная тема, адаптивный интерфейс и кастомные иконки
+- **Управление библиотекой** — Древовидная структура с фильтрацией по **Избранному** и **Тегам**, массовыми операциями (чекбоксы) и нечётким поиском
+- **Продвинутый плеер** — На базе **libmpv** с режимом **Картинка-в-картинке (PiP)** и переходом по процентам видео клавишами (`0`-`9`)
+- **Профессиональный звук** — **AI Шумоподавление**, Компрессор, Де-эссер, Моно-микс и точная настройка задержки
+- **Детальная статистика** — Прогресс по папкам, просмотренное время и остаток
+- **Умные закладки** — Визуальная галерея маркеров, цветные метки и превью на таймлайне
+- **Мгновенное превью** — Наведение на таймлайн показывает кадр из видео
+- **Субтитры и две дорожки** — Одновременное отображение основных и дополнительных субтитров с независимой настройкой цвета, размера и выбора дорожек
+- **Интерактивный перевод** — Клик по словам в субтитрах для мгновенного перевода, просмотра синонимов и озвучки произношения, с поддержкой офлайн-кеширования и перевода всей фразы
+- **Навигация по субтитрам** — Горячие клавиши для перехода между фразами (`Alt + ←/→`), повтора фразы (`Alt + ↓`) и перевода текущих субтитров (`Alt + ↑`)
+- **Управление скоростью** — Регулировка (0.5x - 3.0x) без искажения тона
+- **Современный UI** — Полностью кастомизированная тёмная QSS-тема с адаптивным интерфейсом и оптимизированными иконками
 
-### 📖 Использование
+### Использование
 
 1. **Добавьте пути**: `Библиотека → Настройки` — укажите папки с курсами
 2. **Сканирование**: `Библиотека → Сканировать` — индексация файлов
 
-### 🚀 Установка
+### Установка
 
-#### Вариант 1: Скачать исполняемый файл (рекомендуется)
-1. Скачайте последний релиз со страницы [Releases](../../releases)
-2. Распакуйте архив в нужное место
+#### Вариант 1: Стандартная установка (Setup)
+1. Скачайте последний установщик (`setup.exe` / `SP.Video.Courses.Player.Setup.exe`) со страницы [Releases](../../releases)
+2. Запустите файл установки для инсталляции плеера в систему
+
+#### Вариант 2: Портативная версия (Portable)
+1. Скачайте последний архив портативной версии (`.zip` / `SP.Video.Courses.Player.Portable.zip`) со страницы [Releases](../../releases)
+2. Распакуйте архив в удобное место
 3. Запустите `SP Video Courses Player.exe`
 
 <details>
-<summary><strong>Вариант 2: Запуск из исходников</strong></summary>
+<summary><strong>Вариант 3: Запуск из исходников</strong></summary>
 
 1. Клонируйте репозиторий:
    ```bash
@@ -188,7 +199,7 @@ SP Video Courses Player — плеер для локальных видеоку�
    pip install -r requirements.txt
    ```
 
-   **📦 Зависимости:**
+   **Зависимости:**
    ```
    PyQt6
    python-mpv
@@ -204,21 +215,21 @@ SP Video Courses Player — плеер для локальных видеоку�
 
 </details>
 
-### 🔄 Ручное обновление
+### Ручное обновление (для портативной версии)
 
 1. **Закройте** SP Video Courses Player полностью
-2. Скачайте последний `.zip` архив со страницы [Releases](https://github.com/SPluzh/SPVideoCoursesPlayer/releases/latest)
+2. Скачайте последний портативный `.zip` архив со страницы [Releases](https://github.com/SPluzh/SPVideoCoursesPlayer/releases/latest)
 3. Распакуйте архив в папку приложения **с заменой файлов**
 
 > **Примечание:** Ваши личные данные сохранятся при обновлении — `settings.ini` содержит настройки приложения, а папка `data/` хранит базу данных, прогресс просмотра, закладки и кеш. Эти файлы не входят в архив релиза и не будут перезаписаны.
 
-### 📋 Требования
+### Требования
 
 - **Операционная система**: Windows 10/11
 - **Python**: 3.10+ (для запуска из исходников)
 
 
-### 🔧 Дополнительные компоненты
+### Дополнительные компоненты
 
 Приложение автоматически загрузит эти компоненты при первом запуске. Если автоматическая загрузка не удалась, вы можете скачать их вручную и поместить в директорию `resources/bin/`:
 
@@ -240,7 +251,7 @@ SP Video Courses Player/
 ```
 
 
-### 🖼️ Интеграция с PureRef (опционально)
+### Интеграция с PureRef (опционально)
 
 Для использования интеграции с PureRef для управления референсами рядом с видеокурсами:
 
@@ -253,7 +264,7 @@ SP Video Courses Player/
 
 ---
 
-### 📜 Благодарности
+### Благодарности
 
 - [PyQt6](https://pypi.org/project/PyQt6/) - Фреймворк для графического интерфейса
 - [libmpv](https://mpv.io/) - Движок воспроизведения видео
@@ -264,5 +275,5 @@ SP Video Courses Player/
 ---
 
 <p align="center">
-  Made with ❤️ for video course enthusiasts
+  Created for video course enthusiasts
 </p>
