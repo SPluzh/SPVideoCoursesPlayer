@@ -4,6 +4,7 @@ All notable changes to this project will be documented in this file.
 
 ## [1.6.1]
 - **Subtitles**: Fixed an issue where the selected subtitle language was not loaded or remembered correctly.
+- **Hotkeys**: Added Alt + Up hotkey to translate the entire current subtitle phrase.
 
 ## [1.6.0]
 - **Interactive Subtitles**: Click on any word in the subtitles to translate it.

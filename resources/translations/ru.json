@@ -512,6 +512,7 @@
         "prev_phrase": "Предыдущая фраза субтитров",
         "next_phrase": "Следующая фраза субтитров",
         "replay_phrase": "Повторить текущую фразу субтитров",
+        "translate_subtitle": "Перевести текущий субтитр полностью",
         "volume_up": "Громкость +",
         "volume_down": "Громкость -",
         "audio_delay_up": "Задержка звука +",
@@ -592,7 +593,7 @@
         "added_to_dictionary": "Добавлено в словарь",
         "already_in_dictionary": "Уже в словаре",
         "listen_pronunciation": "Прослушать произношение",
-        "translate_subtitle": "Перевести весь субтитр",
+        "translate_subtitle": "Перевести весь субтитр (Alt+Up)",
         "prev_phrase": "Предыдущая фраза (Alt+Left)",
         "next_phrase": "Следующая фраза (Alt+Right)",
         "replay_phrase": "Повторить текущую фразу (Alt+Down)"

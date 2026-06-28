@@ -548,6 +548,10 @@ class SubtitleOverlayWidget(QFrame):
         if hasattr(self, 'replay_phrase_btn') and self.replay_phrase_btn:
             self.replay_phrase_btn.setToolTip(tr("translator.replay_phrase"))
 
+    def trigger_translation(self):
+        """Programmatically trigger translation of the current subtitle text."""
+        self._on_translate_btn_clicked()
+
     def _on_translate_btn_clicked(self):
         try:
             if not self.current_text:

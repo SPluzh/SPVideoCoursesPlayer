@@ -512,6 +512,7 @@
         "prev_phrase": "Previous Subtitle Phrase",
         "next_phrase": "Next Subtitle Phrase",
         "replay_phrase": "Replay Current Subtitle Phrase",
+        "translate_subtitle": "Translate Current Subtitle",
         "volume_up": "Volume Up",
         "volume_down": "Volume Down",
         "audio_delay_up": "Audio Delay Up",
@@ -592,7 +593,7 @@
         "added_to_dictionary": "Added to dictionary",
         "already_in_dictionary": "Already in dictionary",
         "listen_pronunciation": "Listen pronunciation",
-        "translate_subtitle": "Translate entire subtitle",
+        "translate_subtitle": "Translate entire subtitle (Alt+Up)",
         "prev_phrase": "Previous phrase (Alt+Left)",
         "next_phrase": "Next phrase (Alt+Right)",
         "replay_phrase": "Replay current phrase (Alt+Down)"

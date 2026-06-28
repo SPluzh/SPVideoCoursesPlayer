@@ -171,6 +171,7 @@ class AboutDialog(QDialog):
                     (f"{tr('hotkeys.keys.alt')} + ←", tr("hotkeys.prev_phrase")),
                     (f"{tr('hotkeys.keys.alt')} + →", tr("hotkeys.next_phrase")),
                     (f"{tr('hotkeys.keys.alt')} + ↓", tr("hotkeys.replay_phrase")),
+                    (f"{tr('hotkeys.keys.alt')} + ↑", tr("hotkeys.translate_subtitle")),
                 ],
             ),
             (

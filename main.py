@@ -619,6 +619,8 @@ class VideoCourseBrowser(QMainWindow):
             self.video_player.seek_next_phrase()
         elif action == "replay_phrase":
             self.video_player.replay_current_phrase()
+        elif action == "translate_subtitle":
+            self.video_player.translate_current_subtitle()
         elif action == "toggle_fullscreen":
             self.toggle_fullscreen()
         elif action == "exit_fullscreen_or_pip":

@@ -2828,6 +2828,11 @@ class VideoPlayerWidget(QWidget):
                 else:
                     self.taskbar_progress.set_normal()
 
+            if not self.player.pause:
+                if self.translation_popup:
+                    self.translation_popup.hide()
+                self._paused_by_hover = False
+
             # Show OSD notification for pause/play state
             if self.osd_manager:
                 self.osd_manager.show_pause_state(self.player.pause)
@@ -3024,14 +3029,24 @@ class VideoPlayerWidget(QWidget):
         if not text or not self.player:
             return
 
+        # Check if this was a persistent translation request (e.g. via hotkey)
+        is_persistent = getattr(self, "_persistent_translation", False)
+        self._persistent_translation = False
+
         # Pause playback if playing
         if not self.player.pause:
-            self._paused_by_hover = True
+            if not is_persistent:
+                self._paused_by_hover = True
+            else:
+                self._paused_by_hover = False
             self.player.pause = True
             if self.taskbar_progress:
                 self.taskbar_progress.set_paused()
             if self.osd_manager:
                 self.osd_manager.show_pause_state(True)
+        else:
+            if is_persistent:
+                self._paused_by_hover = False
 
         # Show translation popup
         if self.translation_popup:
@@ -3039,7 +3054,8 @@ class VideoPlayerWidget(QWidget):
             target_lang = global_translator.current_lang
             self.translation_popup.show_translation(text, target_lang, global_pos)
 
-        if hasattr(self, "hover_check_timer"):
+        # Only start hover check timer if this is NOT a persistent translation
+        if not is_persistent and hasattr(self, "hover_check_timer"):
             self.hover_check_timer.start(100)
 
     def _on_subtitle_hover_cleared(self):
@@ -3124,3 +3140,24 @@ class VideoPlayerWidget(QWidget):
             self.subtitle_overlay.set_text(text)
             if not text:
                 self._resume_playback_if_paused_by_hover()
+
+    def translate_current_subtitle(self):
+        """Translate the current full subtitle phrase."""
+        if not self.player:
+            return
+        
+        self._persistent_translation = True
+        
+        # Pause playback if playing
+        if not self.player.pause:
+            self._paused_by_hover = False
+            self.player.pause = True
+            if self.taskbar_progress:
+                self.taskbar_progress.set_paused()
+            if self.osd_manager:
+                self.osd_manager.show_pause_state(True)
+        else:
+            self._paused_by_hover = False
+
+        if hasattr(self, "subtitle_overlay") and self.subtitle_overlay:
+            self.subtitle_overlay.trigger_translation()

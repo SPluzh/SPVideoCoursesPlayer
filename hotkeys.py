@@ -180,6 +180,7 @@ class HotkeyManager(QObject):
             Qt.Key.Key_Left: "prev_phrase",
             Qt.Key.Key_Right: "next_phrase",
             Qt.Key.Key_Down: "replay_phrase",
+            Qt.Key.Key_Up: "translate_subtitle",
         }
 
         # Navigation/Speed (no shift)
