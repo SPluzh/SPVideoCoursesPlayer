@@ -191,6 +191,7 @@ class VideoPlayerWidget(QWidget):
     mpv_pause_changed = pyqtSignal(bool)
     mpv_file_loaded = pyqtSignal()  # Emitted from MPV thread when file is loaded
     mpv_sub_text_changed = pyqtSignal(str)
+    mpv_secondary_sub_text_changed = pyqtSignal(str)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -212,7 +213,7 @@ class VideoPlayerWidget(QWidget):
         self.osd_manager = None  # Will be initialized in setup_mpv
         self.sub_color = "#FFFFFF"
         self.sub_border_color = "#000000"
-        self.sub_scale = 1.0
+        self.secondary_sub_color = "#ADD8E6"
         self.sub_scale = 1.0
         self.markers = []
         self._restoring_state = False  # Flag to suppress OSD during state restoration
@@ -383,6 +384,8 @@ class VideoPlayerWidget(QWidget):
         self.subtitle_btn.subtitleChanged.connect(self.change_subtitle_track)
         self.subtitle_btn.popup.styleChanged.connect(self.change_subtitle_style)
         self.subtitle_btn.popup.interactiveToggled.connect(self.toggle_interactive_subtitles)
+        self.subtitle_btn.secondarySubtitleToggled.connect(self._on_secondary_subtitle_toggled)
+        self.subtitle_btn.secondarySubtitleChanged.connect(self._on_secondary_subtitle_changed)
         panel_layout.addWidget(self.subtitle_btn)
 
         self.volume_btn = VolumeButton()
@@ -448,6 +451,7 @@ class VideoPlayerWidget(QWidget):
         self.mpv_duration_changed.connect(self.duration_changed)
         self.mpv_pause_changed.connect(self.state_changed)
         self.mpv_sub_text_changed.connect(self._on_sub_text_changed)
+        self.mpv_secondary_sub_text_changed.connect(self._on_secondary_sub_text_changed)
 
         # Preview Popup
         self.preview_popup = PreviewPopup(self.video_widget)
@@ -1409,6 +1413,13 @@ class VideoPlayerWidget(QWidget):
             def sub_text_observer(_name, value):
                 self.mpv_sub_text_changed.emit(value or "")
 
+            try:
+                @self.player.property_observer("secondary-sub-text")
+                def secondary_sub_text_observer(_name, value):
+                    self.mpv_secondary_sub_text_changed.emit(value or "")
+            except Exception as e:
+                logging.error(f"Error observing secondary-sub-text: {e}")
+
             @self.player.property_observer("eof-reached")
             def eof_observer(_name, value):
                 if value:
@@ -1531,6 +1542,12 @@ class VideoPlayerWidget(QWidget):
             self.restore_subtitle_track(filepath)
         except Exception as e:
             logging.error(f"_on_file_loaded: restore_subtitle_track error: {e}", exc_info=True)
+
+        try:
+            # 4b. Restore saved secondary subtitle track
+            self._restore_secondary_subtitle(filepath)
+        except Exception as e:
+            logging.error(f"_on_file_loaded: _restore_secondary_subtitle error: {e}", exc_info=True)
 
         try:
             # 5. Restore secondary audio (if enabled)
@@ -2108,6 +2125,7 @@ class VideoPlayerWidget(QWidget):
 
         popup = self.subtitle_btn.popup
         popup.clear()
+        self.subtitle_btn.clearSecondary()
 
         if not self.db:
             logging.error(f"📝 ❌ Database not available")
@@ -2172,6 +2190,7 @@ class VideoPlayerWidget(QWidget):
                     label += f" [{tr('player.forced')}]"
 
                 popup.addItem(label, track_id)
+                self.subtitle_btn.addSecondaryItem(label, track_id)
 
                 if track_id == selected_subtitle_id:
                     selected_index = idx
@@ -2246,6 +2265,10 @@ class VideoPlayerWidget(QWidget):
                 self.sub_color = value
                 self.subtitle_style_changed.emit("sub-color", value)
                 logging.info(f"📝 Subtitle color: {value}")
+            elif property_name == "sub-secondary-color":
+                self.secondary_sub_color = value
+                self.subtitle_style_changed.emit("sub-secondary-color", value)
+                logging.info(f"📝 Secondary subtitle color: {value}")
             elif property_name == "sub-border-color":
                 hex_color = value.lstrip("#")
                 self.player.sub_border_color = f"#FF{hex_color.upper()}"
@@ -2262,7 +2285,10 @@ class VideoPlayerWidget(QWidget):
                 logging.info(f"📝 Subtitle scale: {new_scale:.2f}")
 
             if hasattr(self, "subtitle_overlay") and self.subtitle_overlay:
-                self.subtitle_overlay.set_subtitle_style(self.sub_color, self.sub_border_color, self.sub_scale)
+                self.subtitle_overlay.set_subtitle_style(
+                    self.sub_color, self.sub_border_color, self.sub_scale,
+                    getattr(self, "secondary_sub_color", None)
+                )
         except Exception as e:
             logging.error(f"Error changing subtitle style: {e}", exc_info=True)
 
@@ -2466,17 +2492,23 @@ class VideoPlayerWidget(QWidget):
             if self.osd_manager:
                 self.osd_manager.show_marker_deleted()
 
-    def set_subtitle_styles(self, color, border_color, scale):
+    def set_subtitle_styles(self, color, border_color, scale, secondary_color=None):
         """Set initial subtitle styles."""
         self.sub_color = color
         self.sub_border_color = border_color
         self.sub_scale = scale
+        if secondary_color is not None:
+            self.secondary_sub_color = secondary_color
 
         # Also sync with popup
         if hasattr(self, "subtitle_btn"):
             self.subtitle_btn.popup.text_color = color
             self.subtitle_btn.popup.outline_color = border_color
+            if secondary_color is not None:
+                self.subtitle_btn.popup.secondary_text_color = secondary_color
             self.subtitle_btn.popup._update_text_color_btn()
+            if hasattr(self.subtitle_btn.popup, "_update_secondary_text_color_btn"):
+                self.subtitle_btn.popup._update_secondary_text_color_btn()
             self.subtitle_btn.popup._update_outline_color_btn()
             if self.config:
                 interactive = self.config.get_interactive_subtitles()
@@ -2486,7 +2518,10 @@ class VideoPlayerWidget(QWidget):
             self._apply_subtitle_styles()
 
         if hasattr(self, "subtitle_overlay") and self.subtitle_overlay:
-            self.subtitle_overlay.set_subtitle_style(color, border_color, scale)
+            self.subtitle_overlay.set_subtitle_style(
+                color, border_color, scale,
+                getattr(self, "secondary_sub_color", None)
+            )
 
     def _apply_subtitle_styles(self):
         """Apply stored subtitle styles to MPV player."""
@@ -2508,7 +2543,10 @@ class VideoPlayerWidget(QWidget):
             logging.error(f"Error applying subtitle styles: {e}", exc_info=True)
 
         if hasattr(self, "subtitle_overlay") and self.subtitle_overlay:
-            self.subtitle_overlay.set_subtitle_style(self.sub_color, self.sub_border_color, self.sub_scale)
+            self.subtitle_overlay.set_subtitle_style(
+                self.sub_color, self.sub_border_color, self.sub_scale,
+                getattr(self, "secondary_sub_color", None)
+            )
 
     def _map_ffprobe_to_mpv_sid(self, ffprobe_stream_index):
         """Map ffprobe global stream index to MPV subtitle track id."""
@@ -2982,6 +3020,7 @@ class VideoPlayerWidget(QWidget):
         try:
             is_interactive = self.config.get_interactive_subtitles() if self.config else False
             is_enabled = self.subtitle_btn.subtitles_enabled
+            is_secondary_enabled = self.subtitle_btn.popup.secondary_enabled_cb.isChecked()
             
             if is_enabled and is_interactive:
                 self.player.sub_visibility = "no"
@@ -2990,9 +3029,23 @@ class VideoPlayerWidget(QWidget):
             else:
                 self.player.sub_visibility = "yes" if is_enabled else "no"
                 self.subtitle_overlay.set_text("")
-                self.subtitle_overlay.hide()
-                if self.translation_popup:
-                    self.translation_popup.hide()
+                if not is_secondary_enabled or not is_interactive:
+                    self.subtitle_overlay.hide()
+                    if self.translation_popup:
+                        self.translation_popup.hide()
+
+            # Handle secondary subtitles
+            try:
+                if is_secondary_enabled and is_interactive:
+                    self.player['secondary-sub-visibility'] = "no"
+                    sub2_text = self.player['secondary-sub-text'] or ""
+                    self.subtitle_overlay.set_secondary_text(sub2_text)
+                else:
+                    self.player['secondary-sub-visibility'] = "yes" if is_secondary_enabled else "no"
+                    self.subtitle_overlay.set_secondary_text("")
+            except Exception as e:
+                logging.debug(f"Could not set secondary-sub-visibility or get secondary-sub-text: {e}")
+                
         except Exception as e:
             logging.error(f"Error updating subtitle visibility: {e}")
 
@@ -3001,6 +3054,204 @@ class VideoPlayerWidget(QWidget):
         if self.config:
             self.config.set_interactive_subtitles(enabled)
             
+        self._update_subtitle_visibility()
+
+    def _on_secondary_sub_text_changed(self, text):
+        is_interactive = self.config.get_interactive_subtitles() if self.config else False
+        is_secondary_enabled = self.subtitle_btn.popup.secondary_enabled_cb.isChecked()
+        if is_interactive and is_secondary_enabled:
+            self.subtitle_overlay.set_secondary_text(text or "")
+
+    def _on_secondary_subtitle_toggled(self, enabled):
+        """Enable/disable secondary subtitle."""
+        logging.info(f"📝 _on_secondary_subtitle_toggled({enabled}) called")
+        if not self.player:
+            return
+
+        popup = self.subtitle_btn.popup
+        if enabled:
+            # Turn on — use previously selected track or first if none selected
+            index_to_use = popup.secondary_selected_index if popup.secondary_selected_index >= 0 else 0
+            popup.setSecondaryIndex(index_to_use)
+            track_id = popup.secondaryItemData(index_to_use)
+            self._on_secondary_subtitle_changed(track_id)
+        else:
+            # Turn off
+            try:
+                self.player["secondary-sid"] = "no"
+                logging.info("🔇 Secondary subtitles disabled in MPV")
+            except Exception as e:
+                logging.error(f"Error disabling secondary-sid in MPV: {e}")
+                
+            if self.current_file and self.db:
+                track_id = popup.secondaryItemData(popup.secondary_selected_index) if popup.secondary_selected_index >= 0 else None
+                self.db.save_secondary_subtitle(self.current_file, track_id, False)
+
+        self._update_subtitle_visibility()
+
+    def _on_secondary_subtitle_changed(self, track_id):
+        """Switch secondary subtitle track on selection by track ID."""
+        if not self.player:
+            return
+        if not self.current_file:
+            return
+
+        popup = self.subtitle_btn.popup
+
+        # If "None" or similar is selected, track_id is None
+        if track_id is None:
+            try:
+                self.player["secondary-sid"] = "no"
+                logging.info("🔇 Secondary subtitles disabled (no track)")
+            except Exception as e:
+                logging.error(f"Error setting secondary-sid to 'no': {e}")
+            if self.current_file and self.db:
+                self.db.save_secondary_subtitle(self.current_file, None, False)
+            self._update_subtitle_visibility()
+            return
+
+        if not self.db:
+            return
+
+        try:
+            track = self.db.get_track_info("subtitle_tracks", track_id)
+            if not track:
+                return
+
+            track_type = track["track_type"]
+            stream_index = track["stream_index"]
+            subtitle_file_path = track["subtitle_file_path"]
+
+            logging.info(f"🔄 Switching secondary subtitle track: {track_type}, stream={stream_index}")
+
+            if track_type == "embedded":
+                try:
+                    mpv_sid = self._map_ffprobe_to_mpv_sid(stream_index)
+                    if mpv_sid is not None:
+                        self.player["secondary-sid"] = mpv_sid
+                        logging.info(f" Switched secondary-sid to embedded {mpv_sid}")
+                    else:
+                        self.player["secondary-sid"] = stream_index
+                        logging.warning(f" Switched secondary-sid to raw {stream_index}")
+                except Exception as e:
+                    logging.error(f"Error setting secondary-sid: {e}")
+            else:
+                # External subtitle
+                if subtitle_file_path and Path(subtitle_file_path).exists():
+                    try:
+                        mpv_sid = self._get_mpv_subtitle_track_id(track)
+                        if mpv_sid is not None:
+                            self.player["secondary-sid"] = mpv_sid
+                            logging.info(f" Switched secondary-sid to external track MPV ID {mpv_sid}")
+                        else:
+                            logging.error(f"Could not load/find external track for secondary subtitle: {subtitle_file_path}")
+                    except Exception as e:
+                        logging.error(f"Error loading external secondary subtitle: {e}")
+                else:
+                    logging.error(f"❌ Secondary subtitle file not found: {subtitle_file_path}")
+
+            # Save selection to DB
+            is_enabled = self.subtitle_btn.popup.secondary_enabled_cb.isChecked()
+            self.db.save_secondary_subtitle(self.current_file, track_id, is_enabled)
+
+        except Exception as e:
+            logging.error(f"Error changing secondary subtitle: {e}", exc_info=True)
+
+        self._update_subtitle_visibility()
+
+    def _get_mpv_subtitle_track_id(self, track):
+        """Get MPV subtitle track ID for a given subtitle track."""
+        logging.info(f"🔍 _get_mpv_subtitle_track_id() called with track: {track}")
+        try:
+            track_type = track["track_type"]
+            if track_type == "embedded":
+                stream_index = track["stream_index"]
+                return self._map_ffprobe_to_mpv_sid(stream_index)
+            elif track_type == "external":
+                subtitle_file_path = track["subtitle_file_path"]
+                if not subtitle_file_path:
+                    return None
+                if not Path(subtitle_file_path).exists():
+                    return None
+
+                # Check if already loaded
+                track_list = self.player.track_list
+                for t in track_list:
+                    if t.get("type") == "sub":
+                        ext_filename = t.get("external-filename")
+                        if ext_filename == subtitle_file_path:
+                            return t["id"]
+
+                # Load external subtitle
+                try:
+                    self.player.command("sub-add", subtitle_file_path, "auto")
+                except Exception as e:
+                    logging.error(f"Error executing sub-add command: {e}")
+                    return None
+
+                # Find the newly added track
+                track_list = self.player.track_list
+                for t in track_list:
+                    if t.get("type") == "sub":
+                        ext_filename = t.get("external-filename")
+                        if ext_filename == subtitle_file_path:
+                            return t["id"]
+        except Exception as e:
+            logging.error(f"Error getting MPV subtitle track ID: {e}")
+        return None
+
+    def _restore_secondary_subtitle(self, filepath):
+        """Restore secondary subtitle track when loading video."""
+        logging.info(f"📝 ========== RESTORING SECONDARY SUBTITLE ==========")
+        logging.info(f"📝 File: {filepath}")
+
+        if not self.db or not self.player:
+            return
+
+        try:
+            sec_track_id, sec_enabled = self.db.load_secondary_subtitle(filepath)
+            
+            logging.info(f"📝 Secondary subtitle ID from DB: {sec_track_id}")
+            logging.info(f"📝 Secondary subtitle enabled from DB: {sec_enabled}")
+
+            self.subtitle_btn.popup.setSecondaryEnabled(sec_enabled)
+
+            popup = self.subtitle_btn.popup
+            found_index = -1
+            if sec_track_id is not None:
+                for i in range(popup.secondary_list_widget.count()):
+                    if popup.secondaryItemData(i) == sec_track_id:
+                        found_index = i
+                        popup.setSecondaryIndex(i)
+                        break
+
+            if sec_enabled and sec_track_id is not None:
+                track = self.db.get_track_info("subtitle_tracks", sec_track_id)
+                if track:
+                    track_type = track["track_type"]
+                    stream_index = track["stream_index"]
+                    subtitle_file_path = track["subtitle_file_path"]
+
+                    if track_type == "embedded":
+                        mpv_sid = self._map_ffprobe_to_mpv_sid(stream_index)
+                        if mpv_sid is not None:
+                            self.player["secondary-sid"] = mpv_sid
+                        else:
+                            self.player["secondary-sid"] = stream_index
+                    elif track_type == "external":
+                        mpv_sid = self._get_mpv_subtitle_track_id(track)
+                        if mpv_sid is not None:
+                            self.player["secondary-sid"] = mpv_sid
+            else:
+                try:
+                    self.player["secondary-sid"] = "no"
+                except Exception as e:
+                    logging.debug(f"Could not set secondary-sid to 'no': {e}")
+
+            logging.info(f"📝 ========== SECONDARY SUBTITLE RESTORE COMPLETE ==========")
+        except Exception as e:
+            logging.error(f"Error restoring secondary subtitle: {e}", exc_info=True)
+
         self._update_subtitle_visibility()
 
     def _on_subtitle_word_hovered(self, word, global_pos):

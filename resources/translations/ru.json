@@ -119,6 +119,7 @@
         "tooltip_play": "Двойной клик: Воспроизвести",
         "subtitle_size": "Размер",
         "subtitle_text": "Текст",
+        "secondary_subtitle_text": "Текст 2",
         "subtitle_outline": "Обводка",
         "tooltip_progress": "Просмотрено: {percent}%",
         "tooltip_audio": "Аудио: {tracks} шт.",
@@ -200,6 +201,8 @@
         "enable_secondary_audio": "Включить вторую аудиодорожку",
         "secondary_track": "Вторая дорожка",
         "secondary_volume": "Громкость второй дорожки",
+        "enable_secondary_subtitle": "Включить вторые субтитры",
+        "secondary_subtitle_track": "Вторые субтитры",
         "filter_tags": "Фильтр по тегам\nЛКМ — вкл/выкл\nПКМ — выбор тегов",
         "file_not_found": "Файл не найден"
     },

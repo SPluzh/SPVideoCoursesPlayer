@@ -1134,7 +1134,7 @@ PreviewPopup QLabel {
     background-color: @accent;
 }
 
-#textColorBtn, #outlineColorBtn {
+#textColorBtn, #secondaryTextColorBtn, #outlineColorBtn {
     border: 1px solid #808080;
     border-radius: 3px;
     padding: 0px;

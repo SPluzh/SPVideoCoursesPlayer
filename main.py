@@ -465,7 +465,7 @@ class VideoCourseBrowser(QMainWindow):
 
         # Apply initial subtitle settings
         self.video_player.set_subtitle_styles(
-            self.sub_color, self.sub_border_color, self.sub_scale
+            self.sub_color, self.sub_border_color, self.sub_scale, self.secondary_sub_color
         )
 
         self.splitter.addWidget(self.browser_widget)
@@ -3227,7 +3227,7 @@ class VideoCourseBrowser(QMainWindow):
         self.animation_interval = self.config.get_animation_interval()
 
         # Subtitle settings
-        self.sub_color, self.sub_border_color, self.sub_scale = (
+        self.sub_color, self.sub_border_color, self.sub_scale, self.secondary_sub_color = (
             self.config.get_subtitle_settings()
         )
 

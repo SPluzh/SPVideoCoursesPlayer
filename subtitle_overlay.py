@@ -221,6 +221,14 @@ class SubtitleOverlayWidget(QFrame):
         self.text_edit.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Ignored)
         layout.addWidget(self.text_edit)
 
+        # Secondary Text Edit
+        self.secondary_text_edit = SubtitleTextEdit(self)
+        self.secondary_text_edit.document().setDocumentMargin(0)
+        self.secondary_text_edit.setMinimumHeight(0)
+        self.secondary_text_edit.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Ignored)
+        layout.addWidget(self.secondary_text_edit)
+        self.secondary_text_edit.hide()
+
         # Translate entire subtitle button
         self.translate_btn = QPushButton(self)
         self.translate_btn.setObjectName("translateSubBtn")
@@ -279,8 +287,10 @@ class SubtitleOverlayWidget(QFrame):
 
         self.text_color = "#FFFFFF"
         self.outline_color = "#000000"
+        self.secondary_text_color = "#ADD8E6"
         self.font_scale = 1.0
         self.current_text = ""
+        self.secondary_text = ""
         self.current_font_size = 0
 
         self.update_geometry()
@@ -323,7 +333,7 @@ class SubtitleOverlayWidget(QFrame):
     def _should_be_visible(self) -> bool:
         if not self.video_widget or not self.video_widget.isVisible():
             return False
-        if not self.text_edit.toPlainText().strip():
+        if not self.text_edit.toPlainText().strip() and not self.secondary_text_edit.toPlainText().strip():
             return False
 
         win = getattr(self, '_installed_window', None)
@@ -335,11 +345,24 @@ class SubtitleOverlayWidget(QFrame):
 
         return True
 
+    def _is_any_popup_visible(self) -> bool:
+        if self.player_window:
+            if hasattr(self.player_window, 'subtitle_btn'):
+                btn = self.player_window.subtitle_btn
+                if btn and hasattr(btn, 'popup') and btn.popup and btn.popup.isVisible():
+                    return True
+            if hasattr(self.player_window, 'volume_btn'):
+                btn = self.player_window.volume_btn
+                if btn and hasattr(btn, 'popup') and btn.popup and btn.popup.isVisible():
+                    return True
+        return False
+
     def update_visibility(self):
         try:
             if self._should_be_visible():
                 self.show()
-                self.raise_()
+                if not self._is_any_popup_visible():
+                    self.raise_()
             else:
                 self.hide()
         except Exception as e:
@@ -349,24 +372,25 @@ class SubtitleOverlayWidget(QFrame):
         self.current_text = text
         if not text:
             self.text_edit.clear()
-            if hasattr(self, 'translate_btn') and self.translate_btn:
-                self.translate_btn.hide()
-            if hasattr(self, 'prev_phrase_btn') and self.prev_phrase_btn:
-                self.prev_phrase_btn.hide()
-            if hasattr(self, 'next_phrase_btn') and self.next_phrase_btn:
-                self.next_phrase_btn.hide()
-            self.hide()
-            return
-
-        # Render centered text
-        font_size = self.get_calculated_font_size()
-        self.current_font_size = font_size
-        html = f"""
-        <div style="text-align: center; color: {self.text_color}; font-family: 'Segoe UI', Arial, sans-serif; font-size: {font_size}px; font-weight: normal; line-height: 1.2;">
-            {text}
-        </div>
-        """
-        self.text_edit.setHtml(html)
+            if not self.secondary_text_edit.toPlainText().strip():
+                if hasattr(self, 'translate_btn') and self.translate_btn:
+                    self.translate_btn.hide()
+                if hasattr(self, 'prev_phrase_btn') and self.prev_phrase_btn:
+                    self.prev_phrase_btn.hide()
+                if hasattr(self, 'next_phrase_btn') and self.next_phrase_btn:
+                    self.next_phrase_btn.hide()
+                self.hide()
+                return
+        else:
+            # Render centered text
+            font_size = self.get_calculated_font_size()
+            self.current_font_size = font_size
+            html = f"""
+            <div style="text-align: center; color: {self.text_color}; font-family: 'Segoe UI', Arial, sans-serif; font-size: {font_size}px; font-weight: normal; line-height: 1.2;">
+                {text}
+            </div>
+            """
+            self.text_edit.setHtml(html)
         
         # Ensure geometry is updated for the new text
         self.update_geometry()
@@ -386,16 +410,65 @@ class SubtitleOverlayWidget(QFrame):
         if self._should_be_visible():
             self.show()
             # Raise overlay to ensure it's on top of any video surface
-            self.raise_()
+            if not self._is_any_popup_visible():
+                self.raise_()
         else:
             self.hide()
 
-    def set_subtitle_style(self, text_color, outline_color, font_scale):
+    def set_secondary_text(self, text):
+        self.secondary_text = text
+        if not text:
+            self.secondary_text_edit.clear()
+            if not self.text_edit.toPlainText().strip():
+                if hasattr(self, 'translate_btn') and self.translate_btn:
+                    self.translate_btn.hide()
+                if hasattr(self, 'prev_phrase_btn') and self.prev_phrase_btn:
+                    self.prev_phrase_btn.hide()
+                if hasattr(self, 'next_phrase_btn') and self.next_phrase_btn:
+                    self.next_phrase_btn.hide()
+                self.hide()
+                return
+        else:
+            # Render centered secondary text with configured color and 85% font size
+            font_size = int(self.get_calculated_font_size() * 0.85)
+            text_color = getattr(self, "secondary_text_color", "#ADD8E6")
+            html = f"""
+            <div style="text-align: center; color: {text_color}; font-family: 'Segoe UI', Arial, sans-serif; font-size: {font_size}px; font-weight: normal; line-height: 1.2;">
+                {text}
+            </div>
+            """
+            self.secondary_text_edit.setHtml(html)
+        
+        self.update_geometry()
+        
+        # Check hover to show/hide translate button
+        from PyQt6.QtGui import QCursor
+        try:
+            is_hovered = self.rect().contains(self.mapFromGlobal(QCursor.pos()))
+            if is_hovered:
+                self._show_translate_btn()
+            else:
+                self._hide_translate_btn()
+        except Exception:
+            pass
+
+        if self._should_be_visible():
+            self.show()
+            if not self._is_any_popup_visible():
+                self.raise_()
+        else:
+            self.hide()
+
+    def set_subtitle_style(self, text_color, outline_color, font_scale, secondary_text_color=None):
         self.text_color = text_color
         self.outline_color = outline_color
         self.font_scale = font_scale
+        if secondary_text_color is not None:
+            self.secondary_text_color = secondary_text_color
         # Refresh current text if any
         self.set_text(self.current_text)
+        if getattr(self, 'secondary_text', None):
+            self.set_secondary_text(self.secondary_text)
 
     def _check_install_window_filter(self):
         if self.video_widget:
@@ -458,13 +531,44 @@ class SubtitleOverlayWidget(QFrame):
                 </div>
                 """
                 self.text_edit.setHtml(html)
+            if getattr(self, 'secondary_text', None):
+                sec_font_size = int(font_size * 0.85)
+                sec_html = f"""
+                <div style="text-align: center; color: #ADD8E6; font-family: 'Segoe UI', Arial, sans-serif; font-size: {sec_font_size}px; font-weight: normal; line-height: 1.2;">
+                    {self.secondary_text}
+                </div>
+                """
+                self.secondary_text_edit.setHtml(sec_html)
 
         # Adjust text width in the document to compute wrap height
         text_width = width - 175  # Adjust for left (50px) and right (125px) margins
-        self.text_edit.document().setTextWidth(text_width)
         
-        # Calculate dynamic height based on document content height
-        doc_height = int(self.text_edit.document().size().height())
+        primary_height = 0
+        secondary_height = 0
+        if self.text_edit.toPlainText().strip():
+            self.text_edit.document().setTextWidth(text_width)
+            primary_height = int(self.text_edit.document().size().height())
+            self.text_edit.setFixedHeight(primary_height)
+            self.text_edit.show()
+        else:
+            self.text_edit.hide()
+
+        if self.secondary_text_edit.toPlainText().strip():
+            self.secondary_text_edit.document().setTextWidth(text_width)
+            secondary_height = int(self.secondary_text_edit.document().size().height())
+            self.secondary_text_edit.setFixedHeight(secondary_height)
+            self.secondary_text_edit.show()
+        else:
+            self.secondary_text_edit.hide()
+
+        doc_height = primary_height + secondary_height
+        layout = self.layout()
+        if primary_height > 0 and secondary_height > 0:
+            doc_height += 4
+            layout.setSpacing(4)
+        else:
+            layout.setSpacing(0)
+
         # Height is doc_height + top_margin(8) + bottom_margin(8)
         height = doc_height + 16
 

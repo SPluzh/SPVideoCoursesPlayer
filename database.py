@@ -251,6 +251,14 @@ class DatabaseManager:
                 c.execute(
                     "ALTER TABLE video_files ADD COLUMN secondary_audio_enabled INTEGER DEFAULT 0"
                 )
+            if "secondary_subtitle_id" not in columns:
+                c.execute(
+                    "ALTER TABLE video_files ADD COLUMN secondary_subtitle_id INTEGER DEFAULT NULL"
+                )
+            if "secondary_subtitle_enabled" not in columns:
+                c.execute(
+                    "ALTER TABLE video_files ADD COLUMN secondary_subtitle_enabled INTEGER DEFAULT 0"
+                )
 
             # Migration for video_markers
             c.execute("PRAGMA table_info(video_markers)")
@@ -521,6 +529,48 @@ class DatabaseManager:
                 conn.commit()
         except Exception as e:
             logging.error(f"Error updating subtitle state: {e}", exc_info=True)
+
+    def save_secondary_subtitle(self, file_path, track_id, enabled):
+        """Saves secondary subtitle settings for a video."""
+        try:
+            with self.get_connection() as conn:
+                c = conn.cursor()
+                c.execute(
+                    """
+                    UPDATE video_files 
+                    SET secondary_subtitle_id = ?, 
+                        secondary_subtitle_enabled = ?
+                    WHERE file_path = ?
+                """,
+                    (track_id, 1 if enabled else 0, str(file_path)),
+                )
+                conn.commit()
+        except Exception as e:
+            logging.error(f"Error saving secondary subtitle: {e}", exc_info=True)
+
+    def load_secondary_subtitle(self, file_path):
+        """Loads secondary subtitle settings. Returns (track_id, enabled)."""
+        try:
+            with self.get_connection() as conn:
+                conn.row_factory = sqlite3.Row
+                c = conn.cursor()
+                c.execute(
+                    """
+                    SELECT secondary_subtitle_id, secondary_subtitle_enabled 
+                    FROM video_files 
+                    WHERE file_path = ?
+                """,
+                    (str(file_path),),
+                )
+                row = c.fetchone()
+                if row:
+                    return (
+                        row["secondary_subtitle_id"],
+                        bool(row["secondary_subtitle_enabled"]),
+                    )
+        except Exception as e:
+            logging.error(f"Error loading secondary subtitle: {e}", exc_info=True)
+        return (None, False)
 
     def get_courses(self):
         """Loads all data for the library view."""

@@ -3,6 +3,8 @@
 All notable changes to this project will be documented in this file.
 
 ## [1.6.1]
+- **Subtitles**: Added support for dual (secondary) subtitles to display two languages simultaneously.
+- **Subtitles**: Added independent color customization and track selection for secondary subtitles.
 - **Subtitles**: Fixed an issue where the selected subtitle language was not loaded or remembered correctly.
 - **Hotkeys**: Added subtitle navigation and translation shortcuts:
   - `Alt + Left` / `Alt + Right`: Seek to the previous / next subtitle phrase.

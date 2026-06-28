@@ -18,6 +18,8 @@ class SubtitlePopup(QWidget):
     styleChanged = pyqtSignal(str, object)  # (property_name, value)
     subtitleToggled = pyqtSignal(bool)
     interactiveToggled = pyqtSignal(bool)
+    secondarySubtitleToggled = pyqtSignal(bool)
+    secondarySubtitleChanged = pyqtSignal(int)
     
     def __init__(self, parent=None):
         super().__init__(parent, Qt.WindowType.Popup | Qt.WindowType.FramelessWindowHint)
@@ -29,7 +31,7 @@ class SubtitlePopup(QWidget):
         
         self.setObjectName("subtitlePopup")
         self.setMinimumWidth(380)
-        self.setMaximumHeight(220)
+        self.setFixedHeight(270)
         
         # Left side: toggle + subtitle list
         left_panel = QHBoxLayout()
@@ -81,6 +83,41 @@ class SubtitlePopup(QWidget):
         self.list_widget.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         self.list_widget.itemClicked.connect(self._on_item_clicked)
         list_section.addWidget(self.list_widget)
+        
+        # Separator (Horizontal)
+        sep_h = QFrame()
+        sep_h.setObjectName("aboutSeparator")
+        sep_h.setFrameShape(QFrame.Shape.HLine)
+        list_section.addWidget(sep_h)
+
+        # Enable checkbox
+        self.secondary_enabled_cb = QCheckBox(tr("player.enable_secondary_subtitle"))
+        self.secondary_enabled_cb.setObjectName("secondarySubtitleCheckbox")
+        self.secondary_enabled_cb.toggled.connect(self._on_secondary_enabled_toggled)
+        list_section.addWidget(self.secondary_enabled_cb)
+
+        # Container for secondary controls
+        self.secondary_container = QWidget()
+        sec_layout = QVBoxLayout(self.secondary_container)
+        sec_layout.setContentsMargins(0, 0, 0, 0)
+        sec_layout.setSpacing(4)
+
+        self.secondary_title_label = QLabel(tr("player.secondary_subtitle_track"))
+        self.secondary_title_label.setObjectName("popupHeaderLabel")
+        sec_layout.addWidget(self.secondary_title_label)
+
+        self.secondary_list_widget = QListWidget()
+        self.secondary_list_widget.setObjectName("subtitleList")
+        self.secondary_list_widget.setMinimumWidth(250)
+        self.secondary_list_widget.setFixedHeight(80)
+        self.secondary_list_widget.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.secondary_list_widget.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        self.secondary_list_widget.itemClicked.connect(self._on_secondary_item_clicked)
+        sec_layout.addWidget(self.secondary_list_widget)
+
+        # Initially hide the container
+        self.secondary_container.setVisible(False)
+        list_section.addWidget(self.secondary_container)
         
         left_panel.addLayout(list_section)
         
@@ -136,6 +173,22 @@ class SubtitlePopup(QWidget):
         text_layout.addWidget(self.text_title_label)
         text_layout.addWidget(self.text_color_btn)
         right_panel.addLayout(text_layout)
+
+        # Secondary text color
+        secondary_text_layout = QVBoxLayout()
+        secondary_text_layout.setSpacing(2)
+        self.secondary_text_title_label = QLabel(tr('player.secondary_subtitle_text'))
+        self.secondary_text_title_label.setObjectName("popupHeaderLabel")
+        self.secondary_text_title_label.setContentsMargins(0, 0, 0, 0)
+        self.secondary_text_color_btn = QPushButton()
+        self.secondary_text_color_btn.setFixedSize(64, 30)
+        self.secondary_text_color_btn.setObjectName("secondaryTextColorBtn")
+        self.secondary_text_color_btn.clicked.connect(self._pick_secondary_text_color)
+        self.secondary_text_color = "#ADD8E6"
+        self._update_secondary_text_color_btn()
+        secondary_text_layout.addWidget(self.secondary_text_title_label)
+        secondary_text_layout.addWidget(self.secondary_text_color_btn)
+        right_panel.addLayout(secondary_text_layout)
         
         # Outline color
         outline_layout = QVBoxLayout()
@@ -158,9 +211,8 @@ class SubtitlePopup(QWidget):
         
         self.selected_index = -1
         self.items_data = []  # [(track_id, label), ...]
-        
-        self.selected_index = -1
-        self.items_data = []  # [(track_id, label), ...]
+        self.secondary_selected_index = -1
+        self.secondary_items_data = []  # [(track_id, label), ...]
         
         # Professional cinema text colors
         self.text_colors = [
@@ -235,6 +287,8 @@ class SubtitlePopup(QWidget):
         target_btn.setStyleSheet(f"background-color: {color};")
         if signal_name == "sub-color":
             self.text_color = color
+        elif signal_name == "sub-secondary-color":
+            self.secondary_text_color = color
         else:
             self.outline_color = color
         self.styleChanged.emit(signal_name, color)
@@ -242,6 +296,9 @@ class SubtitlePopup(QWidget):
     
     def _pick_text_color(self):
         self._show_color_palette(self.text_color_btn, self.text_color, "sub-color", self.text_colors)
+    
+    def _pick_secondary_text_color(self):
+        self._show_color_palette(self.secondary_text_color_btn, self.secondary_text_color, "sub-secondary-color", self.text_colors)
     
     def _pick_outline_color(self):
         self._show_color_palette(self.outline_color_btn, self.outline_color, "sub-border-color", self.outline_colors)
@@ -313,6 +370,10 @@ class SubtitlePopup(QWidget):
     def _update_text_color_btn(self):
         self.text_color_btn.setStyleSheet(f"background-color: {self.text_color};")
 
+    def _update_secondary_text_color_btn(self):
+        if hasattr(self, "secondary_text_color_btn"):
+            self.secondary_text_color_btn.setStyleSheet(f"background-color: {self.secondary_text_color};")
+
     def _update_outline_color_btn(self):
         self.outline_color_btn.setStyleSheet(f"background-color: {self.outline_color};")
 
@@ -329,14 +390,86 @@ class SubtitlePopup(QWidget):
         self.list_title_label.setText(tr('player.subtitle_tracks'))
         self.size_title_label.setText(tr('player.subtitle_size'))
         self.text_title_label.setText(tr('player.subtitle_text'))
+        if hasattr(self, 'secondary_text_title_label'):
+            self.secondary_text_title_label.setText(tr('player.secondary_subtitle_text'))
         self.outline_title_label.setText(tr('player.subtitle_outline'))
         self.interactive_btn.setToolTip(tr('player.interactive_subtitles'))
+        self.secondary_enabled_cb.setText(tr('player.enable_secondary_subtitle'))
+        self.secondary_title_label.setText(tr('player.secondary_subtitle_track'))
+        self._update_checkmarks()
+        self._update_secondary_checkmarks()
+
+    def _on_secondary_enabled_toggled(self, checked):
+        self.secondary_container.setVisible(checked)
+        if checked and self.secondary_selected_index == -1 and len(self.secondary_items_data) > 0:
+            idx = 0
+            if len(self.secondary_items_data) > 1:
+                if self.selected_index == 0:
+                    idx = 1
+                else:
+                    idx = 0
+            self.secondary_selected_index = idx
+            self._update_secondary_checkmarks()
+            track_id = self.secondary_items_data[idx][0]
+            self.secondarySubtitleChanged.emit(track_id)
+        self.secondarySubtitleToggled.emit(checked)
+
+    def _on_secondary_item_clicked(self, item):
+        index = self.secondary_list_widget.row(item)
+        self.secondary_selected_index = index
+        self._update_secondary_checkmarks()
+        if 0 <= index < len(self.secondary_items_data):
+            track_id = self.secondary_items_data[index][0]
+            self.secondarySubtitleChanged.emit(track_id)
+        if not self.secondary_enabled_cb.isChecked():
+            self.secondary_enabled_cb.blockSignals(True)
+            self.secondary_enabled_cb.setChecked(True)
+            self.secondary_enabled_cb.blockSignals(False)
+            self.secondary_container.setVisible(True)
+            self.secondarySubtitleToggled.emit(True)
+        QTimer.singleShot(150, self.hide)
+
+    def clearSecondary(self):
+        self.secondary_list_widget.clear()
+        self.secondary_items_data = []
+        self.secondary_selected_index = -1
+
+    def addSecondaryItem(self, label, track_id):
+        self.secondary_items_data.append((track_id, label))
+        self.secondary_list_widget.addItem(label)
+
+    def setSecondaryIndex(self, index):
+        self.secondary_selected_index = index
+        self._update_secondary_checkmarks()
+
+    def secondaryItemData(self, index):
+        if 0 <= index < len(self.secondary_items_data):
+            return self.secondary_items_data[index][0]
+        return None
+
+    def _update_secondary_checkmarks(self):
+        for i in range(self.secondary_list_widget.count()):
+            item = self.secondary_list_widget.item(i)
+            if i < len(self.secondary_items_data):
+                _, label = self.secondary_items_data[i]
+                if i == self.secondary_selected_index:
+                    item.setText(f"✓ {label}")
+                else:
+                    item.setText(f"   {label}")
+
+    def setSecondaryEnabled(self, enabled):
+        self.secondary_enabled_cb.blockSignals(True)
+        self.secondary_enabled_cb.setChecked(enabled)
+        self.secondary_enabled_cb.blockSignals(False)
+        self.secondary_container.setVisible(enabled)
 
 
 class SubtitleButton(QPushButton):
     """Subtitle button: Left click - select, Right click - toggle on/off."""
     subtitleToggled = pyqtSignal(bool)  # True = on, False = off
     subtitleChanged = pyqtSignal(int)  # combo box index
+    secondarySubtitleToggled = pyqtSignal(bool)
+    secondarySubtitleChanged = pyqtSignal(int)
     
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -348,6 +481,8 @@ class SubtitleButton(QPushButton):
         self.popup = SubtitlePopup(self)
         self.popup.subtitleChanged.connect(self._on_subtitle_changed)
         self.popup.subtitleToggled.connect(self._on_popup_subtitle_toggled)
+        self.popup.secondarySubtitleToggled.connect(self.secondarySubtitleToggled.emit)
+        self.popup.secondarySubtitleChanged.connect(self.secondarySubtitleChanged.emit)
         self.last_hide_time = 0
         self.subtitles_enabled = False
         self._update_icon()
@@ -378,6 +513,7 @@ class SubtitleButton(QPushButton):
         # Position popup above the button
         self.popup.setSubtitlesEnabled(self.subtitles_enabled)
         self.popup._update_checkmarks()  # Ensure checkmarks are up-to-date
+        self.popup._update_secondary_checkmarks()
         self.popup.ensurePolished()
         self.popup.adjustSize()
         
@@ -442,4 +578,19 @@ class SubtitleButton(QPushButton):
         """Update texts on language change."""
         self.setToolTip(tr('player.tooltip_subtitle_track'))
         self.popup.update_texts()
+
+    def clearSecondary(self):
+        self.popup.clearSecondary()
+
+    def addSecondaryItem(self, label, track_id):
+        self.popup.addSecondaryItem(label, track_id)
+
+    def setSecondaryIndex(self, index):
+        self.popup.setSecondaryIndex(index)
+
+    def setSecondaryEnabled(self, enabled):
+        self.popup.setSecondaryEnabled(enabled)
+
+    def secondaryItemData(self, index):
+        return self.popup.secondaryItemData(index)
 
