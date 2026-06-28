@@ -96,13 +96,6 @@ SP Video Courses Player is a desktop application for watching and managing local
 
 > **Note:** Your personal data is preserved during the update — `settings.ini` contains your application settings, and the `data/` folder stores the database, viewing progress, bookmarks, and cache. These files are not included in the release archive and will not be overwritten.
 
-
-### Requirements
-
-- **Operating System**: Windows 10/11
-- **Python**: 3.10+ (for source installation)
-
-
 ### Additional Components
 
 The application will automatically download these components on first run. If the automatic download fails, you can download them manually and place them in the `resources/bin/` directory:
@@ -223,12 +216,6 @@ SP Video Courses Player — плеер для локальных видеоку�
 
 > **Примечание:** Ваши личные данные сохранятся при обновлении — `settings.ini` содержит настройки приложения, а папка `data/` хранит базу данных, прогресс просмотра, закладки и кеш. Эти файлы не входят в архив релиза и не будут перезаписаны.
 
-### Требования
-
-- **Операционная система**: Windows 10/11
-- **Python**: 3.10+ (для запуска из исходников)
-
-
 ### Дополнительные компоненты
 
 Приложение автоматически загрузит эти компоненты при первом запуске. Если автоматическая загрузка не удалась, вы можете скачать их вручную и поместить в директорию `resources/bin/`:
@@ -249,7 +236,6 @@ SP Video Courses Player/
             ├── ffmpeg.exe
             └── ffprobe.exe
 ```
-
 
 ### Интеграция с PureRef (опционально)
 
