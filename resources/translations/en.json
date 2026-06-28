@@ -477,6 +477,7 @@
     "hotkeys": {
         "title": "Keyboard Shortcuts",
         "category_playback": "Playback",
+        "category_subtitles": "Subtitles",
         "category_audio": "Audio",
         "category_video": "Video",
         "category_bookmarks": "Bookmarks",

@@ -168,6 +168,12 @@ class AboutDialog(QDialog):
                     (".", tr("hotkeys.frame_step")),
                     (f"{tr('hotkeys.keys.shift')} + ←", tr("hotkeys.prev_video")),
                     (f"{tr('hotkeys.keys.shift')} + →", tr("hotkeys.next_video")),
+                ],
+            ),
+            (
+                "category_subtitles",
+                [
+                    ("C", tr("hotkeys.toggle_subtitles")),
                     (f"{tr('hotkeys.keys.alt')} + ←", tr("hotkeys.prev_phrase")),
                     (f"{tr('hotkeys.keys.alt')} + →", tr("hotkeys.next_phrase")),
                     (f"{tr('hotkeys.keys.alt')} + ↓", tr("hotkeys.replay_phrase")),
@@ -192,7 +198,6 @@ class AboutDialog(QDialog):
                     ("Z", tr("hotkeys.zoom_mode")),
                     ("[", tr("hotkeys.zoom_out")),
                     ("]", tr("hotkeys.zoom_in")),
-                    ("C", tr("hotkeys.toggle_subtitles")),
                     ("S", tr("hotkeys.take_screenshot")),
                 ],
             ),
@@ -239,9 +244,9 @@ class AboutDialog(QDialog):
             ),
         ]
 
-        # Distribute: Left column gets 1-3 (Playback, Audio, Video), Right column gets 4-8 (Bookmarks, Library, Window, System, Mouse)
-        left_cats = categories[:3]
-        right_cats = categories[3:]
+        # Distribute: Left column gets Playback, Subtitles, Audio, Video. Right column gets Bookmarks, Library, Window, System, Mouse.
+        left_cats = categories[:4]
+        right_cats = categories[4:]
 
         for col_layout, cats in [(left_column, left_cats), (right_column, right_cats)]:
             for idx, (category_key, hotkeys) in enumerate(cats):

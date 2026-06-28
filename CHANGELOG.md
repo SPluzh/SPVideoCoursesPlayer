@@ -4,7 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## [1.6.1]
 - **Subtitles**: Fixed an issue where the selected subtitle language was not loaded or remembered correctly.
-- **Hotkeys**: Added Alt + Up hotkey to translate the entire current subtitle phrase.
+- **Hotkeys**: Added subtitle navigation and translation shortcuts:
+  - `Alt + Left` / `Alt + Right`: Seek to the previous / next subtitle phrase.
+  - `Alt + Down`: Replay the current subtitle phrase from the beginning.
+  - `Alt + Up`: Translate the entire current subtitle phrase (preventing automatic playback resumption and popup closing when triggered).
 
 ## [1.6.0]
 - **Interactive Subtitles**: Click on any word in the subtitles to translate it.
