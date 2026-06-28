@@ -391,7 +391,7 @@ class SubtitleOverlayWidget(QFrame):
             font_size = self.get_calculated_font_size()
             self.current_font_size = font_size
             html = f"""
-            <div style="text-align: center; color: {self.text_color}; font-family: 'Segoe UI', Arial, sans-serif; font-size: {font_size}px; font-weight: normal; line-height: 1.2;">
+            <div style="text-align: center; color: {self.text_color}; font-family: 'Segoe UI', Arial, sans-serif; font-size: {font_size}px; font-weight: normal; line-height: 1.0;">
                 {text}
             </div>
             """
@@ -438,7 +438,7 @@ class SubtitleOverlayWidget(QFrame):
             font_size = int(self.get_calculated_font_size() * 0.85)
             text_color = getattr(self, "secondary_text_color", "#ADD8E6")
             html = f"""
-            <div style="text-align: center; color: {text_color}; font-family: 'Segoe UI', Arial, sans-serif; font-size: {font_size}px; font-weight: normal; line-height: 1.2;">
+            <div style="text-align: center; color: {text_color}; font-family: 'Segoe UI', Arial, sans-serif; font-size: {font_size}px; font-weight: normal; line-height: 1.0;">
                 {text}
             </div>
             """
@@ -532,7 +532,7 @@ class SubtitleOverlayWidget(QFrame):
             self.current_font_size = font_size
             if self.current_text:
                 html = f"""
-                <div style="text-align: center; color: {self.text_color}; font-family: 'Segoe UI', Arial, sans-serif; font-size: {font_size}px; font-weight: normal; line-height: 1.2;">
+                <div style="text-align: center; color: {self.text_color}; font-family: 'Segoe UI', Arial, sans-serif; font-size: {font_size}px; font-weight: normal; line-height: 1.0;">
                     {self.current_text}
                 </div>
                 """
@@ -540,7 +540,7 @@ class SubtitleOverlayWidget(QFrame):
             if getattr(self, 'secondary_text', None):
                 sec_font_size = int(font_size * 0.85)
                 sec_html = f"""
-                <div style="text-align: center; color: #ADD8E6; font-family: 'Segoe UI', Arial, sans-serif; font-size: {sec_font_size}px; font-weight: normal; line-height: 1.2;">
+                <div style="text-align: center; color: #ADD8E6; font-family: 'Segoe UI', Arial, sans-serif; font-size: {sec_font_size}px; font-weight: normal; line-height: 1.0;">
                     {self.secondary_text}
                 </div>
                 """

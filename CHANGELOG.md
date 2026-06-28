@@ -3,8 +3,6 @@
 All notable changes to this project will be documented in this file.
 
 ## [1.6.1]
-- **Subtitles**: Used the user-selected subtitle outline color as the translucent background color of the interactive subtitle overlay.
-- **Subtitles**: Linked secondary subtitles visibility and settings availability to the general subtitle toggle, ensuring secondary subtitles are hidden and disabled when subtitles are turned off.
 - **Subtitles**: Added translation language selection settings.
 - **Subtitles**: Added support for dual (secondary) subtitles to display two languages simultaneously.
 - **Subtitles**: Added independent color customization and track selection for secondary subtitles.
