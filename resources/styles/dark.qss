@@ -1535,7 +1535,7 @@ QPushButton#dictBtn[added="true"]:pressed {
 QPushButton#translateSubBtn, QPushButton#prevPhraseBtn, QPushButton#nextPhraseBtn, QPushButton#replayPhraseBtn {
     background-color: rgba(255, 255, 255, 20);
     border: 1px solid rgba(255, 255, 255, 40);
-    border-radius: 15px;
+    border-radius: 3px;
     padding: 0px;
 }
 
