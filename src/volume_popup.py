@@ -64,6 +64,10 @@ class VolumePopup(QWidget):
         dsp_main_layout = QVBoxLayout()
         dsp_main_layout.setSpacing(6)
 
+        self.audio_enhancement_lbl = QLabel(tr("player.audio_tools.title"))
+        self.audio_enhancement_lbl.setObjectName("popupHeaderLabel")
+        dsp_main_layout.addWidget(self.audio_enhancement_lbl)
+
         grid_layout = QGridLayout()
         grid_layout.setSpacing(4)
         grid_layout.setContentsMargins(0, 0, 0, 0)
@@ -440,6 +444,7 @@ class VolumePopup(QWidget):
     def update_texts(self):
         self.audio_title_label.setText(tr("player.tooltip_audio_track"))
         self.delay_lbl.setText(tr("player.audio_delay"))
+        self.audio_enhancement_lbl.setText(tr("player.audio_tools.title"))
 
         # Audio tools
         if self.noise_mode == "off":

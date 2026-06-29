@@ -193,6 +193,7 @@
             "bookmarks_hidden": "Bookmarks Gallery: Hidden"
         },
         "audio_tools": {
+            "title": "Audio Enhancement",
             "noise": "Noise",
             "noise_tooltip": "Noise Reduction (Off/Standard/AI)",
             "comp": "Comp",
