@@ -278,6 +278,8 @@ class VideoCourseBrowser(QMainWindow):
             lambda action, pressed: self.handle_player_action(action, pressed)
         )
         self.selected_tag_ids = set()
+        self.tag_popup = None
+        self.tag_popup_last_hide_time = 0
         self.load_settings()
 
         self.load_icons()
@@ -3573,6 +3575,13 @@ class VideoCourseBrowser(QMainWindow):
 
     def show_tag_filter_popup(self, pos=None):
         """Show the tag filter selection popup."""
+        if time.time() - self.tag_popup_last_hide_time < 0.2:
+            return
+
+        if self.tag_popup is not None and self.tag_popup.isVisible():
+            self.tag_popup.hide()
+            return
+
         all_tags = self.db.get_tags()
         self.tag_popup = TagFilterPopup(all_tags, self.selected_tag_ids, self)
 
@@ -3584,6 +3593,9 @@ class VideoCourseBrowser(QMainWindow):
 
         self.tag_popup.filter_changed.connect(self._on_tag_filter_changed)
         self.tag_popup.show()
+
+    def on_tag_popup_hidden(self):
+        self.tag_popup_last_hide_time = time.time()
 
     def _on_tag_filter_changed(self, selected_ids):
         """Handle change in tag selection from the popup."""

@@ -117,3 +117,9 @@ class TagFilterPopup(QWidget):
                 if tid is not None:
                     checked_ids.add(tid)
         self.filter_changed.emit(checked_ids)
+
+    def hideEvent(self, event):
+        if hasattr(self.parent(), "on_tag_popup_hidden"):
+            self.parent().on_tag_popup_hidden()
+        super().hideEvent(event)
+
