@@ -404,6 +404,7 @@ class VideoPlayerWidget(QWidget):
         panel_layout.addLayout(sub_layout)
 
         self.volume_btn = VolumeButton()
+        self.volume_btn.setObjectName("volumeBtn")
         self.volume_btn.volumeChanged.connect(self.change_volume)
         self.volume_btn.audioChanged.connect(self.change_audio_track)
 
@@ -423,7 +424,20 @@ class VideoPlayerWidget(QWidget):
             self.set_secondary_audio_volume
         )
 
-        panel_layout.addWidget(self.volume_btn)
+        self.vol_settings_btn = QPushButton()
+        self.vol_settings_btn.setObjectName("volSettingsBtn")
+        self.vol_settings_btn.setFixedSize(15, 30)
+        self.vol_settings_btn.setIcon(self.icons["chevron-down"])
+        self.vol_settings_btn.setIconSize(QSize(10, 10))
+        self.vol_settings_btn.setToolTip(tr("player.tooltip_volume_settings"))
+        self.vol_settings_btn.clicked.connect(self.volume_btn.show_popup)
+
+        vol_layout = QHBoxLayout()
+        vol_layout.setSpacing(0)
+        vol_layout.setContentsMargins(0, 0, 0, 0)
+        vol_layout.addWidget(self.volume_btn)
+        vol_layout.addWidget(self.vol_settings_btn)
+        panel_layout.addLayout(vol_layout)
 
         # PiP Button
         self.pip_btn = QPushButton()
@@ -449,6 +463,7 @@ class VideoPlayerWidget(QWidget):
             self.subtitle_btn,
             self.sub_settings_btn,
             self.volume_btn,
+            self.vol_settings_btn,
             self.pip_btn,
             self.fullscreen_btn,
         ]:
@@ -2990,6 +3005,8 @@ class VideoPlayerWidget(QWidget):
         self.subtitle_btn.update_texts()
         if hasattr(self, "sub_settings_btn"):
             self.sub_settings_btn.setToolTip(tr("player.tooltip_subtitle_settings"))
+        if hasattr(self, "vol_settings_btn"):
+            self.vol_settings_btn.setToolTip(tr("player.tooltip_volume_settings"))
         self.play_btn.setToolTip(
             tr("player.play")
             if self.player and self.player.pause

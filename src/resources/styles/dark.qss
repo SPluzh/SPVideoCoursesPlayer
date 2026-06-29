@@ -1719,15 +1719,15 @@ QLabel#updateDialogNewVersion {
 }
 
 /* ============================================================
-   СЕГМЕНТИРОВАННЫЕ КНОПКИ СУБТИТРОВ
+   СЕГМЕНТИРОВАННЫЕ КНОПКИ СУБТИТРОВ И ГРОМКОСТИ
    ============================================================ */
-QPushButton#subtitleBtn {
+QPushButton#subtitleBtn, QPushButton#volumeBtn {
     border-top-right-radius: 0px;
     border-bottom-right-radius: 0px;
     border-right: none;
 }
 
-QPushButton#subSettingsBtn {
+QPushButton#subSettingsBtn, QPushButton#volSettingsBtn {
     border-top-left-radius: 0px;
     border-bottom-left-radius: 0px;
     padding: 0px;

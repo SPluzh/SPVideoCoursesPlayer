@@ -532,9 +532,6 @@ class VolumeButton(QPushButton):
             else:
                 restore = self.stored_volume if self.stored_volume > 0 else 20
                 self.popup.slider.setValue(restore)
-        elif event.button() == Qt.MouseButton.RightButton:
-            # Right click - show popup
-            self.show_popup()
         else:
             super().mousePressEvent(event)
 
