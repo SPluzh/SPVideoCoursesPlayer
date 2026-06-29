@@ -665,9 +665,6 @@ class SubtitleButton(QPushButton):
             self.subtitles_enabled = not self.subtitles_enabled
             self._update_icon()
             self.subtitleToggled.emit(self.subtitles_enabled)
-        elif event.button() == Qt.MouseButton.RightButton:
-            # Right click - show selection popup
-            self.show_popup()
         else:
             super().mousePressEvent(event)
     

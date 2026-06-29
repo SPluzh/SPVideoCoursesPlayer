@@ -17,7 +17,7 @@ from PyQt6.QtWidgets import (
     QComboBox,
     QFrame,
 )
-from PyQt6.QtCore import Qt, QTimer, pyqtSignal, QPoint, QRect
+from PyQt6.QtCore import Qt, QTimer, pyqtSignal, QPoint, QRect, QSize
 from PyQt6.QtGui import QIcon, QColor, QPalette, QPainter, QPen, QBrush
 
 from mpv_handler import setup_mpv_dll, MPVVideoWidget
@@ -327,7 +327,7 @@ class VideoPlayerWidget(QWidget):
         panel_layout = QHBoxLayout(self.control_panel)
         panel_layout.setContentsMargins(0, 5, 0, 0)
 
-        self.icons = load_icons_dict(["play", "pause", "next", "prev", "pip", "fullscreen", "picture-in-picture"])
+        self.icons = load_icons_dict(["play", "pause", "next", "prev", "pip", "fullscreen", "picture-in-picture", "chevron-down"])
 
         # Previous Video Button
         self.prev_video_btn = QPushButton()
@@ -380,13 +380,28 @@ class VideoPlayerWidget(QWidget):
         panel_layout.addWidget(self.speed_label, 0, Qt.AlignmentFlag.AlignVCenter)
 
         self.subtitle_btn = SubtitleButton()
+        self.subtitle_btn.setObjectName("subtitleBtn")
         self.subtitle_btn.subtitleToggled.connect(self.toggle_subtitles)
         self.subtitle_btn.subtitleChanged.connect(self.change_subtitle_track)
         self.subtitle_btn.popup.styleChanged.connect(self.change_subtitle_style)
         self.subtitle_btn.popup.interactiveToggled.connect(self.toggle_interactive_subtitles)
         self.subtitle_btn.secondarySubtitleToggled.connect(self._on_secondary_subtitle_toggled)
         self.subtitle_btn.secondarySubtitleChanged.connect(self._on_secondary_subtitle_changed)
-        panel_layout.addWidget(self.subtitle_btn)
+
+        self.sub_settings_btn = QPushButton()
+        self.sub_settings_btn.setObjectName("subSettingsBtn")
+        self.sub_settings_btn.setFixedSize(15, 30)
+        self.sub_settings_btn.setIcon(self.icons["chevron-down"])
+        self.sub_settings_btn.setIconSize(QSize(10, 10))
+        self.sub_settings_btn.setToolTip(tr("player.tooltip_subtitle_settings"))
+        self.sub_settings_btn.clicked.connect(self.subtitle_btn.show_popup)
+
+        sub_layout = QHBoxLayout()
+        sub_layout.setSpacing(0)
+        sub_layout.setContentsMargins(0, 0, 0, 0)
+        sub_layout.addWidget(self.subtitle_btn)
+        sub_layout.addWidget(self.sub_settings_btn)
+        panel_layout.addLayout(sub_layout)
 
         self.volume_btn = VolumeButton()
         self.volume_btn.volumeChanged.connect(self.change_volume)
@@ -432,6 +447,7 @@ class VideoPlayerWidget(QWidget):
             self.play_btn,
             self.next_video_btn,
             self.subtitle_btn,
+            self.sub_settings_btn,
             self.volume_btn,
             self.pip_btn,
             self.fullscreen_btn,
@@ -2972,6 +2988,8 @@ class VideoPlayerWidget(QWidget):
         # Update tooltips and buttons
         self.volume_btn.update_texts()
         self.subtitle_btn.update_texts()
+        if hasattr(self, "sub_settings_btn"):
+            self.sub_settings_btn.setToolTip(tr("player.tooltip_subtitle_settings"))
         self.play_btn.setToolTip(
             tr("player.play")
             if self.player and self.player.pause

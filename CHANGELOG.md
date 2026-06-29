@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.6.2]
+- **UI**: Added a dedicated subtitle settings dropdown button and simplified subtitle controls.
+
 ## [1.6.1]
 - **Subtitles**: Added translation language selection settings.
 - **Subtitles**: Added support for dual (secondary) subtitles to display two languages simultaneously.

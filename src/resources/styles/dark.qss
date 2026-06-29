@@ -1717,3 +1717,18 @@ QLabel#updateDialogTitle {
 QLabel#updateDialogNewVersion {
     font-weight: bold;
 }
+
+/* ============================================================
+   СЕГМЕНТИРОВАННЫЕ КНОПКИ СУБТИТРОВ
+   ============================================================ */
+QPushButton#subtitleBtn {
+    border-top-right-radius: 0px;
+    border-bottom-right-radius: 0px;
+    border-right: none;
+}
+
+QPushButton#subSettingsBtn {
+    border-top-left-radius: 0px;
+    border-bottom-left-radius: 0px;
+    padding: 0px;
+}
