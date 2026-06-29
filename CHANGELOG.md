@@ -3,8 +3,8 @@
 All notable changes to this project will be documented in this file.
 
 ## [1.6.2]
-- **UI**: Added dedicated settings dropdown buttons next to subtitle and volume controls.
-- **UI**: Removed right-click menus from subtitle and volume toggle buttons, routing all settings access through the new dedicated settings buttons.
+- **UI**: Added dedicated settings dropdown buttons next to subtitle, volume, and library tag filter controls.
+- **UI**: Removed right-click menus from subtitle, volume, and library tag filter buttons, routing all settings access through the new dedicated settings buttons.
 
 ## [1.6.1]
 - **Subtitles**: Added translation language selection settings.

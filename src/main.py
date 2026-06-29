@@ -367,15 +367,27 @@ class VideoCourseBrowser(QMainWindow):
         self.tag_filter_btn.setToolTip(tr("library.filter_tags"))
         self.tag_filter_btn.setFixedSize(30, 30)
         self.tag_filter_btn.setObjectName("tagFilterBtn")
-        self.tag_filter_btn.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
-        self.tag_filter_btn.customContextMenuRequested.connect(
-            self.show_tag_filter_popup
-        )
+        self.tag_filter_btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.tag_filter_btn.toggled.connect(
             lambda _: self.filter_library(self.search_edit.text())
         )
 
-        search_container_layout.addWidget(self.tag_filter_btn)
+        self.tag_filter_settings_btn = QPushButton()
+        self.tag_filter_settings_btn.setObjectName("tagFilterSettingsBtn")
+        self.tag_filter_settings_btn.setFixedSize(15, 30)
+        self.tag_filter_settings_btn.setIcon(self.icons.get("chevron-down", QIcon()))
+        self.tag_filter_settings_btn.setIconSize(QSize(10, 10))
+        self.tag_filter_settings_btn.setToolTip(tr("library.tooltip_tag_filter_settings"))
+        self.tag_filter_settings_btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self.tag_filter_settings_btn.clicked.connect(self.show_tag_filter_popup)
+
+        tag_filter_layout = QHBoxLayout()
+        tag_filter_layout.setSpacing(0)
+        tag_filter_layout.setContentsMargins(0, 0, 0, 0)
+        tag_filter_layout.addWidget(self.tag_filter_btn)
+        tag_filter_layout.addWidget(self.tag_filter_settings_btn)
+
+        search_container_layout.addLayout(tag_filter_layout)
 
         self.marker_toggle_btn = QPushButton()
         self.marker_toggle_btn.setCheckable(True)
@@ -805,6 +817,8 @@ class VideoCourseBrowser(QMainWindow):
                 self.fav_filter_btn.setToolTip(tr("library.filter_favorites"))
             if hasattr(self, "tag_filter_btn"):
                 self.tag_filter_btn.setToolTip(tr("library.filter_tags"))
+            if hasattr(self, "tag_filter_settings_btn"):
+                self.tag_filter_settings_btn.setToolTip(tr("library.tooltip_tag_filter_settings"))
             if hasattr(self, "marker_toggle_btn"):
                 self.marker_toggle_btn.setToolTip(tr("library.show_markers"))
             if hasattr(self, "video_player") and self.video_player:
@@ -2252,6 +2266,7 @@ class VideoCourseBrowser(QMainWindow):
             "collapse",
             "expand",
             "locate",
+            "chevron-down",
         ]
         self.icons = load_icons_dict(icon_names)
 
@@ -3556,7 +3571,7 @@ class VideoCourseBrowser(QMainWindow):
         if search_text or fav_active or tag_active:
             self.filter_library(search_text)
 
-    def show_tag_filter_popup(self, pos):
+    def show_tag_filter_popup(self, pos=None):
         """Show the tag filter selection popup."""
         all_tags = self.db.get_tags()
         self.tag_popup = TagFilterPopup(all_tags, self.selected_tag_ids, self)

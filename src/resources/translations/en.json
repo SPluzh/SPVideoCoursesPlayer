@@ -38,7 +38,8 @@
     "library": {
         "search_placeholder": "Search...",
         "filter_favorites": "Show only favorites",
-        "filter_tags": "Filter by tags\nL-click to toggle\nR-click to select tags",
+        "filter_tags": "Filter by tags (L-click to toggle)",
+        "tooltip_tag_filter_settings": "Filter settings",
         "filter_tags_popup": "Filter by Tags",
         "select_all": "Select All",
         "deselect_all": "Deselect All",

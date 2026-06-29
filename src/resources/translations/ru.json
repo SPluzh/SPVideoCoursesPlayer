@@ -38,7 +38,8 @@
     "library": {
         "search_placeholder": "Поиск...",
         "filter_favorites": "Показать только избранное",
-        "filter_tags": "Фильтр по тегам\nЛКМ — вкл/выкл\nПКМ — выбор тегов",
+        "filter_tags": "Фильтр по тегам (ЛКМ — вкл/выкл)",
+        "tooltip_tag_filter_settings": "Настройки фильтрации",
         "filter_tags_popup": "Фильтр по тегам",
         "select_all": "Выбрать все",
         "deselect_all": "Снять все",

@@ -1721,13 +1721,13 @@ QLabel#updateDialogNewVersion {
 /* ============================================================
    СЕГМЕНТИРОВАННЫЕ КНОПКИ СУБТИТРОВ И ГРОМКОСТИ
    ============================================================ */
-QPushButton#subtitleBtn, QPushButton#volumeBtn {
+QPushButton#subtitleBtn, QPushButton#volumeBtn, QPushButton#tagFilterBtn {
     border-top-right-radius: 0px;
     border-bottom-right-radius: 0px;
     border-right: none;
 }
 
-QPushButton#subSettingsBtn, QPushButton#volSettingsBtn {
+QPushButton#subSettingsBtn, QPushButton#volSettingsBtn, QPushButton#tagFilterSettingsBtn {
     border-top-left-radius: 0px;
     border-bottom-left-radius: 0px;
     padding: 0px;
