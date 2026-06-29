@@ -105,20 +105,20 @@ class SubtitlePopup(QWidget):
         toggle_col.setContentsMargins(0, 0, 0, 0)
         toggle_col.setSpacing(0)
         
-        # Spacer to align with list (to offset the list label height)
-        toggle_col.addSpacing(16) 
+        self.translation_lang_title_label = QLabel(tr('player.interactive_subtitles'))
+        self.translation_lang_title_label.setObjectName("popupHeaderLabel")
+        self.translation_lang_title_label.setWordWrap(True)
+        self.translation_lang_title_label.setFixedWidth(146)
+        self.translation_lang_title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        toggle_col.addWidget(self.translation_lang_title_label, alignment=Qt.AlignmentFlag.AlignHCenter)
         
-        # Horizontal layout for toggle and interactive buttons
-        buttons_row = QHBoxLayout()
-        buttons_row.setContentsMargins(0, 0, 0, 0)
-        buttons_row.setSpacing(6)
-        buttons_row.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        toggle_col.addSpacing(6)
         
-        self.toggle_btn = QPushButton()
-        self.toggle_btn.setFixedSize(30, 30)
-        self.toggle_btn.clicked.connect(self._toggle_subtitles)
-        self.toggle_btn.setObjectName("popupSubtitleToggle")
-        buttons_row.addWidget(self.toggle_btn)
+        # Horizontal layout for interactive button and language selection
+        lang_layout = QHBoxLayout()
+        lang_layout.setContentsMargins(0, 0, 0, 0)
+        lang_layout.setSpacing(6)
+        lang_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
         
         self.interactive_btn = QPushButton()
         self.interactive_btn.setFixedSize(30, 30)
@@ -126,24 +126,12 @@ class SubtitlePopup(QWidget):
         self.interactive_btn.setObjectName("interactiveSubtitlesBtn")
         self.interactive_btn.setToolTip(tr('player.interactive_subtitles'))
         self.interactive_btn.toggled.connect(self._on_interactive_toggled)
-        buttons_row.addWidget(self.interactive_btn)
-        
-        toggle_col.addLayout(buttons_row)
-        
-        toggle_col.addSpacing(10)
-        
-        self.translation_lang_title_label = QLabel(tr('subtitle_popup.translation_lang'))
-        self.translation_lang_title_label.setObjectName("popupHeaderLabel")
-        self.translation_lang_title_label.setWordWrap(True)
-        self.translation_lang_title_label.setFixedWidth(110)
-        self.translation_lang_title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        toggle_col.addWidget(self.translation_lang_title_label, alignment=Qt.AlignmentFlag.AlignHCenter)
-        
-        toggle_col.addSpacing(2)
+        lang_layout.addWidget(self.interactive_btn)
         
         self.translation_lang_btn = QPushButton()
         self.translation_lang_btn.setObjectName("translationLangBtn")
-        self.translation_lang_btn.setFixedSize(110, 24)
+        self.translation_lang_btn.setFixedSize(110, 30)
+        self.translation_lang_btn.setToolTip(tr('subtitle_popup.translation_lang_tooltip'))
 
         
         self.translation_langs = [
@@ -183,7 +171,12 @@ class SubtitlePopup(QWidget):
         ]
         self.translation_langs.sort(key=lambda x: x[1].lower())
         self.translation_lang_btn.clicked.connect(self._show_language_dialog)
-        toggle_col.addWidget(self.translation_lang_btn, alignment=Qt.AlignmentFlag.AlignHCenter)
+        
+        # Add translation button to lang_layout
+        lang_layout.addWidget(self.translation_lang_btn)
+        
+        # Add lang_layout to toggle_col
+        toggle_col.addLayout(lang_layout)
         
         toggle_col.addStretch()
         left_panel.addLayout(toggle_col)
@@ -246,7 +239,7 @@ class SubtitlePopup(QWidget):
         main_layout.addLayout(left_panel)
         
         # Load icons
-        self.icons = load_icons_dict(["subtitle_on", "subtitle_off", "languages"])
+        self.icons = load_icons_dict(["languages"])
         self.interactive_btn.setIcon(self.icons["languages"])
         
         self.subtitles_enabled = False
@@ -488,8 +481,6 @@ class SubtitlePopup(QWidget):
         self.subtitleToggled.emit(self.subtitles_enabled)
         
     def _update_toggle_icon(self):
-        icon_name = "subtitle_on" if self.subtitles_enabled else "subtitle_off"
-        self.toggle_btn.setIcon(self.icons[icon_name])
         if hasattr(self, "secondary_enabled_cb"):
             self.secondary_enabled_cb.setEnabled(self.subtitles_enabled)
         if hasattr(self, "secondary_container"):
@@ -531,8 +522,10 @@ class SubtitlePopup(QWidget):
             self.secondary_text_title_label.setText(tr('player.secondary_subtitle_text'))
         self.outline_title_label.setText(tr('player.subtitle_outline'))
         if hasattr(self, 'translation_lang_title_label'):
-            self.translation_lang_title_label.setText(tr('subtitle_popup.translation_lang'))
+            self.translation_lang_title_label.setText(tr('player.interactive_subtitles'))
         self.interactive_btn.setToolTip(tr('player.interactive_subtitles'))
+        if hasattr(self, 'translation_lang_btn'):
+            self.translation_lang_btn.setToolTip(tr('subtitle_popup.translation_lang_tooltip'))
         self.secondary_enabled_cb.setText(tr('player.enable_secondary_subtitle'))
         self.secondary_title_label.setText(tr('player.secondary_subtitle_track'))
         self._update_checkmarks()

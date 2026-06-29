@@ -589,7 +589,8 @@
         "next": "Следующее видео"
     },
     "subtitle_popup": {
-        "translation_lang": "Язык перевода"
+        "translation_lang": "Язык перевода",
+        "translation_lang_tooltip": "Выбрать язык перевода"
     },
     "translator": {
         "synonyms": "Синонимы",
