@@ -3,6 +3,7 @@
 All notable changes to this project will be documented in this file.
 
 ## [1.6.2]
+- **UI**: Highlighted subtitle and mute/volume buttons with the theme's accent color when active (subtitles enabled or volume muted).
 - **UI**: Added dedicated settings dropdown buttons next to subtitle, volume, and library tag filter controls.
 - **UI**: Removed right-click menus from subtitle, volume, and library tag filter buttons, routing all settings access through the new dedicated settings buttons.
 

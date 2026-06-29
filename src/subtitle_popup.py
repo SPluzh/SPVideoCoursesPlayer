@@ -723,6 +723,9 @@ class SubtitleButton(QPushButton):
         self._update_icon()
     
     def _update_icon(self):
+        self.setProperty("active", self.subtitles_enabled)
+        self.style().unpolish(self)
+        self.style().polish(self)
         if self.subtitles_enabled:
             self.setIcon(self.icons['subtitle_on'])
         else:

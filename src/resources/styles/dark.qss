@@ -103,6 +103,25 @@ QPushButton#playBtn {
     min-width: 40px;
 }
 
+/* Кнопка субтитров и кнопка громкости во включенном (активном) состоянии */
+QPushButton#subtitleBtn[active="true"],
+QPushButton#volumeBtn[active="true"] {
+    background-color: @accent;
+    border-color: @accent-hover;
+}
+
+QPushButton#subtitleBtn[active="true"]:hover,
+QPushButton#volumeBtn[active="true"]:hover {
+    background-color: @accent-hover;
+    border-color: @accent-hover;
+}
+
+QPushButton#subtitleBtn[active="true"]:pressed,
+QPushButton#volumeBtn[active="true"]:pressed {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 @accent-pressed, stop:1 @accent);
+    border-color: @accent-pressed;
+}
+
 QPushButton#favFilterBtn {
     background-color: @bg-dark;
     border: 1px solid @border;

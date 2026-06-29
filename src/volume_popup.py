@@ -588,6 +588,10 @@ class VolumeButton(QPushButton):
         self.volumeChanged.emit(value)
 
     def _update_icon(self, value):
+        is_muted = (value == 0)
+        self.setProperty("active", is_muted)
+        self.style().unpolish(self)
+        self.style().polish(self)
         if value == 0:
             self.setIcon(self.icons["volume_mute"])
         elif value < 33:
