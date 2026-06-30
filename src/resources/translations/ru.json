@@ -33,7 +33,9 @@
         "show_pureref_badges": "Показывать иконки PureRef",
         "show_pureref_badges_when_missing": "Показывать иконки PureRef при отсутствии файла",
         "fullscreen": "Полноэкранный режим",
-        "show_mass_selection": "Показывать чекбоксы выбора"
+        "show_mass_selection": "Показывать чекбоксы выбора",
+        "rotate_clockwise": "Повернуть по часовой стрелке",
+        "rotate_counterclockwise": "Повернуть против часовой стрелки"
     },
     "library": {
         "search_placeholder": "Поиск...",
@@ -190,7 +192,8 @@
             "mono_on": "Моно режим: Вкл",
             "mono_off": "Моно режим: Выкл",
             "bookmarks_shown": "Галерея закладок: Закладки: {count}",
-            "bookmarks_hidden": "Галерея закладок: Скрыта"
+            "bookmarks_hidden": "Галерея закладок: Скрыта",
+            "rotated": "Повёрнуто {angle}°"
         },
         "audio_tools": {
             "title": "Улучшение звука",

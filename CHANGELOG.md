@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.6.3]
+- **Tools Menu**: Added "Rotate Clockwise" and "Rotate Counter-clockwise" actions to rotate video 90° per click (0 → 90 → 180 → 270 → 0) with OSD notifications.
+
 ## [1.6.2]
 - **UI**: Highlighted subtitle and mute/volume buttons with the theme's accent color when active (subtitles enabled or volume muted).
 - **UI**: Added dedicated settings dropdown buttons next to subtitle, volume, and library tag filter controls.

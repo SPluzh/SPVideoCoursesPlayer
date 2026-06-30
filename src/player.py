@@ -1386,6 +1386,22 @@ class VideoPlayerWidget(QWidget):
         """Decrease zoom level."""
         self.video_widget.zoom_out()
 
+    def rotate_video(self, clockwise=True):
+        """Rotate video 90° clockwise or counter-clockwise."""
+        if not self.player:
+            return
+        current = getattr(self, '_rotation_angle', 0)
+        if clockwise:
+            current = (current + 90) % 360
+        else:
+            current = (current - 90) % 360
+        self._rotation_angle = current
+        try:
+            self.player["video-rotate"] = current
+        except Exception as e:
+            logging.error(f"Error setting rotation: {e}")
+            self._rotation_angle = 0
+
     def set_zoom_mode(self, enabled):
         """Set zoom state for Z key (hold)."""
         self.video_widget.z_key_pressed = enabled

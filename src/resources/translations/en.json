@@ -33,7 +33,9 @@
         "show_pureref_badges": "Show PureRef Icons",
         "show_pureref_badges_when_missing": "Show PureRef Icons When Missing",
         "fullscreen": "Fullscreen",
-        "show_mass_selection": "Show Selection Checkboxes"
+        "show_mass_selection": "Show Selection Checkboxes",
+        "rotate_clockwise": "Rotate Clockwise",
+        "rotate_counterclockwise": "Rotate Counter-clockwise"
     },
     "library": {
         "search_placeholder": "Search...",
@@ -190,7 +192,8 @@
             "mono_on": "Mono Mode: On",
             "mono_off": "Mono Mode: Off",
             "bookmarks_shown": "Bookmarks Gallery: Bookmarks: {count}",
-            "bookmarks_hidden": "Bookmarks Gallery: Hidden"
+            "bookmarks_hidden": "Bookmarks Gallery: Hidden",
+            "rotated": "Rotated {angle}°"
         },
         "audio_tools": {
             "title": "Audio Enhancement",

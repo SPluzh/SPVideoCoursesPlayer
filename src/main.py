@@ -607,6 +607,16 @@ class VideoCourseBrowser(QMainWindow):
             self.video_player.frame_step()
         elif action == "frame_back":
             self.video_player.frame_back_step()
+        elif action == "rotate_clockwise":
+            self.video_player.rotate_video(clockwise=True)
+            if hasattr(self.video_player, "osd_manager") and self.video_player.osd_manager:
+                angle = getattr(self.video_player, "_rotation_angle", 0)
+                self.video_player.osd_manager.show_osd(tr("player.osd.rotated", angle=str(angle)))
+        elif action == "rotate_counterclockwise":
+            self.video_player.rotate_video(clockwise=False)
+            if hasattr(self.video_player, "osd_manager") and self.video_player.osd_manager:
+                angle = getattr(self.video_player, "_rotation_angle", 0)
+                self.video_player.osd_manager.show_osd(tr("player.osd.rotated", angle=str(angle)))
         elif action == "speed_up":
             self.video_player.adjust_speed(0.1)
         elif action == "speed_down":
@@ -1233,6 +1243,24 @@ class VideoCourseBrowser(QMainWindow):
             lambda: self.handle_player_action("frame_back")
         )
         tools_menu.addAction(frame_back_action)
+
+        tools_menu.addSeparator()
+
+        rotate_cw_action = QAction(
+            self.icons.get("rotate-cw", QIcon()), tr("menu.rotate_clockwise"), self
+        )
+        rotate_cw_action.triggered.connect(
+            lambda: self.handle_player_action("rotate_clockwise")
+        )
+        tools_menu.addAction(rotate_cw_action)
+
+        rotate_ccw_action = QAction(
+            self.icons.get("rotate-ccw", QIcon()), tr("menu.rotate_counterclockwise"), self
+        )
+        rotate_ccw_action.triggered.connect(
+            lambda: self.handle_player_action("rotate_counterclockwise")
+        )
+        tools_menu.addAction(rotate_ccw_action)
 
         # [View] Menu
         view_menu = menubar.addMenu(tr("menu.view"))
@@ -2269,6 +2297,8 @@ class VideoCourseBrowser(QMainWindow):
             "expand",
             "locate",
             "chevron-down",
+            "rotate-cw",
+            "rotate-ccw",
         ]
         self.icons = load_icons_dict(icon_names)
 
