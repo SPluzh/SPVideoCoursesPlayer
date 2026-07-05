@@ -18,7 +18,7 @@ class ConfigManager:
         "General": {
             "language": "en",
             "show_preview_popup": "True",
-            "check_updates_on_start": "True",
+            "check_updates_on_start": "False",
             "skip_version": "",
             "autoplay_on_next": "True",
             "autoplay_on_prev": "True",
@@ -173,7 +173,7 @@ class ConfigManager:
 
     def get_check_updates_on_start(self) -> bool:
         config = self._read_config()
-        return config.getboolean("General", "check_updates_on_start", fallback=True)
+        return config.getboolean("General", "check_updates_on_start", fallback=False)
 
     def set_check_updates_on_start(self, value: bool):
         config = self._read_config()
