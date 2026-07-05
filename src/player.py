@@ -1707,6 +1707,7 @@ class VideoPlayerWidget(QWidget):
             # Store pending path so _on_file_loaded() knows which file to initialize
             self._pending_file_path = file_path
             self._cached_audio_data = None  # Clear stale cache
+            self._cached_subtitle_data = None  # Clear stale subtitle cache
             self.player.loadfile(file_path)
             logging.info(f"🎬 ✅ MPV loadfile completed")
             self._apply_subtitle_styles()
@@ -2177,6 +2178,8 @@ class VideoPlayerWidget(QWidget):
 
         if not self.db:
             logging.error(f"📝 ❌ Database not available")
+            self.subtitle_btn.set_enabled_state(False)
+            self._cached_subtitle_data = ([], None, 0)
             return
 
         try:
@@ -2184,8 +2187,13 @@ class VideoPlayerWidget(QWidget):
                 self.db.load_subtitle_tracks(filepath)
             )
 
+            logging.info(f"📝 load_subtitle_tracks: DB returned tracks count={len(tracks)}, selected_subtitle_id={selected_subtitle_id}, subtitles_enabled={subtitles_enabled}")
+
             if not tracks:
-                logging.warning(f"📝 ⚠️ No subtitle tracks found in database")
+                logging.warning(f"📝 ⚠️ No subtitle tracks found in database, disabling subtitles.")
+                self.subtitle_btn.set_enabled_state(False)
+                self._cached_subtitle_data = ([], None, 0)
+                logging.info(f"📝 load_subtitle_tracks: set subtitles_enabled=False in button/UI (no tracks)")
                 return
 
             logging.info(f"📝 Found {len(tracks)} subtitle track(s) in database")
@@ -2260,6 +2268,8 @@ class VideoPlayerWidget(QWidget):
 
         except Exception as e:
             logging.error(f"📝 ❌ Error loading subtitle tracks: {e}", exc_info=True)
+            self.subtitle_btn.set_enabled_state(False)
+            self._cached_subtitle_data = ([], None, 0)
 
     def toggle_subtitles(self, enabled):
         """Toggle subtitles on/off."""
@@ -2645,7 +2655,8 @@ class VideoPlayerWidget(QWidget):
         track_id = popup.itemData(index)
 
         # Update button state
-        self.subtitle_btn.set_enabled_state(True)
+        if track_id is not None:
+            self.subtitle_btn.set_enabled_state(True)
 
         # If "Off" is selected
         if track_id is None:
@@ -2762,11 +2773,17 @@ class VideoPlayerWidget(QWidget):
                 logging.info(
                     f"📝 ========== SUBTITLE TRACK RESTORED (DISABLED) =========="
                 )
+                self._update_subtitle_visibility()
                 return
 
             if not selected_subtitle_id:
-                logging.warning(f"📝 ⚠️ No selected subtitle ID")
+                logging.warning(f"📝 ⚠️ No selected subtitle ID, setting MPV sid='no' to be safe")
+                try:
+                    self.player.sid = "no"
+                except Exception as e:
+                    logging.error(f"Error setting sid='no': {e}")
                 logging.info(f"📝 ========== SUBTITLE TRACK RESTORED (NONE) ==========")
+                self._update_subtitle_visibility()
                 return
 
             track = next((t for t in tracks if t["id"] == selected_subtitle_id), None)
@@ -2775,8 +2792,13 @@ class VideoPlayerWidget(QWidget):
                 track = self.db.get_track_info("subtitle_tracks", selected_subtitle_id)
             if not track:
                 logging.error(
-                    f"📝 ❌ Subtitle track {selected_subtitle_id} not found in DB"
+                    f"📝 ❌ Subtitle track {selected_subtitle_id} not found in DB, setting MPV sid='no' to be safe"
                 )
+                try:
+                    self.player.sid = "no"
+                except Exception as e:
+                    logging.error(f"Error setting sid='no': {e}")
+                self._update_subtitle_visibility()
                 return
 
             track_type = track["track_type"]
@@ -3078,6 +3100,7 @@ class VideoPlayerWidget(QWidget):
 
     def _update_subtitle_visibility(self):
         if not self.player:
+            logging.info("📝 _update_subtitle_visibility: player not initialized")
             return
         try:
             is_interactive = self.config.get_interactive_subtitles() if self.config else False
@@ -3085,15 +3108,24 @@ class VideoPlayerWidget(QWidget):
             is_secondary_enabled = self.subtitle_btn.popup.secondary_enabled_cb.isChecked()
             is_secondary_effective = is_secondary_enabled and is_enabled
             
+            logging.info(
+                f"📝 _update_subtitle_visibility: subtitles_enabled (button state)={is_enabled}, "
+                f"is_interactive={is_interactive}, is_secondary_enabled={is_secondary_enabled}, "
+                f"is_secondary_effective={is_secondary_effective}"
+            )
+            
             if is_enabled and is_interactive:
                 self.player.sub_visibility = "no"
                 sub_text = self.player.sub_text or ""
                 self.subtitle_overlay.set_text(sub_text)
+                logging.info(f"📝 _update_subtitle_visibility: Interactive subs ON (hiding native, overlay len={len(sub_text)})")
             else:
                 self.player.sub_visibility = "yes" if is_enabled else "no"
                 self.subtitle_overlay.set_text("")
+                logging.info(f"📝 _update_subtitle_visibility: Native subs visibility set to '{self.player.sub_visibility}' (is_enabled={is_enabled})")
                 if not is_secondary_effective or not is_interactive:
                     self.subtitle_overlay.hide()
+                    logging.info("📝 _update_subtitle_visibility: Hiding subtitle overlay (secondary not effective or not interactive)")
                     if self.translation_popup:
                         self.translation_popup.hide()
 
@@ -3103,9 +3135,11 @@ class VideoPlayerWidget(QWidget):
                     self.player['secondary-sub-visibility'] = "no"
                     sub2_text = self.player['secondary-sub-text'] or ""
                     self.subtitle_overlay.set_secondary_text(sub2_text)
+                    logging.info(f"📝 _update_subtitle_visibility: Interactive secondary subs ON (overlay len={len(sub2_text)})")
                 else:
                     self.player['secondary-sub-visibility'] = "yes" if is_secondary_effective else "no"
                     self.subtitle_overlay.set_secondary_text("")
+                    logging.info(f"📝 _update_subtitle_visibility: Native secondary subs visibility set to '{self.player['secondary-sub-visibility']}'")
             except Exception as e:
                 logging.debug(f"Could not set secondary-sub-visibility or get secondary-sub-text: {e}")
                 
