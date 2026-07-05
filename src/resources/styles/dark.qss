@@ -107,7 +107,7 @@ QPushButton#playBtn {
 QPushButton#subtitleBtn[active="true"],
 QPushButton#volumeBtn[active="true"] {
     background-color: @accent;
-    border-color: @accent-hover;
+    border-color: @accent;
 }
 
 QPushButton#subtitleBtn[active="true"]:hover,
@@ -131,7 +131,7 @@ QPushButton#favFilterBtn {
 
 QPushButton#favFilterBtn:checked {
     background-color: @accent;
-    border-color: @accent-hover;
+    border-color: @accent;
 }
 
 QPushButton#favFilterBtn:hover {
@@ -140,6 +140,7 @@ QPushButton#favFilterBtn:hover {
 
 QPushButton#favFilterBtn:checked:hover {
     background-color: @accent-hover;
+    border-color: @accent-hover;
 }
 
 QPushButton#tagFilterBtn {
@@ -151,7 +152,7 @@ QPushButton#tagFilterBtn {
 
 QPushButton#tagFilterBtn:checked {
     background-color: @accent;
-    border-color: @accent-hover;
+    border-color: @accent;
 }
 
 QPushButton#tagFilterBtn:hover {
@@ -160,6 +161,7 @@ QPushButton#tagFilterBtn:hover {
 
 QPushButton#tagFilterBtn:checked:hover {
     background-color: @accent-hover;
+    border-color: @accent-hover;
 }
 
 QPushButton#markerToggleBtn {
@@ -171,7 +173,7 @@ QPushButton#markerToggleBtn {
 
 QPushButton#markerToggleBtn:checked {
     background-color: @accent;
-    border-color: @accent-hover;
+    border-color: @accent;
 }
 
 QPushButton#markerToggleBtn:hover {
@@ -180,6 +182,7 @@ QPushButton#markerToggleBtn:hover {
 
 QPushButton#markerToggleBtn:checked:hover {
     background-color: @accent-hover;
+    border-color: @accent-hover;
 }
 
 /* Аудио-фильтры на панели */
@@ -1597,15 +1600,17 @@ QLabel#aboutGithubLink:hover {
 
 QPushButton#dictBtn[added="true"] {
     background-color: @accent;
-    border-color: @accent-hover;
+    border-color: @accent;
 }
 
 QPushButton#dictBtn[added="true"]:hover {
     background-color: @accent-hover;
+    border-color: @accent-hover;
 }
 
 QPushButton#dictBtn[added="true"]:pressed {
     background-color: @accent-pressed;
+    border-color: @accent-pressed;
 }
 
 /* Subtitle overlay translate entire subtitle button */
