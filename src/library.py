@@ -101,6 +101,9 @@ class VideoItemDelegate(QStyledItemDelegate):
         self.row_play_button_bg = QWidget()
         self.row_play_button_bg.setObjectName("row_play_button_bg")
 
+        self.row_play_button_bg_hover = QWidget()
+        self.row_play_button_bg_hover.setObjectName("row_play_button_bg_hover")
+
         self.row_play_button_icon = QLabel()
         self.row_play_button_icon.setObjectName("row_play_button_icon")
 
@@ -118,6 +121,7 @@ class VideoItemDelegate(QStyledItemDelegate):
             self.video_title,
             self.video_info,
             self.row_play_button_bg,
+            self.row_play_button_bg_hover,
             self.row_play_button_icon,
             self.status_watched,
             self.status_started,
@@ -900,10 +904,10 @@ class VideoItemDelegate(QStyledItemDelegate):
                     color.setAlpha(150)
                     painter.setBrush(color)
                 elif is_over_btn:
-                    color = self.row_play_button_bg.palette().color(
+                    hover_color = self.row_play_button_bg_hover.palette().color(
                         QPalette.ColorRole.Window
                     )
-                    painter.setBrush(color.lighter(110))
+                    painter.setBrush(hover_color)
 
                 painter.setPen(Qt.PenStyle.NoPen)
                 painter.drawRoundedRect(play_btn_rect, 3, 3)
@@ -1497,12 +1501,15 @@ class VideoItemDelegate(QStyledItemDelegate):
                     painter.setRenderHint(QPainter.RenderHint.Antialiasing)
 
                     # Draw button background (Play button style, but always fully visible)
-                    bg_color = self.row_play_button_bg.palette().color(
-                        QPalette.ColorRole.Window
-                    )
                     if is_over_badge:
-                        painter.setBrush(bg_color.lighter(110))
+                        hover_color = self.row_play_button_bg_hover.palette().color(
+                            QPalette.ColorRole.Window
+                        )
+                        painter.setBrush(hover_color)
                     else:
+                        bg_color = self.row_play_button_bg.palette().color(
+                            QPalette.ColorRole.Window
+                        )
                         painter.setBrush(bg_color)
 
                     painter.setPen(Qt.PenStyle.NoPen)

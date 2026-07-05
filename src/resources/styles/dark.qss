@@ -135,7 +135,8 @@ QPushButton#favFilterBtn:checked {
 }
 
 QPushButton#favFilterBtn:hover {
-    background-color: @bg-hover;
+    background-color: @accent;
+    border-color: @accent;
 }
 
 QPushButton#favFilterBtn:checked:hover {
@@ -156,7 +157,8 @@ QPushButton#tagFilterBtn:checked {
 }
 
 QPushButton#tagFilterBtn:hover {
-    background-color: @bg-hover;
+    background-color: @accent;
+    border-color: @accent;
 }
 
 QPushButton#tagFilterBtn:checked:hover {
@@ -177,7 +179,8 @@ QPushButton#markerToggleBtn:checked {
 }
 
 QPushButton#markerToggleBtn:hover {
-    background-color: @bg-hover;
+    background-color: @accent;
+    border-color: @accent;
 }
 
 QPushButton#markerToggleBtn:checked:hover {
@@ -894,6 +897,10 @@ QToolTip {
 /* Кнопка Play/Pause на обложке видео в библиотеке */
 #row_play_button_bg {
     background-color: @accent;
+}
+
+#row_play_button_bg_hover {
+    background-color: @accent-hover;
 }
 
 #row_play_button_icon {
