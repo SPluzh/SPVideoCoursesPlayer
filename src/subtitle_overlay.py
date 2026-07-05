@@ -292,6 +292,11 @@ class SubtitleOverlayWidget(QFrame):
         # is fully embedded in the hierarchy (window() returns the root then).
         QTimer.singleShot(0, self._install_main_window_filter)
 
+        # Application-level filter to detect when the user switches to another app
+        app = QApplication.instance()
+        if app:
+            app.installEventFilter(self)
+
     def enterEvent(self, event):
         try:
             self.mouseEntered.emit()
@@ -389,6 +394,10 @@ class SubtitleOverlayWidget(QFrame):
                 win = self.player_window.window()
 
         if win and win.isMinimized():
+            return False
+
+        # Hide when the user has switched to another application
+        if win and not win.isActiveWindow():
             return False
 
         return True
@@ -774,6 +783,15 @@ class SubtitleOverlayWidget(QFrame):
             logging.error(f"Error in _on_translate_btn_clicked: {e}", exc_info=True)
 
     def eventFilter(self, obj, event):
+        if obj is QApplication.instance():
+            if event.type() == QEvent.Type.ApplicationDeactivate:
+                # User switched to another application — hide overlay immediately
+                self.hide()
+            elif event.type() == QEvent.Type.ApplicationActivate:
+                # User switched back — re-evaluate visibility after a short delay
+                # (window activation state may not be updated yet)
+                QTimer.singleShot(150, self.update_visibility)
+            return False
         if obj == self.video_widget:
             if event.type() in (QEvent.Type.Resize, QEvent.Type.Move, QEvent.Type.Show, QEvent.Type.Hide):
                 self.update_geometry()
@@ -809,4 +827,7 @@ class SubtitleOverlayWidget(QFrame):
                 self._installed_window.removeEventFilter(self)
             except Exception:
                 pass
+        app = QApplication.instance()
+        if app:
+            app.removeEventFilter(self)
         super().closeEvent(event)

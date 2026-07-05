@@ -2156,6 +2156,10 @@ class VideoCourseBrowser(QMainWindow):
 
         self.show()
 
+        # Update subtitle overlay geometry after entering PiP mode
+        if hasattr(self.video_player, "subtitle_overlay") and self.video_player.subtitle_overlay:
+            QTimer.singleShot(100, self.video_player.subtitle_overlay.update_geometry)
+
         # Update close button position after window is shown
         QTimer.singleShot(0, self._update_pip_close_button_position)
 
