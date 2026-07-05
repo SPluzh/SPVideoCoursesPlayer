@@ -84,7 +84,7 @@ class SubtitlePopup(QWidget):
     secondaryHoverOnlyChanged = pyqtSignal(bool)
     
     def __init__(self, parent=None):
-        super().__init__(parent, Qt.WindowType.Popup | Qt.WindowType.FramelessWindowHint)
+        super().__init__(parent, Qt.WindowType.Tool | Qt.WindowType.FramelessWindowHint | Qt.WindowType.WindowStaysOnTopHint)
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground)
         
         main_layout = QHBoxLayout(self)  # Horizontal main layout
@@ -332,7 +332,7 @@ class SubtitlePopup(QWidget):
         # Background opacity
         opacity_layout = QVBoxLayout()
         opacity_layout.setSpacing(2)
-        self.opacity_title_label = QLabel(tr('player.subtitle_bg_opacity'))
+        self.opacity_title_label = QLabel(f"{tr('player.subtitle_bg_opacity')} (70%)")
         self.opacity_title_label.setObjectName("popupHeaderLabel")
         self.opacity_title_label.setContentsMargins(0, 0, 0, 0)
         self.opacity_slider = QSlider(Qt.Orientation.Horizontal)
@@ -466,10 +466,9 @@ class SubtitlePopup(QWidget):
         self.styleChanged.emit("sub-scale", -5)  # decrease by 5%
 
     def _on_opacity_slider_changed(self, value):
-        from PyQt6.QtWidgets import QToolTip
-        from PyQt6.QtGui import QCursor
         self.opacity_slider.setToolTip(f"{value}%")
-        QToolTip.showText(QCursor.pos(), f"{value}%", self.opacity_slider)
+        if hasattr(self, 'opacity_title_label'):
+            self.opacity_title_label.setText(f"{tr('player.subtitle_bg_opacity')} ({value}%)")
         self.styleChanged.emit("sub-bg-opacity", value)
 
     def setBgOpacity(self, value):
@@ -479,6 +478,8 @@ class SubtitlePopup(QWidget):
             self.opacity_slider.setValue(val)
             self.opacity_slider.setToolTip(f"{val}%")
             self.opacity_slider.blockSignals(False)
+            if hasattr(self, 'opacity_title_label'):
+                self.opacity_title_label.setText(f"{tr('player.subtitle_bg_opacity')} ({val}%)")
         except Exception as e:
             import logging
             logging.error(f"Error setting subtitle popup background opacity: {e}")
@@ -539,16 +540,74 @@ class SubtitlePopup(QWidget):
     
     def hideEvent(self, event):
         if isinstance(self.parent(), SubtitleButton):
-            from PyQt6.QtGui import QCursor
-            btn = self.parent()
-            btn_rect = QRect(btn.mapToGlobal(QPoint(0, 0)), btn.size())
-            popup_rect = QRect(self.mapToGlobal(QPoint(0, 0)), self.size())
-            if btn_rect.contains(QCursor.pos()) or popup_rect.contains(QCursor.pos()):
-                QTimer.singleShot(50, self.show)
-                super().hideEvent(event)
-                return
             self.parent().on_popup_hidden()
         super().hideEvent(event)
+
+    def focusOutEvent(self, event):
+        focused = QApplication.focusWidget()
+        if focused and (focused == self or self.isAncestorOf(focused)):
+            super().focusOutEvent(event)
+            return
+
+        if isinstance(self.parent(), SubtitleButton):
+            btn = self.parent()
+            btn_rect = QRect(btn.mapToGlobal(QPoint(0, 0)), btn.size())
+            
+            sub_settings_btn = None
+            p = btn.parent()
+            while p:
+                if hasattr(p, 'sub_settings_btn'):
+                    sub_settings_btn = p.sub_settings_btn
+                    break
+                p = p.parent()
+                
+            chevron_contains = False
+            if sub_settings_btn:
+                chevron_rect = QRect(sub_settings_btn.mapToGlobal(QPoint(0, 0)), sub_settings_btn.size())
+                from PyQt6.QtGui import QCursor
+                chevron_contains = chevron_rect.contains(QCursor.pos())
+                
+            from PyQt6.QtGui import QCursor
+            if btn_rect.contains(QCursor.pos()) or chevron_contains:
+                super().focusOutEvent(event)
+                return
+
+        self.hide()
+        super().focusOutEvent(event)
+
+    def changeEvent(self, event):
+        if event.type() == event.Type.ActivationChange:
+            if not self.isActiveWindow():
+                active_win = QApplication.activeWindow()
+                if active_win and (active_win == self or self.isAncestorOf(active_win) or active_win.parent() == self):
+                    super().changeEvent(event)
+                    return
+                
+                if isinstance(self.parent(), SubtitleButton):
+                    btn = self.parent()
+                    btn_rect = QRect(btn.mapToGlobal(QPoint(0, 0)), btn.size())
+                    
+                    sub_settings_btn = None
+                    p = btn.parent()
+                    while p:
+                        if hasattr(p, 'sub_settings_btn'):
+                            sub_settings_btn = p.sub_settings_btn
+                            break
+                        p = p.parent()
+                        
+                    chevron_contains = False
+                    if sub_settings_btn:
+                        chevron_rect = QRect(sub_settings_btn.mapToGlobal(QPoint(0, 0)), sub_settings_btn.size())
+                        from PyQt6.QtGui import QCursor
+                        chevron_contains = chevron_rect.contains(QCursor.pos())
+                        
+                    from PyQt6.QtGui import QCursor
+                    if btn_rect.contains(QCursor.pos()) or chevron_contains:
+                        super().changeEvent(event)
+                        return
+                
+                self.hide()
+        super().changeEvent(event)
 
     def _update_text_color_btn(self):
         self._set_button_color_icon(self.text_color_btn, self.text_color)
@@ -586,7 +645,7 @@ class SubtitlePopup(QWidget):
             self.secondary_text_title_label.setText(tr('player.secondary_subtitle_text'))
         self.outline_title_label.setText(tr('player.subtitle_outline'))
         if hasattr(self, 'opacity_title_label'):
-            self.opacity_title_label.setText(tr('player.subtitle_bg_opacity'))
+            self.opacity_title_label.setText(f"{tr('player.subtitle_bg_opacity')} ({self.opacity_slider.value()}%)")
         if hasattr(self, 'translation_lang_title_label'):
             self.translation_lang_title_label.setText(tr('player.interactive_subtitles'))
         self.interactive_btn.setToolTip(tr('player.interactive_subtitles'))
@@ -778,6 +837,8 @@ class SubtitleButton(QPushButton):
         
         self.popup.move(target_x, target_y)
         self.popup.show()
+        self.popup.raise_()
+        self.popup.activateWindow()
 
     def _on_popup_subtitle_toggled(self, enabled):
         self.subtitles_enabled = enabled

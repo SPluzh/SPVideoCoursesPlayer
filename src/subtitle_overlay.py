@@ -188,7 +188,7 @@ class SubtitleOverlayWidget(QFrame):
     replayPhraseRequested = pyqtSignal()
 
     def __init__(self, video_widget, player_window):
-        super().__init__(video_widget, Qt.WindowType.Window | Qt.WindowType.FramelessWindowHint | Qt.WindowType.NoDropShadowWindowHint)
+        super().__init__(video_widget, Qt.WindowType.ToolTip | Qt.WindowType.FramelessWindowHint | Qt.WindowType.NoDropShadowWindowHint)
         self.video_widget = video_widget
         self.player_window = player_window
         
@@ -528,9 +528,30 @@ class SubtitleOverlayWidget(QFrame):
                     win.installEventFilter(self)
                     self._installed_window = win
 
+    def show(self):
+        super().show()
+        if self.player_window:
+            if hasattr(self.player_window, 'subtitle_btn'):
+                btn = self.player_window.subtitle_btn
+                if btn and hasattr(btn, 'popup') and btn.popup and btn.popup.isVisible():
+                    btn.popup.raise_()
+            if hasattr(self.player_window, 'volume_btn'):
+                btn = self.player_window.volume_btn
+                if btn and hasattr(btn, 'popup') and btn.popup and btn.popup.isVisible():
+                    btn.popup.raise_()
+
     def showEvent(self, event):
         self._check_install_window_filter()
         super().showEvent(event)
+        if self.player_window:
+            if hasattr(self.player_window, 'subtitle_btn'):
+                btn = self.player_window.subtitle_btn
+                if btn and hasattr(btn, 'popup') and btn.popup and btn.popup.isVisible():
+                    btn.popup.raise_()
+            if hasattr(self.player_window, 'volume_btn'):
+                btn = self.player_window.volume_btn
+                if btn and hasattr(btn, 'popup') and btn.popup and btn.popup.isVisible():
+                    btn.popup.raise_()
 
     def hideEvent(self, event):
         try:
