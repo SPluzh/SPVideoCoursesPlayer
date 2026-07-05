@@ -6,7 +6,8 @@ from pathlib import Path
 from collections import OrderedDict
 from PyQt6.QtWidgets import QWidget, QLabel, QVBoxLayout
 from PyQt6.QtCore import Qt, QTimer, QSize, QPoint
-from PyQt6.QtGui import QPixmap, QGuiApplication
+from PyQt6.QtGui import QPixmap, QGuiApplication, QImage
+from PIL import Image
 
 PREVIEW_CACHE_MAX = 50
 
@@ -65,12 +66,8 @@ class PreviewPopup(QWidget):
         self._idle_timer.setInterval(10000)  # 10 seconds idle → destroy MPV
         self._idle_timer.timeout.connect(self._destroy_preview_mpv)
 
-        # Temp dir for screenshots
-        self._temp_dir = Path(tempfile.gettempdir()) / "spvideoplayer_preview"
-        try:
-            self._temp_dir.mkdir(exist_ok=True)
-        except Exception as e:
-            logging.error(f"Error creating temp dir for previews: {e}")
+        # In-memory screenshot mode initialized
+        pass
 
         # Debounce Timer
         self.debounce_timer = QTimer()
@@ -84,8 +81,8 @@ class PreviewPopup(QWidget):
         self._preload_timer.setInterval(300)
         self._preload_timer.timeout.connect(self._ensure_preview_mpv)
 
-        self._capture_retry_count = 0
-        self._capture_retry_max = 4  # Max retries for frame capture
+        # Retry mechanism removed for faster direct capturing
+        pass
 
         self.resources_dir = Path(__file__).parent / "resources"
         self.ffmpeg_path = None  # Kept for compatibility if external ffmpeg logic is ever needed, but unused now
@@ -238,42 +235,21 @@ class PreviewPopup(QWidget):
         try:
             # Keyframe seek for speed
             self.preview_mpv.seek(time_key, "absolute+keyframes")
-            self._capture_retry_count = 0
 
-            # Wait 40ms for MPV to decode the frame, then attempt capture with retries
-            QTimer.singleShot(40, lambda: self._capture_frame_with_retry(time_key))
+            # Wait 40ms for MPV to decode the frame, then capture directly
+            QTimer.singleShot(40, lambda: self._capture_frame(time_key))
 
         except Exception as e:
             # Silently ignore errors during video switching
             logging.debug(f"Preview seek error (likely during video switch): {e}")
 
-    def _capture_frame_with_retry(self, time_key):
-        """Verify MPV has decoded the frame near time_key before capturing. Retries if not ready."""
-        if not self.preview_mpv or not self._mpv_video_loaded:
-            return
-
-        # If user moved to a different position, abandon this capture
-        if self.pending_time is not None and self.pending_time != time_key:
-            return
-
-        try:
-            current_pos = self.preview_mpv.time_pos
-        except Exception:
-            current_pos = None
-
-        # Check if MPV has seeked close enough to our target (within 2 seconds)
-        if current_pos is not None and abs(current_pos - time_key) <= 2.0:
-            self._capture_frame(time_key)
-        elif self._capture_retry_count < self._capture_retry_max:
-            self._capture_retry_count += 1
-            QTimer.singleShot(40, lambda: self._capture_frame_with_retry(time_key))
-        else:
-            # Timed out waiting — capture anyway (may still have a valid frame)
-            self._capture_frame(time_key)
-
     def _capture_frame(self, time_key):
-        """Capture screenshot to temp file and load it."""
+        """Capture screenshot using memory buffer and load it."""
         if not self.preview_mpv or not self._mpv_video_loaded:
+            return
+
+        # Guard: if user moved to a different position, abandon this capture
+        if self.pending_time is not None and self.pending_time != time_key:
             return
 
         # Guard: ensure we're still on the same video we seeked for
@@ -287,36 +263,38 @@ class PreviewPopup(QWidget):
             pass
 
         try:
-            temp_path = (
-                self._temp_dir
-                / f"preview_{hash(self.current_video_path)}_{time_key:.1f}.jpg"
-            )
-
-            self.preview_mpv.screenshot_to_file(str(temp_path), includes="video")
-
-            if temp_path.exists():
-                pixmap = QPixmap(str(temp_path))
+            # Capture frame in-memory (returns PIL Image)
+            pil_img = self.preview_mpv.screenshot_raw(includes="video")
+            if pil_img:
+                # Resize image using Pillow (which is extremely fast) before converting to QImage/QPixmap.
+                # This dramatically reduces the bytes copied to Qt (from 8MB+ to ~89KB).
+                # Keep aspect ratio: target width 200, height 112
+                pil_img.thumbnail((200, 112), Image.Resampling.BILINEAR)
+                
+                # Convert PIL Image to QImage
+                if pil_img.mode != "RGBA":
+                    pil_img = pil_img.convert("RGBA")
+                
+                # We must keep raw_data reference alive during QImage construction
+                raw_data = pil_img.tobytes("raw", "RGBA")
+                q_img = QImage(
+                    raw_data,
+                    pil_img.width,
+                    pil_img.height,
+                    QImage.Format.Format_RGBA8888
+                )
+                
+                # QPixmap.fromImage makes a deep copy of QImage, so raw_data scope doesn't matter after this
+                pixmap = QPixmap.fromImage(q_img)
+                
                 if not pixmap.isNull():
-                    # Scale to fit label
-                    scaled = pixmap.scaled(
-                        200,
-                        112,
-                        Qt.AspectRatioMode.KeepAspectRatio,
-                        Qt.TransformationMode.SmoothTransformation,
-                    )
                     # LRU eviction
                     if len(self.cache) >= PREVIEW_CACHE_MAX:
                         self.cache.popitem(last=False)
-                    self.cache[time_key] = scaled
-                    self.display_pixmap(scaled)
+                    self.cache[time_key] = pixmap
+                    self.display_pixmap(pixmap)
                 else:
                     self.thumb_label.setText("No Preview")
-
-                # Copy is in memory (QPixmap), delete file
-                try:
-                    temp_path.unlink(missing_ok=True)
-                except:
-                    pass
             else:
                 self.thumb_label.setText("...")
 
@@ -330,14 +308,3 @@ class PreviewPopup(QWidget):
         """Release resources."""
         self._idle_timer.stop()
         self._destroy_preview_mpv()
-
-        # Clean temp folder
-        if self._temp_dir.exists():
-            try:
-                for f in self._temp_dir.glob("preview_*.jpg"):
-                    try:
-                        f.unlink(missing_ok=True)
-                    except:
-                        pass
-            except Exception as e:
-                logging.error(f"Error cleaning temp dir: {e}")
