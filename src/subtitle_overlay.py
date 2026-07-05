@@ -288,6 +288,9 @@ class SubtitleOverlayWidget(QFrame):
         self._is_hovered = False
 
         self.update_geometry()
+        # Deferred: install filter on the real QMainWindow once the widget
+        # is fully embedded in the hierarchy (window() returns the root then).
+        QTimer.singleShot(0, self._install_main_window_filter)
 
     def enterEvent(self, event):
         try:
@@ -377,9 +380,13 @@ class SubtitleOverlayWidget(QFrame):
         if not self.text_edit.toPlainText().strip() and not self.secondary_text_edit.toPlainText().strip():
             return False
 
+        # Always resolve the real top-level window, not just cached _installed_window
         win = getattr(self, '_installed_window', None)
-        if not win and self.player_window:
-            win = self.player_window.window()
+        if not win:
+            if self.video_widget:
+                win = self.video_widget.window()
+            elif self.player_window:
+                win = self.player_window.window()
 
         if win and win.isMinimized():
             return False
@@ -527,6 +534,36 @@ class SubtitleOverlayWidget(QFrame):
                             pass
                     win.installEventFilter(self)
                     self._installed_window = win
+
+    def _install_main_window_filter(self):
+        """Find the true top-level QMainWindow and install an event filter on it.
+        Called deferred (via QTimer.singleShot) so the widget hierarchy is fully
+        built and video_widget.window() returns the real root window.
+        """
+        win = None
+        if self.video_widget:
+            win = self.video_widget.window()
+        elif self.player_window:
+            win = self.player_window.window()
+
+        if not win:
+            return
+
+        # Already installed on this window — nothing to do
+        if getattr(self, '_installed_window', None) is win:
+            return
+
+        # Remove filter from the old window if present
+        old_win = getattr(self, '_installed_window', None)
+        if old_win:
+            try:
+                old_win.removeEventFilter(self)
+            except Exception:
+                pass
+
+        win.installEventFilter(self)
+        self._installed_window = win
+        logging.debug(f"SubtitleOverlay: event filter installed on {win!r}")
 
     def show(self):
         super().show()
@@ -752,15 +789,13 @@ class SubtitleOverlayWidget(QFrame):
                 if self._installed_window.isMinimized():
                     self.hide()
                 else:
-                    QTimer.singleShot(0, self.update_visibility)
+                    # Small delay: window is still animating back from minimized state
+                    QTimer.singleShot(150, self.update_visibility)
         elif obj == self.player_window:
+            # player_window is a QWidget (VideoPlayerWidget), NOT a QWindow —
+            # WindowStateChange is never emitted by it, so handle only geometry.
             if event.type() in (QEvent.Type.Move, QEvent.Type.Resize):
                 self.update_geometry()
-            elif event.type() == QEvent.Type.WindowStateChange:
-                if self.player_window.isMinimized():
-                    self.hide()
-                else:
-                    QTimer.singleShot(0, self.update_visibility)
         return super().eventFilter(obj, event)
 
     def closeEvent(self, event):
