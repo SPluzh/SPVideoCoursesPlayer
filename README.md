@@ -1,5 +1,3 @@
-<img width="2150" height="1035" alt="image" src="https://github.com/user-attachments/assets/880f39be-1094-4c79-a70b-0c88f7e71a83" />
-
 # SP Video Courses Player
 
 [![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)](https://www.python.org/downloads/)
