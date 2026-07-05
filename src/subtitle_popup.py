@@ -519,8 +519,6 @@ class SubtitlePopup(QWidget):
         self.selected_index = index
         self._update_checkmarks()
         self.subtitleChanged.emit(index)
-        # Close popup after selection
-        QTimer.singleShot(150, self.hide)
     
     def _toggle_subtitles(self):
         self.subtitles_enabled = not self.subtitles_enabled
@@ -541,6 +539,14 @@ class SubtitlePopup(QWidget):
     
     def hideEvent(self, event):
         if isinstance(self.parent(), SubtitleButton):
+            from PyQt6.QtGui import QCursor
+            btn = self.parent()
+            btn_rect = QRect(btn.mapToGlobal(QPoint(0, 0)), btn.size())
+            popup_rect = QRect(self.mapToGlobal(QPoint(0, 0)), self.size())
+            if btn_rect.contains(QCursor.pos()) or popup_rect.contains(QCursor.pos()):
+                QTimer.singleShot(50, self.show)
+                super().hideEvent(event)
+                return
             self.parent().on_popup_hidden()
         super().hideEvent(event)
 
@@ -651,7 +657,6 @@ class SubtitlePopup(QWidget):
             self.secondary_enabled_cb.blockSignals(False)
             self.secondary_container.setVisible(True)
             self.secondarySubtitleToggled.emit(True)
-        QTimer.singleShot(150, self.hide)
 
     def clearSecondary(self):
         self.secondary_list_widget.clear()
