@@ -2156,9 +2156,12 @@ class VideoCourseBrowser(QMainWindow):
 
         self.show()
 
-        # Update subtitle overlay geometry after entering PiP mode
+        # Update subtitle overlay after entering PiP mode.
+        # reattach_to_video_widget() rebinds the ToolTip native window to the
+        # freshly-recreated HWND so that mouse events (hover/translation) work again.
         if hasattr(self.video_player, "subtitle_overlay") and self.video_player.subtitle_overlay:
-            QTimer.singleShot(100, self.video_player.subtitle_overlay.update_geometry)
+            QTimer.singleShot(150, self.video_player.subtitle_overlay.update_geometry)
+            QTimer.singleShot(350, self.video_player.subtitle_overlay.reattach_to_video_widget)
 
         # Update close button position after window is shown
         QTimer.singleShot(0, self._update_pip_close_button_position)
@@ -2208,7 +2211,7 @@ class VideoCourseBrowser(QMainWindow):
 
             for widget in self.video_player.findChildren(QWidget):
                 widget.removeEventFilter(self)
-                if not isinstance(widget, (MPVVideoWidget, ClickableSlider)):
+                if not isinstance(widget, (MPVVideoWidget, ClickableSlider)) and type(widget).__name__ not in ("SubtitleOverlayWidget", "SubtitleTextEdit"):
                     widget.setMouseTracking(False)
 
         self.setMouseTracking(False)
@@ -2236,9 +2239,12 @@ class VideoCourseBrowser(QMainWindow):
         self.raise_()
         self.activateWindow()
 
-        # Update subtitle overlay geometry after exiting PiP mode
+        # Update subtitle overlay after exiting PiP mode.
+        # reattach_to_video_widget() rebinds the ToolTip native window to the
+        # freshly-recreated HWND so that mouse events (hover/translation) work again.
         if hasattr(self.video_player, "subtitle_overlay") and self.video_player.subtitle_overlay:
-            QTimer.singleShot(100, self.video_player.subtitle_overlay.update_geometry)
+            QTimer.singleShot(150, self.video_player.subtitle_overlay.update_geometry)
+            QTimer.singleShot(350, self.video_player.subtitle_overlay.reattach_to_video_widget)
 
         # Flags change might require re-initializing taskbar buttons
         QTimer.singleShot(500, self._refresh_taskbar_buttons)

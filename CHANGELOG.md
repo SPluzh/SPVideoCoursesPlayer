@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 - **Performance**: Optimized seek slider hover preview popup generation speed
 - **Subtitles**: Fixed subtitle popup closing automatically when switching subtitle or secondary subtitle tracks.
 - **PiP**: Fixed subtitle position being misaligned after entering and exiting Picture-in-Picture mode.
+- **PiP**: Fixed subtitle hover highlights and translation popups not working after returning from Picture-in-Picture mode.
 
 ## [1.6.4]
 - **Subtitles**: Added a "Show secondary subtitle only on hover" option to display secondary subtitles dynamically on mouse hover.

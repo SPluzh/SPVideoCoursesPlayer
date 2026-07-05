@@ -69,17 +69,21 @@ class SubtitleTextEdit(QTextEdit):
             # Let default QTextEdit process selection / drag
             super().mouseMoveEvent(event)
 
+            pos = event.position().toPoint()
+            logging.warning(f"SubtitleTextEdit [{self.objectName()}] mouseMoveEvent at pos {pos}")
+
             # If user is selecting text (left button is down), do not trigger hover translation
             if event.buttons() & Qt.MouseButton.LeftButton:
+                logging.warning(f"  mouseMoveEvent: LeftButton is pressed, skipping hover")
                 self.hover_timer.stop()
                 return
 
             # If there is already an active selection, do not trigger hover translation
             if self.textCursor().hasSelection():
+                logging.warning(f"  mouseMoveEvent: textCursor has selection, skipping hover")
                 self.hover_timer.stop()
                 return
 
-            pos = event.position().toPoint()
             cursor = self.cursorForPosition(pos)
 
             if not cursor.isNull():
@@ -116,14 +120,21 @@ class SubtitleTextEdit(QTextEdit):
                             y = r_start.top()
                             
                             self.hover_pos = self.viewport().mapToGlobal(QPoint(x, y))
-                            logging.debug(f"Subtitle word hovered: '{cleaned_word}', position: {self.hover_pos}")
+                            logging.warning(f"Subtitle word hovered: '{cleaned_word}', position: {self.hover_pos}")
                             # Reset timer
                             self.hover_timer.start(300) # 300ms debounce
                         return
+                    else:
+                        logging.warning(f"  mouseMoveEvent: cleaned_word='{cleaned_word}' is empty or not alpha")
+                else:
+                    logging.warning(f"  mouseMoveEvent: pos {pos} not in expanded_rect {expanded_rect} (cursor rect {rect})")
+            else:
+                logging.warning(f"  mouseMoveEvent: cursor is null")
 
             # If not over a word, clear
             self.hover_timer.stop()
             if self.current_hovered_word:
+                logging.warning(f"  mouseMoveEvent: clearing highlight because mouse is not over a word")
                 self.clear_highlight()
         except Exception as e:
             logging.error(f"Error in mouseMoveEvent: {e}", exc_info=True)
@@ -159,6 +170,7 @@ class SubtitleTextEdit(QTextEdit):
 
     def leaveEvent(self, event):
         try:
+            logging.warning(f"SubtitleTextEdit [{self.objectName()}] leaveEvent triggered")
             self.hover_timer.stop()
             cursor = self.textCursor()
             if cursor.hasSelection():
@@ -171,6 +183,7 @@ class SubtitleTextEdit(QTextEdit):
 
     def enterEvent(self, event):
         try:
+            logging.warning(f"SubtitleTextEdit [{self.objectName()}] enterEvent triggered")
             parent = self.parent()
             if parent and hasattr(parent, "mouseEntered"):
                 parent.mouseEntered.emit()
@@ -286,6 +299,7 @@ class SubtitleOverlayWidget(QFrame):
         self.current_font_size = 0
         self.secondary_hover_only = True
         self._is_hovered = False
+        self._pip_transition = False
 
         self.update_geometry()
         # Deferred: install filter on the real QMainWindow once the widget
@@ -299,6 +313,7 @@ class SubtitleOverlayWidget(QFrame):
 
     def enterEvent(self, event):
         try:
+            logging.warning("SubtitleOverlayWidget enterEvent triggered")
             self.mouseEntered.emit()
             super().enterEvent(event)
         except Exception as e:
@@ -306,6 +321,7 @@ class SubtitleOverlayWidget(QFrame):
 
     def leaveEvent(self, event):
         try:
+            logging.warning("SubtitleOverlayWidget leaveEvent triggered")
             from PyQt6.QtGui import QCursor
             if not self.rect().contains(self.mapFromGlobal(QCursor.pos())):
                 self.mouseLeft.emit()
@@ -385,19 +401,29 @@ class SubtitleOverlayWidget(QFrame):
         if not self.text_edit.toPlainText().strip() and not self.secondary_text_edit.toPlainText().strip():
             return False
 
-        # Always resolve the real top-level window, not just cached _installed_window
-        win = getattr(self, '_installed_window', None)
-        if not win:
-            if self.video_widget:
-                win = self.video_widget.window()
-            elif self.player_window:
-                win = self.player_window.window()
+        # Always resolve the real top-level window fresh (never trust stale cache).
+        # After PiP setWindowFlags() the HWND is recreated, so video_widget.window()
+        # may return a different object than _installed_window.
+        win = None
+        if self.video_widget:
+            win = self.video_widget.window()
+        if not win and self.player_window:
+            win = self.player_window.window()
+
+        # If the top-level window changed (e.g. after PiP flag switch), silently
+        # reinstall the event filter so future visibility checks work correctly.
+        if win and getattr(self, '_installed_window', None) is not win:
+            self.reinstall_window_filter()
+
+        win_active = win.isActiveWindow() if win else False
+        win_minimized = win.isMinimized() if win else False
+        logging.warning(f"SubtitleOverlayWidget._should_be_visible: win={win}, active={win_active}, minimized={win_minimized}, pip_transition={self._pip_transition}")
 
         if win and win.isMinimized():
             return False
 
         # Hide when the user has switched to another application
-        if win and not win.isActiveWindow():
+        if win and not win.isActiveWindow() and not self._pip_transition:
             return False
 
         return True
@@ -573,6 +599,112 @@ class SubtitleOverlayWidget(QFrame):
         win.installEventFilter(self)
         self._installed_window = win
         logging.debug(f"SubtitleOverlay: event filter installed on {win!r}")
+
+    def reinstall_window_filter(self):
+        """Re-attach the event filter to the current top-level window.
+
+        Must be called after any setWindowFlags() call that recreates the HWND,
+        such as entering or exiting PiP mode. The old _installed_window reference
+        becomes stale after flag changes, causing isActiveWindow() to return False
+        and breaking hover highlight / translation popup.
+        """
+        try:
+            win = None
+            if self.video_widget:
+                win = self.video_widget.window()
+            elif self.player_window:
+                win = self.player_window.window()
+
+            if not win:
+                return
+
+            old_win = getattr(self, '_installed_window', None)
+            if old_win is not win:
+                # Remove filter from the stale window (may already be invalid)
+                if old_win:
+                    try:
+                        old_win.removeEventFilter(self)
+                    except Exception:
+                        pass
+                self._installed_window = None
+
+                # Install on the fresh window
+                win.installEventFilter(self)
+                self._installed_window = win
+                logging.debug(f"SubtitleOverlay: reinstalled event filter on {win!r}")
+        except Exception as e:
+            logging.error(f"SubtitleOverlay.reinstall_window_filter: {e}", exc_info=True)
+
+    def reattach_to_video_widget(self):
+        """Re-bind the overlay to the video_widget's native parent after PiP.
+
+        When setWindowFlags() is called on the main window (enter/exit PiP mode),
+        Qt recreates the native HWND for the entire window hierarchy. The ToolTip-type
+        overlay (SubtitleOverlayWidget) loses its native parent binding and stops
+        receiving mouse events (enterEvent / leaveEvent / mouseMoveEvent all break).
+
+        Calling setParent() + setWindowFlags() + show() forces Qt to create a new
+        native ToolTip window attached to the current (fresh) native parent of
+        video_widget. After this, mouse tracking is fully restored.
+        """
+        try:
+            if not self.video_widget:
+                return
+
+            self._pip_transition = True
+            QTimer.singleShot(600, self._clear_pip_transition)
+
+            was_visible = self.isVisible()
+
+            # Temporarily hide to avoid visual glitch during reparenting
+            super().hide()
+
+            # Re-attach: setParent resets window flags, so we must set them again
+            self.setParent(self.video_widget)
+            self.setWindowFlags(
+                Qt.WindowType.ToolTip
+                | Qt.WindowType.FramelessWindowHint
+                | Qt.WindowType.NoDropShadowWindowHint
+            )
+
+            # Restore WA attributes that setParent may clear
+            self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+            self.setAttribute(Qt.WidgetAttribute.WA_ShowWithoutActivating)
+
+            # Reinstall event filter on the fresh top-level window
+            self.reinstall_window_filter()
+
+            # Recompute geometry and restore visibility
+            self.update_geometry()
+            if was_visible:
+                self.update_visibility()
+
+            # Clear any stale text selection/hover state from PiP mode
+            for edit in (self.text_edit, self.secondary_text_edit):
+                try:
+                    cursor = edit.textCursor()
+                    if cursor.hasSelection():
+                        cursor.clearSelection()
+                        edit.setTextCursor(cursor)
+                    edit.hover_timer.stop()
+                    edit.current_hovered_word = ""
+                    edit.current_hovered_cursor = None
+                    edit.setExtraSelections([])
+                except Exception:
+                    pass
+
+            # Explicitly restore mouse tracking properties
+            self.setMouseTracking(True)
+            self.text_edit.setMouseTracking(True)
+            self.secondary_text_edit.setMouseTracking(True)
+
+            logging.debug("SubtitleOverlay: reattached to video_widget native parent")
+        except Exception as e:
+            logging.error(f"SubtitleOverlay.reattach_to_video_widget: {e}", exc_info=True)
+
+    def _clear_pip_transition(self):
+        self._pip_transition = False
+        self.update_visibility()
 
     def show(self):
         super().show()
@@ -790,7 +922,7 @@ class SubtitleOverlayWidget(QFrame):
             elif event.type() == QEvent.Type.ApplicationActivate:
                 # User switched back — re-evaluate visibility after a short delay
                 # (window activation state may not be updated yet)
-                QTimer.singleShot(150, self.update_visibility)
+                QTimer.singleShot(400, self.update_visibility)
             return False
         if obj == self.video_widget:
             if event.type() in (QEvent.Type.Resize, QEvent.Type.Move, QEvent.Type.Show, QEvent.Type.Hide):
