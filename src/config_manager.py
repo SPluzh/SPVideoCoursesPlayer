@@ -66,6 +66,7 @@ class ConfigManager:
             "extensions": ".srt,.ass,.ssa,.sub,.idx,.vtt,.sup,.stl,.smi,.txt",
             "interactive": "False",
             "translation_target_lang": "ru",
+            "secondary_subtitle_hover_only": "True",
         },
         "Audio": {
             "extensions": ".mp3,.aac,.ac3,.dts,.flac,.wav,.ogg,.m4a,.wma,.eac3,.opus,.mka",
@@ -419,6 +420,19 @@ class ConfigManager:
         if "Subtitles" not in config:
             config["Subtitles"] = {}
         config["Subtitles"]["interactive"] = str(enabled)
+        self._write_config(config)
+
+    def get_secondary_subtitle_hover_only(self) -> bool:
+        """Returns True if the secondary subtitle should only be shown on hover."""
+        config = self._read_config()
+        return config.getboolean("Subtitles", "secondary_subtitle_hover_only", fallback=True)
+
+    def set_secondary_subtitle_hover_only(self, enabled: bool):
+        """Sets whether the secondary subtitle should only be shown on hover."""
+        config = self._read_config()
+        if "Subtitles" not in config:
+            config["Subtitles"] = {}
+        config["Subtitles"]["secondary_subtitle_hover_only"] = str(enabled)
         self._write_config(config)
 
     # --- Window state ---

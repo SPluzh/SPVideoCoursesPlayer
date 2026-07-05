@@ -283,6 +283,8 @@ class SubtitleOverlayWidget(QFrame):
         self.current_text = ""
         self.secondary_text = ""
         self.current_font_size = 0
+        self.secondary_hover_only = True
+        self._is_hovered = False
 
         self.update_geometry()
 
@@ -301,6 +303,46 @@ class SubtitleOverlayWidget(QFrame):
             super().leaveEvent(event)
         except Exception as e:
             logging.error(f"Error in leaveEvent: {e}", exc_info=True)
+
+    def set_secondary_hover_only(self, enabled: bool):
+        self.secondary_hover_only = enabled
+        self._apply_secondary_visibility()
+
+    def _should_secondary_be_visible(self) -> bool:
+        if not self.secondary_text_edit.toPlainText().strip():
+            return False
+        if self.secondary_hover_only:
+            is_over_overlay = False
+            try:
+                from PyQt6.QtGui import QCursor
+                is_over_overlay = self.rect().contains(self.mapFromGlobal(QCursor.pos()))
+            except Exception:
+                pass
+            
+            is_over_translation = False
+            try:
+                from PyQt6.QtGui import QCursor
+                if self.player_window and hasattr(self.player_window, 'translation_popup'):
+                    pop = self.player_window.translation_popup
+                    if pop and pop.isVisible():
+                        is_over_translation = pop.rect().contains(pop.mapFromGlobal(QCursor.pos()))
+            except Exception:
+                pass
+                
+            self._is_hovered = is_over_overlay or is_over_translation
+            return self._is_hovered
+        return True
+
+    def _apply_secondary_visibility(self):
+        """Show/hide secondary_text_edit based on hover_only flag and hover state."""
+        should_visible = self._should_secondary_be_visible()
+        is_visible = self.secondary_text_edit.isVisible()
+        if should_visible != is_visible:
+            if should_visible:
+                self.secondary_text_edit.show()
+            else:
+                self.secondary_text_edit.hide()
+            self.update_geometry()
 
     def get_calculated_font_size(self):
         if self.video_widget:
@@ -550,7 +592,7 @@ class SubtitleOverlayWidget(QFrame):
         else:
             self.text_edit.hide()
 
-        if self.secondary_text_edit.toPlainText().strip():
+        if self._should_secondary_be_visible():
             self.secondary_text_edit.document().setTextWidth(text_width)
             secondary_height = int(self.secondary_text_edit.document().size().height())
             self.secondary_text_edit.setFixedHeight(secondary_height)
@@ -618,6 +660,8 @@ class SubtitleOverlayWidget(QFrame):
             self.replay_phrase_btn.setGeometry(btn_x, btn_y, btn_width, btn_height)
 
     def _show_translate_btn(self):
+        self._is_hovered = True
+        self._apply_secondary_visibility()
         if self.current_text:
             if hasattr(self, 'translate_btn') and self.translate_btn:
                 self.translate_btn.show()
@@ -629,6 +673,8 @@ class SubtitleOverlayWidget(QFrame):
                 self.replay_phrase_btn.show()
 
     def _hide_translate_btn(self):
+        self._is_hovered = False
+        self._apply_secondary_visibility()
         if hasattr(self, 'translate_btn') and self.translate_btn:
             self.translate_btn.hide()
         if hasattr(self, 'prev_phrase_btn') and self.prev_phrase_btn:

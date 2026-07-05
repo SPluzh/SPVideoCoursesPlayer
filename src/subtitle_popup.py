@@ -81,6 +81,7 @@ class SubtitlePopup(QWidget):
     interactiveToggled = pyqtSignal(bool)
     secondarySubtitleToggled = pyqtSignal(bool)
     secondarySubtitleChanged = pyqtSignal(int)
+    secondaryHoverOnlyChanged = pyqtSignal(bool)
     
     def __init__(self, parent=None):
         super().__init__(parent, Qt.WindowType.Popup | Qt.WindowType.FramelessWindowHint)
@@ -92,7 +93,7 @@ class SubtitlePopup(QWidget):
         
         self.setObjectName("subtitlePopup")
         self.setMinimumWidth(400)
-        self.setFixedHeight(270)
+        self.setFixedHeight(300)
         
         # Left side: toggle + subtitle list
         left_panel = QHBoxLayout()
@@ -210,6 +211,13 @@ class SubtitlePopup(QWidget):
         self.secondary_enabled_cb.setObjectName("secondarySubtitleCheckbox")
         self.secondary_enabled_cb.toggled.connect(self._on_secondary_enabled_toggled)
         list_section.addWidget(self.secondary_enabled_cb)
+
+        # Checkbox: show secondary subtitle only on hover
+        self.secondary_hover_only_cb = QCheckBox(tr("player.secondary_subtitle_hover_only"))
+        self.secondary_hover_only_cb.setObjectName("secondaryHoverOnlyCheckbox")
+        self.secondary_hover_only_cb.setChecked(True)
+        self.secondary_hover_only_cb.toggled.connect(self._on_secondary_hover_only_toggled)
+        list_section.addWidget(self.secondary_hover_only_cb)
 
         # Container for secondary controls
         self.secondary_container = QWidget()
@@ -483,6 +491,8 @@ class SubtitlePopup(QWidget):
     def _update_toggle_icon(self):
         if hasattr(self, "secondary_enabled_cb"):
             self.secondary_enabled_cb.setEnabled(self.subtitles_enabled)
+        if hasattr(self, "secondary_hover_only_cb"):
+            self.secondary_hover_only_cb.setEnabled(self.subtitles_enabled)
         if hasattr(self, "secondary_container"):
             self.secondary_container.setEnabled(self.subtitles_enabled)
         
@@ -513,6 +523,15 @@ class SubtitlePopup(QWidget):
         self.interactive_btn.setChecked(enabled)
         self.interactive_btn.blockSignals(False)
 
+    def _on_secondary_hover_only_toggled(self, checked):
+        self.secondaryHoverOnlyChanged.emit(checked)
+
+    def setSecondaryHoverOnly(self, enabled):
+        if hasattr(self, "secondary_hover_only_cb"):
+            self.secondary_hover_only_cb.blockSignals(True)
+            self.secondary_hover_only_cb.setChecked(enabled)
+            self.secondary_hover_only_cb.blockSignals(False)
+
     def update_texts(self):
         """Update texts on language change."""
         self.list_title_label.setText(tr('player.subtitle_tracks'))
@@ -527,6 +546,8 @@ class SubtitlePopup(QWidget):
         if hasattr(self, 'translation_lang_btn'):
             self.translation_lang_btn.setToolTip(tr('subtitle_popup.translation_lang_tooltip'))
         self.secondary_enabled_cb.setText(tr('player.enable_secondary_subtitle'))
+        if hasattr(self, "secondary_hover_only_cb"):
+            self.secondary_hover_only_cb.setText(tr('player.secondary_subtitle_hover_only'))
         self.secondary_title_label.setText(tr('player.secondary_subtitle_track'))
         self._update_checkmarks()
         self._update_secondary_checkmarks()
@@ -632,6 +653,7 @@ class SubtitleButton(QPushButton):
     subtitleChanged = pyqtSignal(int)  # combo box index
     secondarySubtitleToggled = pyqtSignal(bool)
     secondarySubtitleChanged = pyqtSignal(int)
+    secondaryHoverOnlyChanged = pyqtSignal(bool)
     
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -645,6 +667,7 @@ class SubtitleButton(QPushButton):
         self.popup.subtitleToggled.connect(self._on_popup_subtitle_toggled)
         self.popup.secondarySubtitleToggled.connect(self.secondarySubtitleToggled.emit)
         self.popup.secondarySubtitleChanged.connect(self.secondarySubtitleChanged.emit)
+        self.popup.secondaryHoverOnlyChanged.connect(self.secondaryHoverOnlyChanged.emit)
         self.last_hide_time = 0
         self.subtitles_enabled = False
         self._update_icon()
@@ -753,6 +776,9 @@ class SubtitleButton(QPushButton):
 
     def setSecondaryEnabled(self, enabled):
         self.popup.setSecondaryEnabled(enabled)
+
+    def setSecondaryHoverOnly(self, enabled):
+        self.popup.setSecondaryHoverOnly(enabled)
 
     def secondaryItemData(self, index):
         return self.popup.secondaryItemData(index)

@@ -446,3 +446,9 @@ class TranslationPopup(QFrame):
     def enterEvent(self, event):
         self.hide_timer.stop()
         super().enterEvent(event)
+
+    def hideEvent(self, event):
+        super().hideEvent(event)
+        parent = self.parent()
+        if parent and hasattr(parent, "_apply_secondary_visibility"):
+            parent._apply_secondary_visibility()

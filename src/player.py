@@ -387,6 +387,7 @@ class VideoPlayerWidget(QWidget):
         self.subtitle_btn.popup.interactiveToggled.connect(self.toggle_interactive_subtitles)
         self.subtitle_btn.secondarySubtitleToggled.connect(self._on_secondary_subtitle_toggled)
         self.subtitle_btn.secondarySubtitleChanged.connect(self._on_secondary_subtitle_changed)
+        self.subtitle_btn.secondaryHoverOnlyChanged.connect(self._on_secondary_hover_only_changed)
 
         self.sub_settings_btn = QPushButton()
         self.sub_settings_btn.setObjectName("subSettingsBtn")
@@ -2565,6 +2566,8 @@ class VideoPlayerWidget(QWidget):
                 self.subtitle_btn.popup.setInteractiveSubtitlesEnabled(interactive)
                 target_lang = self.config.get_translation_target_lang()
                 self.subtitle_btn.setTranslationTargetLang(target_lang)
+                hover_only = self.config.get_secondary_subtitle_hover_only()
+                self.subtitle_btn.setSecondaryHoverOnly(hover_only)
 
         if self.player:
             self._apply_subtitle_styles()
@@ -2574,6 +2577,9 @@ class VideoPlayerWidget(QWidget):
                 color, border_color, scale,
                 getattr(self, "secondary_sub_color", None)
             )
+            if self.config:
+                hover_only = self.config.get_secondary_subtitle_hover_only()
+                self.subtitle_overlay.set_secondary_hover_only(hover_only)
 
     def _apply_subtitle_styles(self):
         """Apply stored subtitle styles to MPV player."""
@@ -3122,6 +3128,14 @@ class VideoPlayerWidget(QWidget):
             self.subtitle_overlay.set_secondary_text(text or "")
         else:
             self.subtitle_overlay.set_secondary_text("")
+
+    def _on_secondary_hover_only_changed(self, enabled):
+        """Handle toggling of showing secondary subtitles only on hover."""
+        logging.info(f"📝 _on_secondary_hover_only_changed({enabled}) called")
+        if self.config:
+            self.config.set_secondary_subtitle_hover_only(enabled)
+        if hasattr(self, "subtitle_overlay") and self.subtitle_overlay:
+            self.subtitle_overlay.set_secondary_hover_only(enabled)
 
     def _on_secondary_subtitle_toggled(self, enabled):
         """Enable/disable secondary subtitle."""

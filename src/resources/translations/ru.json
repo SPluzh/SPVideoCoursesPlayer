@@ -210,6 +210,7 @@
         "secondary_track": "Вторая дорожка",
         "secondary_volume": "Громкость второй дорожки",
         "enable_secondary_subtitle": "Включить вторые субтитры",
+        "secondary_subtitle_hover_only": "Показывать только при наведении",
         "secondary_subtitle_track": "Вторые субтитры",
         "filter_tags": "Фильтр по тегам\nЛКМ — вкл/выкл\nПКМ — выбор тегов",
         "file_not_found": "Файл не найден"

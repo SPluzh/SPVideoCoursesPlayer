@@ -210,6 +210,7 @@
         "secondary_track": "Secondary Track",
         "secondary_volume": "Secondary Volume",
         "enable_secondary_subtitle": "Enable Secondary Subtitles",
+        "secondary_subtitle_hover_only": "Show secondary subtitle only on hover",
         "secondary_subtitle_track": "Secondary Subtitle Track",
         "filter_tags": "Filter by tags\nL-click to toggle\nR-click to select tags",
         "file_not_found": "File not found"
