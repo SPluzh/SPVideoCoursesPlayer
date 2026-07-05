@@ -1,5 +1,7 @@
 # SP Video Courses Player
 
+Video player for local courses with hierarchical library, progress tracking, bookmarks, tags, and learning statistics. Includes video zoom, audio enhancement, custom subtitle settings, and instant thumbnail previews on the timeline
+
 [![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![PyQt6](https://img.shields.io/badge/PyQt6-6.6.0+-green.svg)](https://pypi.org/project/PyQt6/)
 [![Platform](https://img.shields.io/badge/Platform-Windows-lightgrey.svg)](https://www.microsoft.com/windows)
@@ -7,8 +9,6 @@
 [![Latest Release Downloads](https://img.shields.io/github/downloads/SPluzh/SPVideoCoursesPlayer/latest/total)](https://github.com/SPluzh/SPVideoCoursesPlayer/releases/latest)
 [![Downloads](https://img.shields.io/github/downloads/SPluzh/SPVideoCoursesPlayer/total)](https://github.com/SPluzh/SPVideoCoursesPlayer/releases)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
-
-Video player for local courses with hierarchical library, progress tracking, bookmarks, tags, and learning statistics. Includes video zoom, audio enhancement, custom subtitle settings, and instant thumbnail previews on the timeline
 
 ![](attachments/SP_Video_Courses_Player.gif)
 ![](attachments/SP_Video_Courses_Player_translate_popup.gif)
