@@ -70,17 +70,14 @@ class SubtitleTextEdit(QTextEdit):
             super().mouseMoveEvent(event)
 
             pos = event.position().toPoint()
-            logging.warning(f"SubtitleTextEdit [{self.objectName()}] mouseMoveEvent at pos {pos}")
 
             # If user is selecting text (left button is down), do not trigger hover translation
             if event.buttons() & Qt.MouseButton.LeftButton:
-                logging.warning(f"  mouseMoveEvent: LeftButton is pressed, skipping hover")
                 self.hover_timer.stop()
                 return
 
             # If there is already an active selection, do not trigger hover translation
             if self.textCursor().hasSelection():
-                logging.warning(f"  mouseMoveEvent: textCursor has selection, skipping hover")
                 self.hover_timer.stop()
                 return
 
@@ -120,21 +117,13 @@ class SubtitleTextEdit(QTextEdit):
                             y = r_start.top()
                             
                             self.hover_pos = self.viewport().mapToGlobal(QPoint(x, y))
-                            logging.warning(f"Subtitle word hovered: '{cleaned_word}', position: {self.hover_pos}")
                             # Reset timer
                             self.hover_timer.start(300) # 300ms debounce
                         return
-                    else:
-                        logging.warning(f"  mouseMoveEvent: cleaned_word='{cleaned_word}' is empty or not alpha")
-                else:
-                    logging.warning(f"  mouseMoveEvent: pos {pos} not in expanded_rect {expanded_rect} (cursor rect {rect})")
-            else:
-                logging.warning(f"  mouseMoveEvent: cursor is null")
 
             # If not over a word, clear
             self.hover_timer.stop()
             if self.current_hovered_word:
-                logging.warning(f"  mouseMoveEvent: clearing highlight because mouse is not over a word")
                 self.clear_highlight()
         except Exception as e:
             logging.error(f"Error in mouseMoveEvent: {e}", exc_info=True)
@@ -170,7 +159,6 @@ class SubtitleTextEdit(QTextEdit):
 
     def leaveEvent(self, event):
         try:
-            logging.warning(f"SubtitleTextEdit [{self.objectName()}] leaveEvent triggered")
             self.hover_timer.stop()
             cursor = self.textCursor()
             if cursor.hasSelection():
@@ -183,7 +171,6 @@ class SubtitleTextEdit(QTextEdit):
 
     def enterEvent(self, event):
         try:
-            logging.warning(f"SubtitleTextEdit [{self.objectName()}] enterEvent triggered")
             self.viewport().setMouseTracking(True)
             parent = self.parent()
             if parent and hasattr(parent, "mouseEntered"):
@@ -314,7 +301,6 @@ class SubtitleOverlayWidget(QFrame):
 
     def enterEvent(self, event):
         try:
-            logging.warning("SubtitleOverlayWidget enterEvent triggered")
             self.mouseEntered.emit()
             super().enterEvent(event)
         except Exception as e:
@@ -322,7 +308,6 @@ class SubtitleOverlayWidget(QFrame):
 
     def leaveEvent(self, event):
         try:
-            logging.warning("SubtitleOverlayWidget leaveEvent triggered")
             from PyQt6.QtGui import QCursor
             if not self.rect().contains(self.mapFromGlobal(QCursor.pos())):
                 self.mouseLeft.emit()
@@ -418,7 +403,6 @@ class SubtitleOverlayWidget(QFrame):
 
         win_active = win.isActiveWindow() if win else False
         win_minimized = win.isMinimized() if win else False
-        logging.warning(f"SubtitleOverlayWidget._should_be_visible: win={win}, active={win_active}, minimized={win_minimized}, pip_transition={self._pip_transition}")
 
         if win and win.isMinimized():
             return False
