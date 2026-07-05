@@ -2344,11 +2344,16 @@ class VideoPlayerWidget(QWidget):
             elif property_name == "translation-target-lang":
                 self.subtitle_style_changed.emit("translation-target-lang", value)
                 logging.info(f"📝 Subtitle translation target language: {value}")
+            elif property_name == "sub-bg-opacity":
+                self.sub_bg_opacity = value
+                self.subtitle_style_changed.emit("sub-bg-opacity", value)
+                logging.info(f"📝 Subtitle background opacity: {value}")
 
             if hasattr(self, "subtitle_overlay") and self.subtitle_overlay:
                 self.subtitle_overlay.set_subtitle_style(
                     self.sub_color, self.sub_border_color, self.sub_scale,
-                    getattr(self, "secondary_sub_color", None)
+                    getattr(self, "secondary_sub_color", None),
+                    getattr(self, "sub_bg_opacity", 70)
                 )
         except Exception as e:
             logging.error(f"Error changing subtitle style: {e}", exc_info=True)
@@ -2553,11 +2558,12 @@ class VideoPlayerWidget(QWidget):
             if self.osd_manager:
                 self.osd_manager.show_marker_deleted()
 
-    def set_subtitle_styles(self, color, border_color, scale, secondary_color=None):
+    def set_subtitle_styles(self, color, border_color, scale, secondary_color=None, bg_opacity=70):
         """Set initial subtitle styles."""
         self.sub_color = color
         self.sub_border_color = border_color
         self.sub_scale = scale
+        self.sub_bg_opacity = bg_opacity
         if secondary_color is not None:
             self.secondary_sub_color = secondary_color
 
@@ -2567,6 +2573,8 @@ class VideoPlayerWidget(QWidget):
             self.subtitle_btn.popup.outline_color = border_color
             if secondary_color is not None:
                 self.subtitle_btn.popup.secondary_text_color = secondary_color
+            if hasattr(self.subtitle_btn.popup, "setBgOpacity"):
+                self.subtitle_btn.popup.setBgOpacity(bg_opacity)
             self.subtitle_btn.popup._update_text_color_btn()
             if hasattr(self.subtitle_btn.popup, "_update_secondary_text_color_btn"):
                 self.subtitle_btn.popup._update_secondary_text_color_btn()
@@ -2585,7 +2593,8 @@ class VideoPlayerWidget(QWidget):
         if hasattr(self, "subtitle_overlay") and self.subtitle_overlay:
             self.subtitle_overlay.set_subtitle_style(
                 color, border_color, scale,
-                getattr(self, "secondary_sub_color", None)
+                getattr(self, "secondary_sub_color", None),
+                bg_opacity
             )
             if self.config:
                 hover_only = self.config.get_secondary_subtitle_hover_only()
@@ -2613,7 +2622,8 @@ class VideoPlayerWidget(QWidget):
         if hasattr(self, "subtitle_overlay") and self.subtitle_overlay:
             self.subtitle_overlay.set_subtitle_style(
                 self.sub_color, self.sub_border_color, self.sub_scale,
-                getattr(self, "secondary_sub_color", None)
+                getattr(self, "secondary_sub_color", None),
+                getattr(self, "sub_bg_opacity", 70)
             )
 
     def _map_ffprobe_to_mpv_sid(self, ffprobe_stream_index):

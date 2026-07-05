@@ -63,6 +63,7 @@ class ConfigManager:
             "outline_color": "#000000",
             "secondary_text_color": "#E6E6FA",
             "font_scale": "1.0",
+            "bg_opacity": "70",
             "extensions": ".srt,.ass,.ssa,.sub,.idx,.vtt,.sup,.stl,.smi,.txt",
             "interactive": "True",
             "translation_target_lang": "ru",
@@ -369,13 +370,14 @@ class ConfigManager:
         self._write_config(config)
 
     def get_subtitle_settings(self) -> tuple:
-        """Returns (text_color, outline_color, font_scale, secondary_text_color)."""
+        """Returns (text_color, outline_color, font_scale, secondary_text_color, bg_opacity)."""
         config = self._read_config()
         text_color = config.get("Subtitles", "text_color", fallback="#FFCC66")
         outline_color = config.get("Subtitles", "outline_color", fallback="#000000")
         font_scale = config.getfloat("Subtitles", "font_scale", fallback=1.0)
         secondary_text_color = config.get("Subtitles", "secondary_text_color", fallback="#E6E6FA")
-        return text_color, outline_color, font_scale, secondary_text_color
+        bg_opacity = config.getint("Subtitles", "bg_opacity", fallback=70)
+        return text_color, outline_color, font_scale, secondary_text_color, bg_opacity
 
     def save_subtitle_setting(self, property_name: str, value):
         """Save a single subtitle style setting to ini file."""
@@ -391,6 +393,8 @@ class ConfigManager:
             config["Subtitles"]["font_scale"] = f"{value:.2f}"
         elif property_name == "sub-secondary-color":
             config["Subtitles"]["secondary_text_color"] = value
+        elif property_name == "sub-bg-opacity":
+            config["Subtitles"]["bg_opacity"] = str(value)
         elif property_name == "translation-target-lang":
             config["Subtitles"]["translation_target_lang"] = value
 

@@ -280,6 +280,7 @@ class SubtitleOverlayWidget(QFrame):
         self.outline_color = "#000000"
         self.secondary_text_color = "#E6E6FA"
         self.font_scale = 1.0
+        self.bg_opacity = 70
         self.current_text = ""
         self.secondary_text = ""
         self.current_font_size = 0
@@ -359,12 +360,14 @@ class SubtitleOverlayWidget(QFrame):
         from PyQt6.QtGui import QPainter
         painter = QPainter(self)
         
-        # Use user-defined outline_color as base, with alpha=170 for translucency
+        # Use user-defined outline_color as base, with alpha based on bg_opacity
         base_color = getattr(self, "outline_color", "#000000")
         bg_color = QColor(base_color)
         if not bg_color.isValid():
             bg_color = QColor(0, 0, 0)
-        bg_color.setAlpha(170)
+        opacity = getattr(self, "bg_opacity", 70)
+        alpha = int(opacity * 2.55)
+        bg_color.setAlpha(alpha)
         
         painter.fillRect(self.rect(), bg_color)
 
@@ -497,12 +500,14 @@ class SubtitleOverlayWidget(QFrame):
         else:
             self.hide()
 
-    def set_subtitle_style(self, text_color, outline_color, font_scale, secondary_text_color=None):
+    def set_subtitle_style(self, text_color, outline_color, font_scale, secondary_text_color=None, bg_opacity=None):
         self.text_color = text_color
         self.outline_color = outline_color
         self.font_scale = font_scale
         if secondary_text_color is not None:
             self.secondary_text_color = secondary_text_color
+        if bg_opacity is not None:
+            self.bg_opacity = bg_opacity
         # Refresh current text if any
         self.set_text(self.current_text)
         if getattr(self, 'secondary_text', None):

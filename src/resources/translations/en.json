@@ -126,6 +126,7 @@
         "subtitle_text": "Text",
         "secondary_subtitle_text": "Text 2",
         "subtitle_outline": "Outline",
+        "subtitle_bg_opacity": "Background Opacity",
         "tooltip_progress": "Watched: {percent}%",
         "tooltip_audio": "Audio: {tracks}",
         "tooltip_audio_track": "Audio Tracks",

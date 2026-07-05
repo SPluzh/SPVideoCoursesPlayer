@@ -6,7 +6,7 @@ from pathlib import Path
 from PyQt6.QtWidgets import (
     QWidget, QHBoxLayout, QVBoxLayout, QListWidget, QLabel, QPushButton,
     QFrame, QGridLayout, QApplication, QCheckBox, QComboBox,
-    QDialog, QLineEdit, QListWidgetItem
+    QDialog, QLineEdit, QListWidgetItem, QSlider
 )
 from PyQt6.QtCore import Qt, pyqtSignal, QTimer, QPoint, QRect
 from PyQt6.QtGui import QIcon
@@ -93,7 +93,7 @@ class SubtitlePopup(QWidget):
         
         self.setObjectName("subtitlePopup")
         self.setMinimumWidth(400)
-        self.setFixedHeight(300)
+        self.setFixedHeight(330)
         
         # Left side: toggle + subtitle list
         left_panel = QHBoxLayout()
@@ -329,6 +329,27 @@ class SubtitlePopup(QWidget):
         outline_layout.addWidget(self.outline_color_btn)
         right_panel.addLayout(outline_layout)
         
+        # Background opacity
+        opacity_layout = QVBoxLayout()
+        opacity_layout.setSpacing(2)
+        self.opacity_title_label = QLabel(tr('player.subtitle_bg_opacity'))
+        self.opacity_title_label.setObjectName("popupHeaderLabel")
+        self.opacity_title_label.setContentsMargins(0, 0, 0, 0)
+        self.opacity_slider = QSlider(Qt.Orientation.Horizontal)
+        self.opacity_slider.setRange(0, 100)
+        self.opacity_slider.setSingleStep(10)
+        self.opacity_slider.setPageStep(10)
+        self.opacity_slider.setTickInterval(10)
+        self.opacity_slider.setTickPosition(QSlider.TickPosition.TicksBelow)
+        self.opacity_slider.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self.opacity_slider.setObjectName("subtitleOpacitySlider")
+        self.opacity_slider.setValue(70)
+        self.opacity_slider.setToolTip("70%")
+        self.opacity_slider.valueChanged.connect(self._on_opacity_slider_changed)
+        opacity_layout.addWidget(self.opacity_title_label)
+        opacity_layout.addWidget(self.opacity_slider)
+        right_panel.addLayout(opacity_layout)
+        
         right_panel.addStretch()
         main_layout.addLayout(right_panel)
         
@@ -443,6 +464,24 @@ class SubtitlePopup(QWidget):
     
     def _decrease_size(self):
         self.styleChanged.emit("sub-scale", -5)  # decrease by 5%
+
+    def _on_opacity_slider_changed(self, value):
+        from PyQt6.QtWidgets import QToolTip
+        from PyQt6.QtGui import QCursor
+        self.opacity_slider.setToolTip(f"{value}%")
+        QToolTip.showText(QCursor.pos(), f"{value}%", self.opacity_slider)
+        self.styleChanged.emit("sub-bg-opacity", value)
+
+    def setBgOpacity(self, value):
+        try:
+            val = int(value)
+            self.opacity_slider.blockSignals(True)
+            self.opacity_slider.setValue(val)
+            self.opacity_slider.setToolTip(f"{val}%")
+            self.opacity_slider.blockSignals(False)
+        except Exception as e:
+            import logging
+            logging.error(f"Error setting subtitle popup background opacity: {e}")
     
     def clear(self):
         self.list_widget.clear()
@@ -540,6 +579,8 @@ class SubtitlePopup(QWidget):
         if hasattr(self, 'secondary_text_title_label'):
             self.secondary_text_title_label.setText(tr('player.secondary_subtitle_text'))
         self.outline_title_label.setText(tr('player.subtitle_outline'))
+        if hasattr(self, 'opacity_title_label'):
+            self.opacity_title_label.setText(tr('player.subtitle_bg_opacity'))
         if hasattr(self, 'translation_lang_title_label'):
             self.translation_lang_title_label.setText(tr('player.interactive_subtitles'))
         self.interactive_btn.setToolTip(tr('player.interactive_subtitles'))

@@ -126,6 +126,7 @@
         "subtitle_text": "Текст",
         "secondary_subtitle_text": "Текст 2",
         "subtitle_outline": "Обводка",
+        "subtitle_bg_opacity": "Прозрачность фона",
         "tooltip_progress": "Просмотрено: {percent}%",
         "tooltip_audio": "Аудио: {tracks} шт.",
         "tooltip_audio_track": "Аудиодорожки",
