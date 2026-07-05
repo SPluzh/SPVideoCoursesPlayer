@@ -13,7 +13,7 @@
 Video player for local courses with hierarchical library, progress tracking, bookmarks, tags, and learning statistics. Includes video zoom, audio enhancement, custom subtitle settings, and instant thumbnail previews on the timeline
 
 ![](attachments/SP_Video_Courses_Player.gif)
-
+![](attachments/SP_Video_Courses_Player_translate_popup.gif)
 <p align="center">
   <a href="#english">English</a> •
   <a href="#russian">Русский</a>
