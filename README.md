@@ -21,8 +21,6 @@ Desktop video player for local video courses built with Python, PyQt6 and libmpv
 
 <a name="english"></a>
 
-## English
-
 ### Overview
 
 **SP Video Courses Player** is a desktop application built for people who learn from downloaded video courses. Instead of hunting through folders in a file manager, you get a clean hierarchical library where every course remembers exactly where you left off, how much you've watched, and what's still ahead.
@@ -148,8 +146,6 @@ Once configured, you'll see PureRef badges on folder items in your library, allo
 ---
 
 <a name="russian"></a>
-
-## Русский
 
 ### Обзор
 
