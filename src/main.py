@@ -2232,6 +2232,10 @@ class VideoCourseBrowser(QMainWindow):
         self.raise_()
         self.activateWindow()
 
+        # Update subtitle overlay geometry after exiting PiP mode
+        if hasattr(self.video_player, "subtitle_overlay") and self.video_player.subtitle_overlay:
+            QTimer.singleShot(100, self.video_player.subtitle_overlay.update_geometry)
+
         # Flags change might require re-initializing taskbar buttons
         QTimer.singleShot(500, self._refresh_taskbar_buttons)
 
