@@ -53,6 +53,7 @@ class PreviewPopup(QWidget):
         self.current_video_path = None
         self.cache = OrderedDict()  # LRU cache {timestamp_sec: QPixmap}
         self.pending_time = None
+        self._pending_video_path = None
 
         # MPV instance for preview — created lazily on first hover
         self.preview_mpv = None
@@ -99,6 +100,13 @@ class PreviewPopup(QWidget):
             self.debounce_timer.stop()
             self._preload_timer.stop()
             self.pending_time = None
+            self._pending_video_path = None
+            # Clear stale thumbnail immediately to avoid old frame flash on first hover
+            self.thumb_label.clear()
+            self.thumb_label.setText("...")
+            # If popup is visible, hide it to avoid showing stale content
+            if self.isVisible():
+                self.hide()
             # Pre-load MPV after a short delay so it's ready on first hover
             if file_path:
                 self._preload_timer.start()
@@ -110,8 +118,8 @@ class PreviewPopup(QWidget):
 
         if self.preview_mpv and not self._mpv_video_loaded and self.current_video_path:
             try:
+                self._pending_video_path = self.current_video_path
                 self.preview_mpv.loadfile(self.current_video_path)
-                self._mpv_video_loaded = True
             except Exception as e:
                 logging.error(f"Preview MPV loadfile error: {e}")
 
@@ -134,6 +142,13 @@ class PreviewPopup(QWidget):
                 hr_seek="yes",  # Precise seeking
                 demuxer_max_bytes="5MiB",  # Reduced from 30MiB for lower memory
             )
+
+            @self.preview_mpv.event_callback("file-loaded")
+            def _on_preview_file_loaded(event):
+                if self._pending_video_path == self.current_video_path:
+                    self._mpv_video_loaded = True
+                    logging.debug("Preview MPV: file-loaded event - marked as ready")
+
             logging.debug("Preview MPV initialized (lazy)")
         except Exception as e:
             logging.error(f"Failed to create preview MPV: {e}")
@@ -148,6 +163,7 @@ class PreviewPopup(QWidget):
                 pass
             self.preview_mpv = None
             self._mpv_video_loaded = False
+            self._pending_video_path = None
             logging.debug("Preview MPV destroyed (idle timeout)")
 
     def update_content(self, seconds, global_pos):
@@ -259,6 +275,16 @@ class PreviewPopup(QWidget):
         """Capture screenshot to temp file and load it."""
         if not self.preview_mpv or not self._mpv_video_loaded:
             return
+
+        # Guard: ensure we're still on the same video we seeked for
+        try:
+            mpv_path = self.preview_mpv.path
+            if mpv_path and self.current_video_path:
+                if Path(mpv_path).resolve() != Path(self.current_video_path).resolve():
+                    logging.debug("Preview capture skipped: video path mismatch")
+                    return
+        except Exception:
+            pass
 
         try:
             temp_path = (

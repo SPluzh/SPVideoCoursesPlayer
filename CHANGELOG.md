@@ -5,6 +5,7 @@ All notable changes to this project will be documented in this file.
 ## [1.6.4]
 - **Subtitles**: Added a "Show secondary subtitle only on hover" option to display secondary subtitles dynamically on mouse hover.
 - **Fix**: Fixed a bug where subtitles were automatically enabled when switching to a video that previously had subtitles disabled.
+- **Fix**: Fixed a bug where the seek bar preview popup showed a frame from the previous video on first hover after switching.
 
 ## [1.6.3]
 - **Tools Menu**: Added "Rotate Clockwise" and "Rotate Counter-clockwise" actions to rotate video 90° per click (0 → 90 → 180 → 270 → 0) with OSD notifications.
