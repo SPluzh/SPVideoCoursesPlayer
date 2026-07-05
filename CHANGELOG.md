@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.6.5]
+- **Performance**: Optimized seek slider hover preview popup generation speed
+
 ## [1.6.4]
 - **Subtitles**: Added a "Show secondary subtitle only on hover" option to display secondary subtitles dynamically on mouse hover.
 - **Fix**: Fixed a bug where subtitles were automatically enabled when switching to a video that previously had subtitles disabled.

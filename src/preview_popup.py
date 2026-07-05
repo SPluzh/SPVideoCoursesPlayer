@@ -72,7 +72,7 @@ class PreviewPopup(QWidget):
         # Debounce Timer
         self.debounce_timer = QTimer()
         self.debounce_timer.setSingleShot(True)
-        self.debounce_timer.setInterval(50)  # 50ms debounce to reduce seek spam
+        self.debounce_timer.setInterval(25)  # 25ms debounce to reduce seek spam
         self.debounce_timer.timeout.connect(self._fetch_frame)
 
         # Pre-load timer: init MPV shortly after set_video() to avoid black first frame
@@ -136,7 +136,7 @@ class PreviewPopup(QWidget):
                 hwdec="auto-safe",  # Hardware acceleration
                 sid="no",  # No subtitles
                 video_sync="audio",
-                hr_seek="yes",  # Precise seeking
+                hr_seek="no",  # Disable precise seeking for speed
                 demuxer_max_bytes="5MiB",  # Reduced from 30MiB for lower memory
             )
 
@@ -236,8 +236,8 @@ class PreviewPopup(QWidget):
             # Keyframe seek for speed
             self.preview_mpv.seek(time_key, "absolute+keyframes")
 
-            # Wait 40ms for MPV to decode the frame, then capture directly
-            QTimer.singleShot(40, lambda: self._capture_frame(time_key))
+            # Wait 10ms for MPV to decode the frame, then capture directly
+            QTimer.singleShot(10, lambda: self._capture_frame(time_key))
 
         except Exception as e:
             # Silently ignore errors during video switching
