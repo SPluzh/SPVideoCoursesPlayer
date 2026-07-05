@@ -1,6 +1,6 @@
 # SP Video Courses Player
 
-Video player for local courses with hierarchical library, progress tracking, bookmarks, tags, and learning statistics. Includes video zoom, audio enhancement, custom subtitle settings, and instant thumbnail previews on the timeline
+Desktop video player for local video courses built with Python, PyQt6 and libmpv (Windows). Features a hierarchical course library with progress tracking, favorites, tags, and fuzzy search. Includes Picture-in-Picture mode, interactive subtitle translation with word-click lookup and offline cache, dual subtitle tracks, AI noise reduction, compressor, video zoom, visual bookmarks (markers), course completion statistics, FFmpeg-powered timeline thumbnail previews, and Windows taskbar integration.
 
 [![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![PyQt6](https://img.shields.io/badge/PyQt6-6.6.0+-green.svg)](https://pypi.org/project/PyQt6/)
@@ -25,20 +25,29 @@ Video player for local courses with hierarchical library, progress tracking, boo
 
 ### Overview
 
-SP Video Courses Player is a desktop application for watching and managing local video courses with hierarchical library organization, progress tracking, and learning statistics. Includes video zoom, audio enhancement, custom subtitle settings, and instant thumbnail previews on the timeline.
+**SP Video Courses Player** is a desktop application built for people who learn from downloaded video courses. Instead of hunting through folders in a file manager, you get a clean hierarchical library where every course remembers exactly where you left off, how much you've watched, and what's still ahead.
+
+Play your videos with Picture-in-Picture mode so you can take notes while watching, and instant thumbnail previews as you hover over the timeline. Click on any word in the subtitles to get an instant translation, synonyms, and pronunciation audio right inside the player, with repeated lookups loading instantly. Professional audio tools (AI noise reduction, compressor, de-esser) help when lecture recordings aren't studio-quality. Visual bookmarks with screenshots let you mark and revisit key moments without scrubbing through the whole video.
 
 ### Features
 
-- **Library Management** - Hierarchical tree structure with **Favorites** and **Tags** filtering, bulk operations (checkboxes), and fuzzy search
-- **Advanced Player** - Built on **libmpv** with **Picture-in-Picture (PiP)** mode and YouTube-style percentage seeking (`0`-`9`)
-- **Professional Audio Tools** - **AI Noise Reduction**, Compressor, De-esser, Mono mix, and precise Sync Delay
-- **Detailed Statistics** - Folder completion progress, watched duration, and remaining time
-- **Smart Markers** - Visual marker gallery, custom colors, and timeline previews
-- **Subtitle Support & Dual Tracks** - Support for primary and secondary subtitles simultaneously with independent color/size settings and track selection
-- **Interactive Translation** - Click on subtitle words for instant translations, synonyms, and pronunciation audio, plus offline caching and full-phrase translation
-- **Subtitle Navigation** - Dedicated hotkeys to seek between subtitle phrases (`Alt + ←/→`), replay (`Alt + ↓`), or translate (`Alt + ↑`)
-- **Speed Control** - Adjust playback speed (0.5x - 3.0x) with pitch correction
-- **Modern UI** - Dark theme with custom QSS styling, clean icons, and responsive layout
+- **Course Library** — Hierarchical tree with colored nesting lines, natural sort, Favorites, Tags (multi-tag OR filter), and fuzzy search with EN/RU transliteration
+- **Progress Tracking** — Resumes from where you stopped, color-coded watched/in-progress/unwatched states, auto-advance to next video, bulk "Mark as Watched / Reset Progress"
+- **Detailed Statistics** — Per-folder completion percentage, total/watched/remaining duration, course stats dialog
+- **Advanced Playback** — Picture-in-Picture (PiP), fullscreen, zoom & pan, video rotation (90° steps), frame step, screenshot to clipboard
+- **Timeline Preview** — Hover over the seekbar to instantly see a video thumbnail; jump to any percentage of the video with number keys
+- **Professional Audio** — AI Noise Reduction, Compressor, De-esser, Mono mix, Sync Delay; dual audio track with independent volume
+- **Subtitle & Translation** — Primary + secondary subtitle tracks displayed simultaneously, independent color/size settings, "show secondary on hover" option
+- **Interactive Translation** — Click any subtitle word for instant translation, synonyms, and pronunciation audio; offline cache for instant repeat lookups; full-phrase translation via button or `Alt + ↑`
+- **Subtitle Navigation** — Jump between subtitle phrases, replay the current one, or translate it — all with dedicated hotkeys
+- **Speed Control** — Playback speed 0.5×–3.0× with pitch correction
+- **Smart Markers** — Visual gallery with screenshots, 12 custom colors, timeline dots, edit/delete from gallery or seekbar right-click
+- **Tags & Bulk Operations** — Create color-coded tags, assign to multiple items at once, filter library by any combination of tags
+- **Keyboard Shortcuts** — All hotkeys work in both English and Russian keyboard layouts; media keys (Play/Pause, Next/Prev) work even when the app is in the background
+- **Windows Integration** — Taskbar progress bar, thumbnail toolbar buttons (Prev, -10s, Play/Pause, +10s, Next), Always on Top toggle
+- **PureRef Integration** — Badge button on each folder to open a linked `.pur` reference file; color-coded status dot (missing/exists/running)
+- **Auto-Update** — Checks GitHub Releases on startup and updates with one click; FFmpeg and libmpv auto-download on first run
+- **Modern UI** — Dark theme with full QSS styling, OSD notifications, High DPI / fractional scaling support, collapsible library panel (`Ctrl+L`)
 
 ### Usage
 
@@ -144,21 +153,29 @@ Once configured, you'll see PureRef badges on folder items in your library, allo
 
 ### Обзор
 
-SP Video Courses Player — плеер для локальных видеокурсов с древовидной библиотекой, сохранением прогресса, закладками, тегами и статистикой обучения. Включает масштабирование кадра, улучшение звука, настройку субтитров и мгновенные превью на таймлайне.
+**SP Video Courses Player** — это десктопное приложение, созданное специально для тех, кто учится по скачанным видеокурсам. Вместо того чтобы искать папки в проводнике, вы получаете удобную древовидную библиотеку, где для каждого курса запоминается прогресс: где вы остановились, сколько уже посмотрели и сколько еще осталось.
+
+Смотрите видео в режиме «Картинка-в-картинке» (PiP), чтобы делать заметки во время просмотра, и пользуйтесь мгновенным предпросмотром кадров при наведении на шкалу времени. Кликайте на любое слово в субтитрах для мгновенного перевода, просмотра синонимов и прослушивания произношения прямо в плеере, причем ранее переведенные слова будут открываться моментально. Профессиональные инструменты для работы со звуком (активное шумоподавление, компрессор, де-эссер) помогут, если лекция записана с фоновым шумом. Визуальные закладки со скриншотами позволяют отмечать и быстро находить ключевые моменты в один клик.
 
 ### Возможности
 
-- **Управление библиотекой** — Древовидная структура с фильтрацией по **Избранному** и **Тегам**, массовыми операциями (чекбоксы) и нечётким поиском
-- **Продвинутый плеер** — На базе **libmpv** с режимом **Картинка-в-картинке (PiP)** и переходом по процентам видео клавишами (`0`-`9`)
-- **Профессиональный звук** — **AI Шумоподавление**, Компрессор, Де-эссер, Моно-микс и точная настройка задержки
-- **Детальная статистика** — Прогресс по папкам, просмотренное время и остаток
-- **Умные закладки** — Визуальная галерея маркеров, цветные метки и превью на таймлайне
-- **Мгновенное превью** — Наведение на таймлайн показывает кадр из видео
-- **Субтитры и две дорожки** — Одновременное отображение основных и дополнительных субтитров с независимой настройкой цвета, размера и выбора дорожек
-- **Интерактивный перевод** — Клик по словам в субтитрах для мгновенного перевода, просмотра синонимов и озвучки произношения, с поддержкой офлайн-кеширования и перевода всей фразы
-- **Навигация по субтитрам** — Горячие клавиши для перехода между фразами (`Alt + ←/→`), повтора фразы (`Alt + ↓`) и перевода текущих субтитров (`Alt + ↑`)
-- **Управление скоростью** — Регулировка (0.5x - 3.0x) без искажения тона
-- **Современный UI** — Полностью кастомизированная тёмная QSS-тема с адаптивным интерфейсом и оптимизированными иконками
+- **Библиотека курсов** — древовидная структура с цветными линиями вложенности, естественной сортировкой, Избранным, тегами (фильтрация по нескольким тегам) и нечетким поиском с автоматической транслитерацией EN/RU.
+- **Отслеживание прогресса** — сохранение позиции воспроизведения, цветовая индикация статуса просмотра (просмотрено/в процессе/новое), автоматический переход к следующему видео, массовая отметка просмотренного или сброс прогресса.
+- **Детальная статистика** — процент завершения для каждой папки, общее, просмотренное и оставшееся время, а также отдельное окно статистики курса.
+- **Продвинутое воспроизведение** — режим «Картинка-в-картинке» (PiP), полноэкранный режим, масштабирование и панорамирование видео, поворот кадра на 90 градусов, покадровый шаг и копирование скриншота в буфер обмена.
+- **Предпросмотр на шкале времени** — мгновенное отображение кадра при наведении курсора на таймлайн; быстрый переход к нужному проценту видео с помощью цифровых клавиш.
+- **Профессиональный звук** — интеллектуальное шумоподавление, компрессор, де-эссер, моно-микс и настройка задержки синхронизации; поддержка второй аудиодорожки с независимой регулировкой громкости.
+- **Субтитры и перевод** — одновременное отображение двух дорожек субтитров с независимой настройкой цвета и размера, опция показа вторых субтитров только при наведении мыши.
+- **Интерактивный перевод** — перевод любого слова в субтитрах по клику с показом синонимов и озвучкой; кеширование для мгновенного повторного перевода; перевод всей фразы кнопкой или горячими клавишами.
+- **Навигация по субтитрам** — быстрый переход между фразами, повтор текущей фразы или перевод — все с помощью удобных горячих клавиш.
+- **Управление скоростью** — изменение скорости воспроизведения от 0.5x до 3.0x с сохранением естественного тона голоса.
+- **Умные закладки** — визуальная галерея со скриншотами, 12 цветов для меток, точки закладок на шкале времени, редактирование и удаление прямо из галереи или по клику правой кнопкой мыши на таймлайне.
+- **Теги и массовые операции** — создание цветных тегов, присвоение их нескольким элементам сразу, фильтрация библиотеки по любым комбинациям тегов.
+- **Горячие клавиши** — управление работает как на английской, так и на русской раскладке клавиатуры; поддержка глобальных медиа-клавиш (Play/Pause, Next/Prev) даже когда окно приложения свернуто.
+- **Интеграция с Windows** — отображение прогресса на панели задач, управление воспроизведением кнопками на эскизе панели задач (назад, -10 сек, воспроизведение/пауза, +10 сек, вперед), закрепление окна поверх других окон.
+- **Интеграция с PureRef** — кнопка-значок на папках для быстрого открытия связанного файла референсов `.pur` с цветовой индикацией статуса файла (отсутствует, существует, запущен).
+- **Автоматическое обновление** — проверка новых версий на GitHub при запуске и обновление в один клик; автоматическая загрузка FFmpeg и библиотек плеера при первом запуске.
+- **Современный интерфейс** — темная тема с полной QSS-стилизацией, всплывающие уведомления на экране (OSD), поддержка High DPI и дробного масштабирования, быстрое скрытие боковой панели библиотеки.
 
 ### Использование
 
