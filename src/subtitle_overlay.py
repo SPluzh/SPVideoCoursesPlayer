@@ -276,9 +276,9 @@ class SubtitleOverlayWidget(QFrame):
         if self.player_window:
             self.player_window.installEventFilter(self)
 
-        self.text_color = "#FFFFFF"
+        self.text_color = "#FFCC66"
         self.outline_color = "#000000"
-        self.secondary_text_color = "#ADD8E6"
+        self.secondary_text_color = "#E6E6FA"
         self.font_scale = 1.0
         self.current_text = ""
         self.secondary_text = ""
@@ -469,7 +469,7 @@ class SubtitleOverlayWidget(QFrame):
         else:
             # Render centered secondary text with configured color and 85% font size
             font_size = int(self.get_calculated_font_size() * 0.85)
-            text_color = getattr(self, "secondary_text_color", "#ADD8E6")
+            text_color = getattr(self, "secondary_text_color", "#E6E6FA")
             html = f"""
             <div style="text-align: center; color: {text_color}; font-family: 'Segoe UI', Arial, sans-serif; font-size: {font_size}px; font-weight: normal; line-height: 1.0;">
                 {text}
@@ -573,7 +573,7 @@ class SubtitleOverlayWidget(QFrame):
             if getattr(self, 'secondary_text', None):
                 sec_font_size = int(font_size * 0.85)
                 sec_html = f"""
-                <div style="text-align: center; color: #ADD8E6; font-family: 'Segoe UI', Arial, sans-serif; font-size: {sec_font_size}px; font-weight: normal; line-height: 1.0;">
+                <div style="text-align: center; color: {self.secondary_text_color}; font-family: 'Segoe UI', Arial, sans-serif; font-size: {sec_font_size}px; font-weight: normal; line-height: 1.0;">
                     {self.secondary_text}
                 </div>
                 """

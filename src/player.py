@@ -211,9 +211,9 @@ class VideoPlayerWidget(QWidget):
         self._cached_subtitle_data = None # Cache for subtitle tracks
         self.player = None
         self.osd_manager = None  # Will be initialized in setup_mpv
-        self.sub_color = "#FFFFFF"
+        self.sub_color = "#FFCC66"
         self.sub_border_color = "#000000"
-        self.secondary_sub_color = "#ADD8E6"
+        self.secondary_sub_color = "#E6E6FA"
         self.sub_scale = 1.0
         self.markers = []
         self._restoring_state = False  # Flag to suppress OSD during state restoration

@@ -59,12 +59,12 @@ class ConfigManager:
             "folder_image_extensions": ".jpg,.jpeg,.png,.webp,.bmp",
         },
         "Subtitles": {
-            "text_color": "#FFFFFF",
+            "text_color": "#FFCC66",
             "outline_color": "#000000",
-            "secondary_text_color": "#ADD8E6",
+            "secondary_text_color": "#E6E6FA",
             "font_scale": "1.0",
             "extensions": ".srt,.ass,.ssa,.sub,.idx,.vtt,.sup,.stl,.smi,.txt",
-            "interactive": "False",
+            "interactive": "True",
             "translation_target_lang": "ru",
             "secondary_subtitle_hover_only": "True",
         },
@@ -371,10 +371,10 @@ class ConfigManager:
     def get_subtitle_settings(self) -> tuple:
         """Returns (text_color, outline_color, font_scale, secondary_text_color)."""
         config = self._read_config()
-        text_color = config.get("Subtitles", "text_color", fallback="#FFFFFF")
+        text_color = config.get("Subtitles", "text_color", fallback="#FFCC66")
         outline_color = config.get("Subtitles", "outline_color", fallback="#000000")
         font_scale = config.getfloat("Subtitles", "font_scale", fallback=1.0)
-        secondary_text_color = config.get("Subtitles", "secondary_text_color", fallback="#ADD8E6")
+        secondary_text_color = config.get("Subtitles", "secondary_text_color", fallback="#E6E6FA")
         return text_color, outline_color, font_scale, secondary_text_color
 
     def save_subtitle_setting(self, property_name: str, value):
@@ -412,7 +412,7 @@ class ConfigManager:
     def get_interactive_subtitles(self) -> bool:
         """Returns True if interactive subtitle overlay should be used."""
         config = self._read_config()
-        return config.getboolean("Subtitles", "interactive", fallback=False)
+        return config.getboolean("Subtitles", "interactive", fallback=True)
 
     def set_interactive_subtitles(self, enabled: bool):
         """Sets whether interactive subtitle overlay should be used."""

@@ -291,7 +291,7 @@ class SubtitlePopup(QWidget):
         self.text_color_btn.setFixedSize(64, 30)
         self.text_color_btn.setObjectName("textColorBtn")
         self.text_color_btn.clicked.connect(self._pick_text_color)
-        self.text_color = "#FFFFFF"
+        self.text_color = "#FFCC66"
         self._update_text_color_btn()
         text_layout.addWidget(self.text_title_label)
         text_layout.addWidget(self.text_color_btn)
@@ -307,7 +307,7 @@ class SubtitlePopup(QWidget):
         self.secondary_text_color_btn.setFixedSize(64, 30)
         self.secondary_text_color_btn.setObjectName("secondaryTextColorBtn")
         self.secondary_text_color_btn.clicked.connect(self._pick_secondary_text_color)
-        self.secondary_text_color = "#ADD8E6"
+        self.secondary_text_color = "#E6E6FA"
         self._update_secondary_text_color_btn()
         secondary_text_layout.addWidget(self.secondary_text_title_label)
         secondary_text_layout.addWidget(self.secondary_text_color_btn)
