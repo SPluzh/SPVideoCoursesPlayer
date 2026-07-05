@@ -63,7 +63,6 @@ a = Analysis(
         'scipy',
         'pandas',
         'matplotlib',
-        'PIL',
         'cv2',
     ],
     win_no_prefer_redirects=False,

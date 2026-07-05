@@ -3,3 +3,4 @@ python-mpv
 comtypes
 mutagen
 pyinstaller
+pillow
