@@ -7,6 +7,7 @@ from PyQt6.QtWidgets import (
     QPushButton,
     QHBoxLayout,
     QApplication,
+    QGridLayout,
 )
 from PyQt6.QtCore import Qt, QUrl
 from PyQt6.QtGui import QDesktopServices, QIcon
@@ -133,12 +134,6 @@ class AboutDialog(QDialog):
         layout.addWidget(self.container)
 
     def build_hotkeys_columns(self, container_layout):
-        # General hotkeys title
-        hotkeys_title = QLabel(tr("hotkeys.title"))
-        hotkeys_title.setObjectName("aboutHotkeyTitle")
-        hotkeys_title.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        container_layout.addWidget(hotkeys_title)
-
         # Columns layout
         columns_layout = QHBoxLayout()
         columns_layout.setSpacing(30)
@@ -149,10 +144,28 @@ class AboutDialog(QDialog):
         left_column.setSpacing(4)
         left_column.setAlignment(Qt.AlignmentFlag.AlignTop)
         
+        left_grid = QGridLayout()
+        left_grid.setContentsMargins(0, 0, 0, 0)
+        left_grid.setHorizontalSpacing(10)
+        left_grid.setVerticalSpacing(2)
+        left_grid.setColumnStretch(0, 1)
+        left_grid.setColumnStretch(1, 0)
+        left_grid.setColumnStretch(2, 1)
+        left_column.addLayout(left_grid)
+        
         # Right Column
         right_column = QVBoxLayout()
         right_column.setSpacing(4)
         right_column.setAlignment(Qt.AlignmentFlag.AlignTop)
+
+        right_grid = QGridLayout()
+        right_grid.setContentsMargins(0, 0, 0, 0)
+        right_grid.setHorizontalSpacing(10)
+        right_grid.setVerticalSpacing(2)
+        right_grid.setColumnStretch(0, 1)
+        right_grid.setColumnStretch(1, 0)
+        right_grid.setColumnStretch(2, 1)
+        right_column.addLayout(right_grid)
 
         categories = [
             (
@@ -248,28 +261,41 @@ class AboutDialog(QDialog):
         left_cats = categories[:4]
         right_cats = categories[4:]
 
-        for col_layout, cats in [(left_column, left_cats), (right_column, right_cats)]:
+        for col_grid, cats in [(left_grid, left_cats), (right_grid, right_cats)]:
+            row = 0
             for idx, (category_key, hotkeys) in enumerate(cats):
                 # Category title
                 category_label = QLabel(tr(f"hotkeys.{category_key}"))
                 category_label.setObjectName("hotkeyCategoryTitle")
                 category_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-                col_layout.addWidget(category_label)
+                col_grid.addWidget(category_label, row, 0, 1, 3)
+                row += 1
 
-                # Format hotkeys text
-                hotkey_lines = []
                 for key, desc in hotkeys:
-                    hotkey_lines.append(f"{key}  —  {desc}")
-                
-                content_label = QLabel("\n".join(hotkey_lines))
-                content_label.setObjectName("aboutSectionContent")
-                content_label.setWordWrap(True)
-                content_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-                col_layout.addWidget(content_label)
+                    key_label = QLabel(key)
+                    key_label.setObjectName("hotkeyKey")
+                    key_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                    
+                    dash_label = QLabel("—")
+                    dash_label.setObjectName("hotkeyDesc")
+                    dash_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                    
+                    desc_label = QLabel(desc)
+                    desc_label.setObjectName("hotkeyDesc")
+                    desc_label.setWordWrap(False)
+                    desc_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+                    
+                    col_grid.addWidget(key_label, row, 0, Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+                    col_grid.addWidget(dash_label, row, 1, Qt.AlignmentFlag.AlignCenter)
+                    col_grid.addWidget(desc_label, row, 2, Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+                    row += 1
 
                 # Spacing between categories (add spacing if not the last item in this column)
                 if idx < len(cats) - 1:
-                    col_layout.addSpacing(6)
+                    spacer_label = QLabel("")
+                    spacer_label.setFixedHeight(4)
+                    col_grid.addWidget(spacer_label, row, 0, 1, 3)
+                    row += 1
 
         columns_layout.addLayout(left_column, 1)
         columns_layout.addLayout(right_column, 1)

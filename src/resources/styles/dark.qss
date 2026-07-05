@@ -1545,7 +1545,7 @@ QLabel#aboutGithubLink:hover {
     border: 1px solid @separator-color;
     border-bottom: 2px solid #1a1a1a;
     border-radius: 4px;
-    padding: 2px 6px;
+    padding: 0px 5px;
     font-weight: bold;
     font-family: 'Consolas', 'Courier New', monospace;
     font-size: 11px;
@@ -1575,7 +1575,7 @@ QLabel#aboutGithubLink:hover {
     color: @text-delegate; 
     border: none; 
     border-radius: 3px; 
-    padding: 8px 20px; 
+    padding: 5px 15px; 
     font-weight: bold;
     font-size: 13px;
 }
