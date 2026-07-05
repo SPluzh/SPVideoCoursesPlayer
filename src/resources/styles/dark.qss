@@ -1496,7 +1496,7 @@ QLabel#TagBadge {
 }
 
 QLabel#aboutGithubLink {
-    color: @accent;
+    color: @text-delegate;
     font-weight: bold;
     font-size: 13px;
     line-height: 16px;
