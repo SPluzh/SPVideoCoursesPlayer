@@ -184,6 +184,7 @@ class SubtitleTextEdit(QTextEdit):
     def enterEvent(self, event):
         try:
             logging.warning(f"SubtitleTextEdit [{self.objectName()}] enterEvent triggered")
+            self.viewport().setMouseTracking(True)
             parent = self.parent()
             if parent and hasattr(parent, "mouseEntered"):
                 parent.mouseEntered.emit()
@@ -696,11 +697,26 @@ class SubtitleOverlayWidget(QFrame):
             # Explicitly restore mouse tracking properties
             self.setMouseTracking(True)
             self.text_edit.setMouseTracking(True)
+            self.text_edit.viewport().setMouseTracking(True)
             self.secondary_text_edit.setMouseTracking(True)
+            self.secondary_text_edit.viewport().setMouseTracking(True)
+
+            # Deferred pass — ensure OS-level tracking is active after Qt processes show events
+            QTimer.singleShot(100, self._restore_viewport_tracking)
 
             logging.debug("SubtitleOverlay: reattached to video_widget native parent")
         except Exception as e:
             logging.error(f"SubtitleOverlay.reattach_to_video_widget: {e}", exc_info=True)
+
+    def _restore_viewport_tracking(self):
+        """Re-apply mouse tracking on viewports after deferred HWND creation."""
+        try:
+            for edit in (self.text_edit, self.secondary_text_edit):
+                edit.setMouseTracking(True)
+                edit.viewport().setMouseTracking(True)
+            self.setMouseTracking(True)
+        except Exception as e:
+            logging.error(f"SubtitleOverlay._restore_viewport_tracking: {e}", exc_info=True)
 
     def _clear_pip_transition(self):
         self._pip_transition = False

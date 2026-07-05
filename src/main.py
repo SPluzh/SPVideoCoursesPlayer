@@ -2160,6 +2160,7 @@ class VideoCourseBrowser(QMainWindow):
         # reattach_to_video_widget() rebinds the ToolTip native window to the
         # freshly-recreated HWND so that mouse events (hover/translation) work again.
         if hasattr(self.video_player, "subtitle_overlay") and self.video_player.subtitle_overlay:
+            self.video_player.subtitle_overlay._pip_transition = True
             QTimer.singleShot(150, self.video_player.subtitle_overlay.update_geometry)
             QTimer.singleShot(350, self.video_player.subtitle_overlay.reattach_to_video_widget)
 
@@ -2243,6 +2244,7 @@ class VideoCourseBrowser(QMainWindow):
         # reattach_to_video_widget() rebinds the ToolTip native window to the
         # freshly-recreated HWND so that mouse events (hover/translation) work again.
         if hasattr(self.video_player, "subtitle_overlay") and self.video_player.subtitle_overlay:
+            self.video_player.subtitle_overlay._pip_transition = True
             QTimer.singleShot(150, self.video_player.subtitle_overlay.update_geometry)
             QTimer.singleShot(350, self.video_player.subtitle_overlay.reattach_to_video_widget)
 
