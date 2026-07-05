@@ -75,7 +75,7 @@ class PreviewPopup(QWidget):
         # Debounce Timer
         self.debounce_timer = QTimer()
         self.debounce_timer.setSingleShot(True)
-        self.debounce_timer.setInterval(80)  # 80ms debounce to reduce seek spam
+        self.debounce_timer.setInterval(50)  # 50ms debounce to reduce seek spam
         self.debounce_timer.timeout.connect(self._fetch_frame)
 
         # Pre-load timer: init MPV shortly after set_video() to avoid black first frame
@@ -240,8 +240,8 @@ class PreviewPopup(QWidget):
             self.preview_mpv.seek(time_key, "absolute+keyframes")
             self._capture_retry_count = 0
 
-            # Wait 80ms for MPV to decode the frame, then attempt capture with retries
-            QTimer.singleShot(80, lambda: self._capture_frame_with_retry(time_key))
+            # Wait 40ms for MPV to decode the frame, then attempt capture with retries
+            QTimer.singleShot(40, lambda: self._capture_frame_with_retry(time_key))
 
         except Exception as e:
             # Silently ignore errors during video switching
@@ -266,7 +266,7 @@ class PreviewPopup(QWidget):
             self._capture_frame(time_key)
         elif self._capture_retry_count < self._capture_retry_max:
             self._capture_retry_count += 1
-            QTimer.singleShot(60, lambda: self._capture_frame_with_retry(time_key))
+            QTimer.singleShot(40, lambda: self._capture_frame_with_retry(time_key))
         else:
             # Timed out waiting — capture anyway (may still have a valid frame)
             self._capture_frame(time_key)
