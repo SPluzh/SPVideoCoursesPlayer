@@ -1012,10 +1012,56 @@ class VideoScanner:
                         )
                         thumbnails_json = json.dumps(thumb_list) if thumb_list else None
 
+                # Get cached resolution/codec from existing_data
+                resolution = existing_data.get("resolution")
+                codec = existing_data.get("codec")
+                file_size = existing_data.get("file_size", current_file_size)
+
+                embedded_audio = None
+                embedded_subs = None
+
+                # Only fetch embedded tracks from database if we have a valid cache
+                if resolution and codec:
+                    try:
+                        with self.db.get_connection() as conn:
+                            conn.row_factory = sqlite3.Row
+                            c = conn.cursor()
+                            # Get embedded audio tracks
+                            c.execute(
+                                """
+                                SELECT track_type, stream_index, audio_file_path, audio_file_name,
+                                       language, title, codec, bitrate, sample_rate, channels,
+                                       channel_layout, duration, file_size, is_default, match_score
+                                FROM audio_tracks 
+                                WHERE video_id = ? AND track_type = 'embedded'
+                            """,
+                                (existing_data["id"],),
+                            )
+                            embedded_audio = [dict(row) for row in c.fetchall()]
+
+                            # Get embedded subtitle tracks
+                            c.execute(
+                                """
+                                SELECT track_type, stream_index, subtitle_file_path, subtitle_file_name,
+                                       language, title, codec, format, is_default, is_forced, match_score
+                                FROM subtitle_tracks
+                                WHERE video_id = ? AND track_type = 'embedded'
+                            """,
+                                (existing_data["id"],),
+                            )
+                            embedded_subs = [dict(row) for row in c.fetchall()]
+                    except Exception as e:
+                        logging.error(f"Error loading embedded tracks from DB for {video_file}: {e}")
+                        embedded_audio = None
+                        embedded_subs = None
+
+                # Fallback to ffprobe if cached data is missing or query failed
+                if not resolution or not codec or embedded_audio is None or embedded_subs is None:
+                    _, resolution, codec, file_size, embedded_audio, embedded_subs = (
+                        self._get_video_info_with_audio_subs(video_file)
+                    )
+
                 # Scan audio tracks and subtitles anyway (external ones might have changed)
-                _, resolution, codec, file_size, embedded_audio, embedded_subs = (
-                    self._get_video_info_with_audio_subs(video_file)
-                )
                 external_audio = self._find_external_audio(video_file, folder)
                 external_subs = self._find_external_subtitles(video_file, folder)
                 all_audio_tracks = embedded_audio + external_audio

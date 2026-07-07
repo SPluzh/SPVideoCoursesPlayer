@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.6.6]
+- **Performance**: Speed up library rescanning for already-scanned videos by loading metadata and audio/subtitle tracks from the database instead of invoking ffprobe.
+
 ## [1.6.5]
 - **Performance**: Optimized seek slider hover preview popup generation speed
 - **Subtitles**: Fixed subtitle popup closing automatically when switching subtitle or secondary subtitle tracks.
