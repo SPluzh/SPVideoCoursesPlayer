@@ -71,32 +71,30 @@ def compare_versions(local: str, remote: str) -> bool:
 def get_latest_release() -> dict | None:
     """
     Fetch latest release info from GitHub API.
-    Returns dict with keys: tag, url, changelog, or None on error.
+    Returns dict with keys: tag, url, changelog, or None if tag/download_url is missing.
+    Raises Exception on network/API errors.
     """
-    try:
-        req = urllib.request.Request(GITHUB_API_URL, headers={'User-Agent': USER_AGENT})
-        with urllib.request.urlopen(req, timeout=15) as response:
-            data = json.load(response)
+    req = urllib.request.Request(GITHUB_API_URL, headers={'User-Agent': USER_AGENT})
+    with urllib.request.urlopen(req, timeout=15) as response:
+        data = json.load(response)
 
-        tag = data.get('tag_name', '')
-        body = data.get('body', '')
-        assets = data.get('assets', [])
+    tag = data.get('tag_name', '')
+    body = data.get('body', '')
+    assets = data.get('assets', [])
 
-        download_url = None
-        for asset in assets:
-            name = asset.get('name', '')
-            if name.endswith('.zip'):
-                download_url = asset.get('browser_download_url')
-                break
+    download_url = None
+    for asset in assets:
+        name = asset.get('name', '')
+        if name.endswith('.zip'):
+            download_url = asset.get('browser_download_url')
+            break
 
-        if tag and download_url:
-            return {
-                'tag': tag,
-                'url': download_url,
-                'changelog': body,
-            }
-    except Exception as e:
-        print(f"Error checking for updates: {e}")
+    if tag and download_url:
+        return {
+            'tag': tag,
+            'url': download_url,
+            'changelog': body,
+        }
     return None
 
 

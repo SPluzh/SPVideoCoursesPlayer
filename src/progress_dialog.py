@@ -40,6 +40,7 @@ class BaseProgressDialog(QDialog):
         
         self.status_label = QLabel(title)
         self.status_label.setObjectName("scanStatusLabel")
+        self.status_label.setOpenExternalLinks(True)
         layout.addWidget(self.status_label)
         
         self.progress_bar = QProgressBar()

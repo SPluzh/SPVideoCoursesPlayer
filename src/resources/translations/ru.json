@@ -484,7 +484,7 @@
         "extracting": "Установка обновления...",
         "success": "Обновление загружено. Приложение перезапускается...",
         "no_updates": "У вас установлена последняя версия ({version})",
-        "error": "Ошибка обновления: {error}",
+        "error": "Ошибка обновления: {error}<br><br>Вы можете скачать обновление вручную:<br><a href=\"https://github.com/SPluzh/SPVideoCoursesPlayer/releases\">https://github.com/SPluzh/SPVideoCoursesPlayer/releases</a>",
         "check_updates_auto": "Проверять обновления при запуске"
     },
     "hotkeys": {

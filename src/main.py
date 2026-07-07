@@ -1494,9 +1494,13 @@ class VideoCourseBrowser(QMainWindow):
                 )
         except Exception as e:
             if force:
-                QMessageBox.warning(
-                    self, tr("updater.title"), tr("updater.error", error=str(e))
-                )
+                msg_box = QMessageBox(self)
+                msg_box.setIcon(QMessageBox.Icon.Warning)
+                msg_box.setWindowTitle(tr("updater.title"))
+                msg_box.setText(tr("updater.error", error=str(e)))
+                msg_box.setTextFormat(Qt.TextFormat.RichText)
+                msg_box.setTextInteractionFlags(Qt.TextInteractionFlag.TextBrowserInteraction)
+                msg_box.exec()
 
     def _do_app_update(self, update_info: dict):
         """Download update with progress dialog and restart on user action."""
