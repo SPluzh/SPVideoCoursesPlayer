@@ -7,7 +7,7 @@ echo  SPVideoCoursesPlayer - CREATE ZIP RELEASE
 echo ==================================================
 
 set "DIST_DIR=dist\SP Video Courses Player"
-set "VERSION_FILE=..\resources\version.txt"
+set "VERSION_FILE=..\src\resources\version.txt"
 
 if not exist "!DIST_DIR!" (
     echo [ERROR] Distribution directory not found: !DIST_DIR!
