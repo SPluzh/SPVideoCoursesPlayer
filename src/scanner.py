@@ -1151,7 +1151,40 @@ class VideoScanner:
         except Exception as e:
             return None
 
-    def scan_directory(self, root_path):
+    def find_video_folders(self, root_path):
+        """Find all directories containing video files under root_path."""
+        root = Path(root_path)
+        if not root.exists():
+            return []
+            
+        video_folders = []
+        for item in root.rglob("*"):
+            if item.is_dir():
+                try:
+                    if any(
+                        f.suffix.lower() in self.video_extensions
+                        for f in item.iterdir()
+                        if f.is_file()
+                    ):
+                        video_folders.append(item)
+                except:
+                    continue
+
+        try:
+            if any(
+                f.suffix.lower() in self.video_extensions
+                for f in root.iterdir()
+                if f.is_file()
+            ):
+                if root not in video_folders:
+                    video_folders.append(root)
+        except:
+            pass
+
+        video_folders.sort(key=natural_sort_key)
+        return video_folders
+
+    def scan_directory(self, root_path, progress_callback=None, start_index=0, total_folders=None, video_folders=None):
         """
         Main directory scanning method.
 
@@ -1210,38 +1243,24 @@ class VideoScanner:
         processed_video_paths = set()
         processed_folder_paths = set()
 
-        # Search for folders with video
-        print(f"\n{tr('scanner.scan_searching')}")
+        if video_folders is None:
+            # Search for folders with video
+            print(f"\n{tr('scanner.scan_searching')}")
+            video_folders = self.find_video_folders(root_path)
+        else:
+            # We already have video folders pre-calculated
+            # Let's print searching message just in case to maintain logs
+            print(f"\n{tr('scanner.scan_searching')}")
 
-        video_folders = []
-        for item in root.rglob("*"):
-            if item.is_dir():
-                # Check if there are videos in the folder itself
-                try:
-                    if any(
-                        f.suffix.lower() in self.video_extensions
-                        for f in item.iterdir()
-                        if f.is_file()
-                    ):
-                        video_folders.append(item)
-                except:
-                    continue
+        if total_folders is None:
+            total_folders_to_scan = len(video_folders)
+        else:
+            total_folders_to_scan = total_folders
 
-        # Also check root
-        try:
-            if any(
-                f.suffix.lower() in self.video_extensions
-                for f in root.iterdir()
-                if f.is_file()
-            ):
-                if root not in video_folders:
-                    video_folders.append(root)
-        except:
-            pass
+        if progress_callback:
+            progress_callback(start_index, total_folders_to_scan)
 
-        video_folders.sort(key=natural_sort_key)
-
-        for folder in video_folders:
+        for idx, folder in enumerate(video_folders):
             # Process one folder at a time, holding DB lock only when writing results
             try:
                 rel_path = folder.relative_to(root)
@@ -1571,6 +1590,9 @@ class VideoScanner:
                     exc_info=True,
                 )
                 continue
+            finally:
+                if progress_callback:
+                    progress_callback(start_index + idx + 1, total_folders_to_scan)
 
         # Create folder hierarchy - Short transaction
         print(f"\n{tr('scanner.hierarchy_building')}")

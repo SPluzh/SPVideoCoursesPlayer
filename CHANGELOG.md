@@ -3,6 +3,7 @@
 All notable changes to this project will be documented in this file.
 
 ## [1.6.6]
+- **UI**: Added a scan progress indicator (showing percentage) to the rescan progress bar instead of displaying an indeterminate animation.
 - **Performance**: Speed up library rescanning for already-scanned videos by loading metadata and audio/subtitle tracks from the database instead of invoking ffprobe.
 
 ## [1.6.5]

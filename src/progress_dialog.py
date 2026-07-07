@@ -89,6 +89,7 @@ class ScannerThread(QThread):
     """Background thread for scanning directories"""
     progress = pyqtSignal(str)  # Log message
     finished_scan = pyqtSignal(int, int)  # total_videos, total_folders
+    folder_progress = pyqtSignal(int, int)  # processed, total
     
     def __init__(self, config_file, paths, ffmpeg_path=None, ffprobe_path=None):
         super().__init__()
@@ -127,10 +128,29 @@ class ScannerThread(QThread):
             from scanner import VideoScanner
             scanner = VideoScanner(str(self.config_file))
             
+            # Pre-calculate video folders to get global total
+            paths_folders = []
+            total_folders_to_scan = 0
             for path in self.paths:
-                videos, folders = scanner.scan_directory(path)
+                folders = scanner.find_video_folders(path)
+                paths_folders.append(folders)
+                total_folders_to_scan += len(folders)
+
+            def folder_progress_cb(processed, total):
+                self.folder_progress.emit(processed, total)
+
+            current_start_index = 0
+            for path, path_video_folders in zip(self.paths, paths_folders):
+                videos, folders_count = scanner.scan_directory(
+                    path,
+                    progress_callback=folder_progress_cb,
+                    start_index=current_start_index,
+                    total_folders=total_folders_to_scan,
+                    video_folders=path_video_folders
+                )
                 self.total_videos += videos
-                self.total_folders += folders
+                self.total_folders += folders_count
+                current_start_index += len(path_video_folders)
             
             sys.stdout = old_stdout
             self.finished_scan.emit(self.total_videos, self.total_folders)
@@ -144,14 +164,23 @@ class ScanProgressDialog(BaseProgressDialog):
     def __init__(self, parent=None):
         super().__init__(parent, tr('scan_dialog.title'))
         self.status_label.setText(tr('scan_dialog.scanning'))
+        self.progress_bar.setFormat("%p%")
     
     def start_scan(self, config_file, paths, ffmpeg_path=None, ffprobe_path=None):
         self.scanner_thread = ScannerThread(config_file, paths, ffmpeg_path, ffprobe_path)
         self.thread = self.scanner_thread
         self.scanner_thread.progress.connect(self.append_log)
+        self.scanner_thread.folder_progress.connect(self.on_folder_progress)
         self.scanner_thread.finished_scan.connect(self.on_scan_finished)
         self.scanner_thread.start()
     
+    def on_folder_progress(self, processed, total):
+        if total > 0:
+            self.progress_bar.setRange(0, total)
+            self.progress_bar.setValue(processed)
+        else:
+            self.progress_bar.setRange(0, 0)
+
     def on_scan_finished(self, videos, folders):
         super().on_finished()
         self.status_label.setText(tr('scan_dialog.complete', folders=folders, videos=videos))
