@@ -263,7 +263,7 @@ class AppUpdateProgressDialog(BaseProgressDialog):
         super().__init__(parent, tr('updater.title'))
         self.status_label.setText(tr('updater.downloading'))
 
-        self.restart_btn = QPushButton(tr('updater.update_now'))
+        self.restart_btn = QPushButton(tr('dialog.ok'))
         self.restart_btn.setObjectName("updateNowBtn")
         self.restart_btn.setVisible(False)
         self.restart_btn.clicked.connect(self._on_restart)
@@ -284,9 +284,22 @@ class AppUpdateProgressDialog(BaseProgressDialog):
             self._bat_path = bat_path
             self.status_label.setText(tr('updater.success'))
             self.restart_btn.setVisible(True)
+            self.close_btn.setVisible(False)
         else:
             self.status_label.setText(tr('updater.error', error=''))
 
     def _on_restart(self):
         self.restart_requested.emit(self._bat_path)
         self.accept()
+
+    def reject(self):
+        if self._bat_path:
+            return
+        super().reject()
+
+    def closeEvent(self, event):
+        if self._bat_path:
+            event.ignore()
+        else:
+            super().closeEvent(event)
+

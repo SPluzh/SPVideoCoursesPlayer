@@ -252,7 +252,8 @@
         "confirm": "Confirmation",
         "save": "Save",
         "cancel": "Cancel",
-        "close": "Close"
+        "close": "Close",
+        "ok": "OK"
     },
     "scan_dialog": {
         "title": "Scanning...",

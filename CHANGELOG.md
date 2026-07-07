@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file.
 - **Updater**: Added support for Markdown formatted changelogs in the update dialog with correct dark-theme colors and interactive links.
 - **Fix**: Network and rate limit errors during update checks are now correctly reported instead of falsely claiming the latest version is installed.
 - **Updater**: The update error message now displays a clickable link to manually download the latest version from GitHub releases.
+- **Updater**: Removed the cancel/close button and disabled closing the progress dialog once the update is downloaded and unpacked, ensuring the application restarts to apply the update.
 
 ## [1.6.6]
 - **UI**: Added a scan progress indicator (showing percentage) to the rescan progress bar instead of displaying an indeterminate animation.
