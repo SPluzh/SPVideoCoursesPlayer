@@ -4,6 +4,7 @@ All notable changes to this project will be documented in this file.
 
 ## [1.6.7]
 - **Library**: Renaming video files or moving them to another folder no longer resets your progress. The player will recognize the moved files and keep all your bookmarks, progress, tags, and subtitle selections.
+- **Updater**: Added support for Markdown formatted changelogs in the update dialog with correct dark-theme colors and interactive links.
 
 ## [1.6.6]
 - **UI**: Added a scan progress indicator (showing percentage) to the rescan progress bar instead of displaying an indeterminate animation.

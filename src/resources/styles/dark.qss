@@ -1747,6 +1747,31 @@ QLabel#updateDialogTitle {
 
 QLabel#updateDialogNewVersion {
     font-weight: bold;
+    color: @status-ok;
+}
+
+QDialog#UpdateDialog QTextEdit#changelogText {
+    background-color: @bg-darker;
+    color: @text-main;
+    border: 1px solid @border;
+    border-radius: 3px;
+    padding: 8px;
+}
+
+QPushButton#updateNowBtn {
+    background-color: @accent;
+    border-color: @accent;
+    color: @text-light;
+}
+
+QPushButton#updateNowBtn:hover {
+    background-color: @accent-hover;
+    border-color: @accent-hover;
+}
+
+QPushButton#updateNowBtn:pressed {
+    background-color: @accent-pressed;
+    border-color: @accent-pressed;
 }
 
 /* ============================================================

@@ -5,9 +5,10 @@ Shows available update info, changelog, and action buttons.
 """
 
 from PyQt6.QtWidgets import (
-    QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QTextEdit
+    QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QTextBrowser
 )
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, QUrl
+from PyQt6.QtGui import QPalette, QColor, QDesktopServices
 
 from translator import tr
 
@@ -22,11 +23,13 @@ class UpdateDialog(QDialog):
 
     def __init__(self, parent=None, update_info: dict = None):
         super().__init__(parent)
+        self.setObjectName("UpdateDialog")
         self.update_info = update_info or {}
         self.result_action = self.LATER
         self.setWindowTitle(tr('updater.title'))
-        self.setMinimumWidth(500)
-        self.setMinimumHeight(350)
+        self.setMinimumWidth(560)
+        self.setMinimumHeight(420)
+        self.resize(620, 500)
         self.setup_ui()
 
     def setup_ui(self):
@@ -50,8 +53,19 @@ class UpdateDialog(QDialog):
         changelog_title = QLabel(tr('updater.changelog'))
         layout.addWidget(changelog_title)
 
-        self.changelog_text = QTextEdit()
-        self.changelog_text.setReadOnly(True)
+        self.changelog_text = QTextBrowser()
+        self.changelog_text.setObjectName("changelogText")
+        self.changelog_text.setOpenLinks(False)
+        self.changelog_text.anchorClicked.connect(self._open_link)
+
+        # Apply dark palette to the text document for correct Markdown rendering colors
+        palette = self.changelog_text.palette()
+        palette.setColor(QPalette.ColorRole.Base, QColor("#2c2c2c"))        # @bg-darker
+        palette.setColor(QPalette.ColorRole.Text, QColor("#eaeaea"))        # @text-main
+        palette.setColor(QPalette.ColorRole.Link, QColor("#018574"))        # @accent
+        palette.setColor(QPalette.ColorRole.LinkVisited, QColor("#02a58a")) # @accent-hover
+        self.changelog_text.setPalette(palette)
+
         changelog_content = self.update_info.get('changelog', '')
         if changelog_content:
             self.changelog_text.setMarkdown(changelog_content)
@@ -80,6 +94,9 @@ class UpdateDialog(QDialog):
         btn_layout.addWidget(update_btn)
 
         layout.addLayout(btn_layout)
+
+    def _open_link(self, url: QUrl):
+        QDesktopServices.openUrl(url)
 
     def _on_update(self):
         self.result_action = self.UPDATE_NOW
