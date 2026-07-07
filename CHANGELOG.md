@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.6.7]
+- **Library**: Renaming video files or moving them to another folder no longer resets your progress. The player will recognize the moved files and keep all your bookmarks, progress, tags, and subtitle selections.
+
 ## [1.6.6]
 - **UI**: Added a scan progress indicator (showing percentage) to the rescan progress bar instead of displaying an indeterminate animation.
 - **Performance**: Speed up library rescanning for already-scanned videos by loading metadata and audio/subtitle tracks from the database instead of invoking ffprobe.

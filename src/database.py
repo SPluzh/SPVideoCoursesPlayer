@@ -69,6 +69,7 @@ class DatabaseManager:
                     volume INTEGER DEFAULT 100,
                     subtitles_enabled INTEGER DEFAULT 0,
                     is_available INTEGER DEFAULT 1,
+                    content_hash TEXT DEFAULT NULL,
                     FOREIGN KEY(folder_path) REFERENCES folders(path) ON DELETE CASCADE,
                     FOREIGN KEY(selected_audio_id) REFERENCES audio_tracks(id) ON DELETE SET NULL,
                     FOREIGN KEY(selected_subtitle_id) REFERENCES subtitle_tracks(id) ON DELETE SET NULL
@@ -259,6 +260,13 @@ class DatabaseManager:
                 c.execute(
                     "ALTER TABLE video_files ADD COLUMN secondary_subtitle_enabled INTEGER DEFAULT 0"
                 )
+            if "content_hash" not in columns:
+                c.execute(
+                    "ALTER TABLE video_files ADD COLUMN content_hash TEXT DEFAULT NULL"
+                )
+            c.execute(
+                "CREATE INDEX IF NOT EXISTS idx_content_hash ON video_files(content_hash)"
+            )
 
             # Migration for video_markers
             c.execute("PRAGMA table_info(video_markers)")
@@ -283,6 +291,55 @@ class DatabaseManager:
                 c.execute("ALTER TABLE tags ADD COLUMN color TEXT DEFAULT '#3498db'")
 
             conn.commit()
+
+    def find_video_by_content_hash(self, content_hash):
+        """Find existing video record by content fingerprint."""
+        if not content_hash:
+            return None
+        try:
+            with self.get_connection() as conn:
+                conn.row_factory = sqlite3.Row
+                c = conn.cursor()
+                c.execute(
+                    "SELECT * FROM video_files WHERE content_hash = ? LIMIT 1",
+                    (content_hash,),
+                )
+                row = c.fetchone()
+                return dict(row) if row else None
+        except Exception as e:
+            logging.error(f"Error finding video by content hash: {e}", exc_info=True)
+            return None
+
+    def update_video_path(self, old_file_path, new_file_path, new_folder_path, new_file_name):
+        """Update file_path when a video has been renamed or moved."""
+        try:
+            with self.get_connection() as conn:
+                c = conn.cursor()
+                # Update video_files
+                c.execute(
+                    """
+                    UPDATE video_files
+                    SET file_path = ?, folder_path = ?, file_name = ?, is_available = 1
+                    WHERE file_path = ?
+                    """,
+                    (new_file_path, new_folder_path, new_file_name, old_file_path),
+                )
+                # Update audio_tracks (video_file_path column)
+                c.execute(
+                    "UPDATE audio_tracks SET video_file_path = ? WHERE video_file_path = ?",
+                    (new_file_path, old_file_path),
+                )
+                # Update subtitle_tracks (video_file_path column)
+                c.execute(
+                    "UPDATE subtitle_tracks SET video_file_path = ? WHERE video_file_path = ?",
+                    (new_file_path, old_file_path),
+                )
+                conn.commit()
+                logging.info(f"Updated video path: {old_file_path} → {new_file_path}")
+                return True
+        except Exception as e:
+            logging.error(f"Error updating video path: {e}", exc_info=True)
+            return False
 
     def get_existing_video_data(self, file_path):
         """Retrieves existing video metadata for scanning or loading."""

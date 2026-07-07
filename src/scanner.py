@@ -398,6 +398,19 @@ class VideoScanner:
 
         return hashlib.md5(key.encode("utf-8")).hexdigest()
 
+    def _get_content_hash(self, video_path, chunk_size=4 * 1024 * 1024):
+        """Generate content-based MD5 fingerprint using first chunk_size bytes."""
+        try:
+            hasher = hashlib.md5()
+            with open(video_path, "rb") as f:
+                data = f.read(chunk_size)
+                if not data:
+                    return None
+                hasher.update(data)
+            return hasher.hexdigest()
+        except Exception:
+            return None
+
     def _get_video_info_with_audio_subs(self, path):
         """
         Get full information about video file via ffprobe.
@@ -965,10 +978,35 @@ class VideoScanner:
             existing_data = self._get_existing_video_data(file_path_str)
             saved_audio_selection = None
 
+            content_hash = None
             if existing_data:
+                content_hash = existing_data.get("content_hash")
                 saved_audio_selection = self._get_existing_audio_selection(
                     existing_data["id"]
                 )
+            else:
+                content_hash = self._get_content_hash(video_file)
+                if content_hash:
+                    existing_data = self.db.find_video_by_content_hash(content_hash)
+                    if existing_data:
+                        old_path = Path(existing_data["file_path"])
+                        if not old_path.exists():
+                            self.db.update_video_path(
+                                old_file_path=existing_data["file_path"],
+                                new_file_path=file_path_str,
+                                new_folder_path=str(folder),
+                                new_file_name=video_file.name,
+                            )
+                            existing_data = self._get_existing_video_data(file_path_str)
+                            if existing_data:
+                                saved_audio_selection = self._get_existing_audio_selection(
+                                    existing_data["id"]
+                                )
+                        else:
+                            existing_data = None
+
+            if existing_data and not content_hash:
+                content_hash = self._get_content_hash(video_file)
 
             # Check if file has changed
             try:
@@ -1091,6 +1129,7 @@ class VideoScanner:
                     "external_subtitle_count": len(external_subs),
                     "saved_audio_selection": saved_audio_selection,
                     "from_cache": True,
+                    "content_hash": content_hash,
                 }
 
             # FULL SCAN
@@ -1147,6 +1186,7 @@ class VideoScanner:
                 "external_subtitle_count": len(external_subs),
                 "saved_audio_selection": saved_audio_selection,
                 "from_cache": False,
+                "content_hash": content_hash,
             }
         except Exception as e:
             return None
@@ -1377,8 +1417,8 @@ class VideoScanner:
                             (folder_path, file_path, file_name, track_number,
                              duration, resolution, file_size, codec,
                              thumbnail_path, thumbnails_json, watched_percent, last_position, is_available,
-                             audio_track_count, selected_audio_id, subtitle_track_count, selected_subtitle_id)
-                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, NULL, ?, NULL)
+                             audio_track_count, selected_audio_id, subtitle_track_count, selected_subtitle_id, content_hash)
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, NULL, ?, NULL, ?)
                             ON CONFLICT(file_path) DO UPDATE SET
                                 folder_path = excluded.folder_path,
                                 file_name = excluded.file_name,
@@ -1391,7 +1431,8 @@ class VideoScanner:
                                 thumbnails_json = excluded.thumbnails_json,
                                 is_available = 1,
                                 audio_track_count = excluded.audio_track_count,
-                                subtitle_track_count = excluded.subtitle_track_count
+                                subtitle_track_count = excluded.subtitle_track_count,
+                                content_hash = excluded.content_hash
                         """,
                             (
                                 result["folder_path"],
@@ -1408,6 +1449,7 @@ class VideoScanner:
                                 result["last_position"],
                                 result["audio_track_count"],
                                 result["subtitle_track_count"],
+                                result.get("content_hash"),
                             ),
                         )
 
