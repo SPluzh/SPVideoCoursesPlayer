@@ -401,14 +401,7 @@ class SubtitleOverlayWidget(QFrame):
         if win and getattr(self, '_installed_window', None) is not win:
             self.reinstall_window_filter()
 
-        win_active = win.isActiveWindow() if win else False
-        win_minimized = win.isMinimized() if win else False
-
         if win and win.isMinimized():
-            return False
-
-        # Hide when the user has switched to another application
-        if win and not win.isActiveWindow() and not self._pip_transition:
             return False
 
         return True
@@ -917,12 +910,12 @@ class SubtitleOverlayWidget(QFrame):
     def eventFilter(self, obj, event):
         if obj is QApplication.instance():
             if event.type() == QEvent.Type.ApplicationDeactivate:
-                # User switched to another application — hide overlay immediately
+                # User switched to another OS application entirely — hide overlay
                 self.hide()
             elif event.type() == QEvent.Type.ApplicationActivate:
                 # User switched back — re-evaluate visibility after a short delay
                 # (window activation state may not be updated yet)
-                QTimer.singleShot(400, self.update_visibility)
+                QTimer.singleShot(200, self.update_visibility)
             return False
         if obj == self.video_widget:
             if event.type() in (QEvent.Type.Resize, QEvent.Type.Move, QEvent.Type.Show, QEvent.Type.Hide):

@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.6.8]
+- **Subtitles**: Fixed a bug where subtitles would disappear when the player window lost focus, even if the window was still fully visible on the screen.
+
 ## [1.6.7]
 - **Library**: Renaming video files or moving them to another folder no longer resets your progress. The player will recognize the moved files and keep all your bookmarks, progress, tags, and subtitle selections.
 - **Updater**: Added support for Markdown formatted changelogs in the update dialog with correct dark-theme colors and interactive links.
