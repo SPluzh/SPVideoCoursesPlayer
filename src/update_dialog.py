@@ -41,18 +41,7 @@ class UpdateDialog(QDialog):
         title.setObjectName("updateDialogTitle")
         layout.addWidget(title)
 
-        # Version info
-        current_label = QLabel(tr('updater.current_version', version=self.update_info.get('current', '?')))
-        layout.addWidget(current_label)
-
-        new_label = QLabel(tr('updater.new_version', version=self.update_info.get('latest', '?')))
-        new_label.setObjectName("updateDialogNewVersion")
-        layout.addWidget(new_label)
-
         # Changelog
-        changelog_title = QLabel(tr('updater.changelog'))
-        layout.addWidget(changelog_title)
-
         self.changelog_text = QTextBrowser()
         self.changelog_text.setObjectName("changelogText")
         self.changelog_text.setOpenLinks(False)
@@ -77,15 +66,7 @@ class UpdateDialog(QDialog):
         btn_layout = QHBoxLayout()
         btn_layout.setSpacing(8)
 
-        skip_btn = QPushButton(tr('updater.skip_version'))
-        skip_btn.clicked.connect(self._on_skip)
-        btn_layout.addWidget(skip_btn)
-
         btn_layout.addStretch()
-
-        later_btn = QPushButton(tr('updater.later'))
-        later_btn.clicked.connect(self._on_later)
-        btn_layout.addWidget(later_btn)
 
         update_btn = QPushButton(tr('updater.update_now'))
         update_btn.setDefault(True)
@@ -101,11 +82,3 @@ class UpdateDialog(QDialog):
     def _on_update(self):
         self.result_action = self.UPDATE_NOW
         self.accept()
-
-    def _on_skip(self):
-        self.result_action = self.SKIP_VERSION
-        self.reject()
-
-    def _on_later(self):
-        self.result_action = self.LATER
-        self.reject()

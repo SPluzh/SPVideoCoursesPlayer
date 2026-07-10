@@ -18,6 +18,31 @@ from constants import ROOT_DIR, RESOURCES_DIR
 GITHUB_API_URL = "https://api.github.com/repos/SPluzh/SPVideoCoursesPlayer/releases/latest"
 USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
 
+_TOKEN_FILE = ".github_token"
+
+
+def _get_github_token() -> str:
+    """
+    Load a GitHub Personal Access Token for authenticated API requests.
+    Priority:
+      1. Environment variable GITHUB_TOKEN
+      2. File .github_token next to the exe / src directory
+    Returns empty string if not found.
+    """
+    token = os.environ.get("GITHUB_TOKEN", "").strip()
+    if token:
+        return token
+    if getattr(sys, 'frozen', False):
+        token_path = Path(sys.executable).parent / _TOKEN_FILE
+    else:
+        token_path = Path(__file__).parent / _TOKEN_FILE
+    if token_path.exists():
+        try:
+            return token_path.read_text("utf-8").strip()
+        except Exception:
+            pass
+    return ""
+
 # Files/dirs that must NOT be overwritten during update
 PROTECTED_ITEMS = {
     'settings.ini',
@@ -74,7 +99,14 @@ def get_latest_release() -> dict | None:
     Returns dict with keys: tag, url, changelog, or None if tag/download_url is missing.
     Raises Exception on network/API errors.
     """
-    req = urllib.request.Request(GITHUB_API_URL, headers={'User-Agent': USER_AGENT})
+    headers = {
+        'User-Agent': USER_AGENT,
+        'Accept': 'application/vnd.github.v3+json'
+    }
+    token = _get_github_token()
+    if token:
+        headers['Authorization'] = f'Bearer {token}'
+    req = urllib.request.Request(GITHUB_API_URL, headers=headers)
     with urllib.request.urlopen(req, timeout=15) as response:
         data = json.load(response)
 

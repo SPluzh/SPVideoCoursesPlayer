@@ -27,6 +27,32 @@ if sys.platform == "win32":
         # Fallback for older python versions if needed, though 3.7+ has reconfigure
         pass
 
+_TOKEN_FILE = ".github_token"
+
+
+def _get_github_token() -> str:
+    """
+    Load a GitHub Personal Access Token for authenticated API requests.
+    Priority:
+      1. Environment variable GITHUB_TOKEN
+      2. File .github_token next to the exe / src directory
+    Returns empty string if not found.
+    """
+    token = os.environ.get("GITHUB_TOKEN", "").strip()
+    if token:
+        return token
+    if getattr(sys, 'frozen', False):
+        token_path = Path(sys.executable).parent / _TOKEN_FILE
+    else:
+        token_path = Path(__file__).parent / _TOKEN_FILE
+    if token_path.exists():
+        try:
+            return token_path.read_text("utf-8").strip()
+        except Exception:
+            pass
+    return ""
+
+
 # Try importing py7zr
 try:
     import py7zr
@@ -246,7 +272,14 @@ class GitHubSource(ReleaseSource):
         return f"GitHub ({self.author_name})"
 
     def get_latest_release(self):
-        req = urllib.request.Request(self.api_url, headers={'User-Agent': 'Mozilla/5.0'})
+        headers = {
+            'User-Agent': 'Mozilla/5.0',
+            'Accept': 'application/vnd.github.v3+json'
+        }
+        token = _get_github_token()
+        if token:
+            headers['Authorization'] = f'Bearer {token}'
+        req = urllib.request.Request(self.api_url, headers=headers)
         try:
             with urllib.request.urlopen(req) as response:
                 data = json.load(response)
