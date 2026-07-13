@@ -29,6 +29,21 @@ class Translator:
             logging.error(f"Error loading language file: {e}")
             return False
 
+    def get_available_languages(self):
+        """Scan translations directory and return dictionary of code -> name"""
+        languages = {}
+        if not self.lang_dir.exists():
+            return languages
+        for lang_file in self.lang_dir.glob('*.json'):
+            lang_code = lang_file.stem
+            try:
+                with open(lang_file, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                    languages[lang_code] = data.get('language_name', lang_code)
+            except Exception as e:
+                logging.error(f"Error reading language name from {lang_file.name}: {e}")
+        return languages
+
     def get(self, key, **kwargs):
         keys = key.split('.')
         value = self.translations

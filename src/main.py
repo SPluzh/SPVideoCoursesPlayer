@@ -1272,19 +1272,17 @@ class VideoCourseBrowser(QMainWindow):
         lang_group = QActionGroup(self)
         lang_group.setExclusive(True)
 
-        ru_action = QAction(tr("menu.language_ru"), self)
-        ru_action.setCheckable(True)
-        ru_action.setChecked(tr.current_lang == "ru")
-        ru_action.triggered.connect(lambda: self.change_language("ru"))
-        lang_group.addAction(ru_action)
-        lang_menu.addAction(ru_action)
+        # Get available languages dynamically and sort alphabetically by their display name
+        languages = tr.get_available_languages()
+        sorted_languages = sorted(languages.items(), key=lambda item: item[1].lower())
 
-        en_action = QAction(tr("menu.language_en"), self)
-        en_action.setCheckable(True)
-        en_action.setChecked(tr.current_lang == "en")
-        en_action.triggered.connect(lambda: self.change_language("en"))
-        lang_group.addAction(en_action)
-        lang_menu.addAction(en_action)
+        for code, name in sorted_languages:
+            action = QAction(name, self)
+            action.setCheckable(True)
+            action.setChecked(tr.current_lang == code)
+            action.triggered.connect(lambda checked, c=code: self.change_language(c))
+            lang_group.addAction(action)
+            lang_menu.addAction(action)
 
         view_menu.addSeparator()
 

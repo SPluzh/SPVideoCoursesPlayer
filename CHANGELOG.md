@@ -3,6 +3,7 @@
 All notable changes to this project will be documented in this file.
 
 ## [1.6.8]
+- **UI**: Added new interface languages: Arabic, Chinese (Simplified), French, German, Japanese, Korean, Portuguese, and Spanish. The language menu is now sorted alphabetically by native name.
 - **Subtitles**: Fixed a bug where subtitles would disappear when the player window lost focus, even if the window was still fully visible on the screen.
 
 ## [1.6.7]

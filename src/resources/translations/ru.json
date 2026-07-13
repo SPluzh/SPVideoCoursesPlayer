@@ -1,4 +1,5 @@
 {
+    "language_name": "Русский",
     "app": {
         "title": "SP Video Courses Player",
         "version": "1.0",
@@ -13,8 +14,6 @@
         "help": "Помощь",
         "about": "О программе",
         "language": "Язык",
-        "language_ru": "Русский",
-        "language_en": "English",
         "pip_mode": "Плавающее окно",
         "tools": "Инструменты",
         "screenshot": "Сделать скриншот",
