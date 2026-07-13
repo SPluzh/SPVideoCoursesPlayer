@@ -1109,6 +1109,7 @@ class VideoScanner:
                     "folder_path": str(folder),
                     "file_path": file_path_str,
                     "file_name": video_file.name,
+                    "file_name_without_ext": video_file.stem,
                     "track_number": track_number,
                     "duration": duration,
                     "resolution": resolution,
@@ -1166,6 +1167,7 @@ class VideoScanner:
                 "folder_path": str(folder),
                 "file_path": file_path_str,
                 "file_name": video_file.name,
+                "file_name_without_ext": video_file.stem,
                 "track_number": track_number,
                 "duration": duration,
                 "resolution": resolution,
@@ -1414,14 +1416,15 @@ class VideoScanner:
                         c.execute(
                             """
                             INSERT INTO video_files
-                            (folder_path, file_path, file_name, track_number,
+                            (folder_path, file_path, file_name, file_name_without_ext, track_number,
                              duration, resolution, file_size, codec,
                              thumbnail_path, thumbnails_json, watched_percent, last_position, is_available,
                              audio_track_count, selected_audio_id, subtitle_track_count, selected_subtitle_id, content_hash)
-                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, NULL, ?, NULL, ?)
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, NULL, ?, NULL, ?)
                             ON CONFLICT(file_path) DO UPDATE SET
                                 folder_path = excluded.folder_path,
                                 file_name = excluded.file_name,
+                                file_name_without_ext = excluded.file_name_without_ext,
                                 track_number = excluded.track_number,
                                 duration = excluded.duration,
                                 resolution = excluded.resolution,
@@ -1438,6 +1441,7 @@ class VideoScanner:
                                 result["folder_path"],
                                 result["file_path"],
                                 result["file_name"],
+                                result["file_name_without_ext"],
                                 result["track_number"],
                                 result["duration"],
                                 result["resolution"],

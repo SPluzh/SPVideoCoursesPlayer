@@ -63,5 +63,49 @@ class TestDatabaseSecondarySubtitles(unittest.TestCase):
         self.assertIsNone(track_id)
         self.assertFalse(enabled)
 
+    def test_file_name_without_ext(self):
+        folder_path = "C:/Test/Folder"
+        file_path = "C:/Test/Folder/lesson_1.mp4"
+
+        # 1. Simulate old schema by dropping the column
+        with self.db.get_connection() as conn:
+            c = conn.cursor()
+            c.execute("ALTER TABLE video_files DROP COLUMN file_name_without_ext")
+            c.execute(
+                "INSERT INTO folders (path, name) VALUES (?, ?)",
+                (folder_path, "Folder")
+            )
+            # Insert video record without explicit stem
+            c.execute(
+                "INSERT INTO video_files (folder_path, file_path, file_name) VALUES (?, ?, ?)",
+                (folder_path, file_path, "lesson_1.mp4")
+            )
+            conn.commit()
+
+        # Run migration/init_database to verify it populates file_name_without_ext
+        self.db.init_database()
+
+        with self.db.get_connection() as conn:
+            c = conn.cursor()
+            c.execute("SELECT file_name_without_ext FROM video_files WHERE file_path = ?", (file_path,))
+            row = c.fetchone()
+            self.assertEqual(row[0], "lesson_1")
+
+        # 2. Test update_video_path updates the stem correctly
+        new_file_path = "C:/Test/Folder/lesson_1_renamed.mkv"
+        self.db.update_video_path(
+            old_file_path=file_path,
+            new_file_path=new_file_path,
+            new_folder_path=folder_path,
+            new_file_name="lesson_1_renamed.mkv"
+        )
+
+        with self.db.get_connection() as conn:
+            c = conn.cursor()
+            c.execute("SELECT file_name, file_name_without_ext FROM video_files WHERE file_path = ?", (new_file_path,))
+            row = c.fetchone()
+            self.assertEqual(row[0], "lesson_1_renamed.mkv")
+            self.assertEqual(row[1], "lesson_1_renamed")
+
 if __name__ == "__main__":
     unittest.main()

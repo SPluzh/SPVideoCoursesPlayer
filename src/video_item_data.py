@@ -13,5 +13,6 @@ class VideoItemData:
     last_position: float
     marker_count: int
     is_favorite: bool
+    filename_without_ext: str = ""
     tags: List[dict] = field(default_factory=list)
     markers: List[dict] = field(default_factory=list)

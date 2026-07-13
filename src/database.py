@@ -53,6 +53,7 @@ class DatabaseManager:
                     folder_path TEXT NOT NULL,
                     file_path TEXT UNIQUE NOT NULL,
                     file_name TEXT,
+                    file_name_without_ext TEXT,
                     track_number INTEGER,
                     duration REAL DEFAULT 0,
                     resolution TEXT,
@@ -264,6 +265,20 @@ class DatabaseManager:
                 c.execute(
                     "ALTER TABLE video_files ADD COLUMN content_hash TEXT DEFAULT NULL"
                 )
+            if "file_name_without_ext" not in columns:
+                c.execute(
+                    "ALTER TABLE video_files ADD COLUMN file_name_without_ext TEXT DEFAULT NULL"
+                )
+                # Populate existing rows
+                c.execute("SELECT id, file_name FROM video_files")
+                rows = c.fetchall()
+                for row_id, fn in rows:
+                    if fn:
+                        stem = Path(fn).stem
+                        c.execute(
+                            "UPDATE video_files SET file_name_without_ext = ? WHERE id = ?",
+                            (stem, row_id)
+                        )
             c.execute(
                 "CREATE INDEX IF NOT EXISTS idx_content_hash ON video_files(content_hash)"
             )
@@ -316,13 +331,14 @@ class DatabaseManager:
             with self.get_connection() as conn:
                 c = conn.cursor()
                 # Update video_files
+                new_file_name_without_ext = Path(new_file_name).stem
                 c.execute(
                     """
                     UPDATE video_files
-                    SET file_path = ?, folder_path = ?, file_name = ?, is_available = 1
+                    SET file_path = ?, folder_path = ?, file_name = ?, file_name_without_ext = ?, is_available = 1
                     WHERE file_path = ?
                     """,
-                    (new_file_path, new_folder_path, new_file_name, old_file_path),
+                    (new_file_path, new_folder_path, new_file_name, new_file_name_without_ext, old_file_path),
                 )
                 # Update audio_tracks (video_file_path column)
                 c.execute(

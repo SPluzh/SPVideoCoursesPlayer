@@ -3535,7 +3535,7 @@ class VideoCourseBrowser(QMainWindow):
                 parent_item = folder_items[v["folder_path"]]
                 video_item = QTreeWidgetItem(parent_item)
 
-                display_name = v["file_name"]
+                display_name = v.get("file_name_without_ext") or Path(v["file_name"]).stem
                 if v["track_number"]:
                     display_name = f"{v['track_number']}. {display_name}"
 
@@ -3563,6 +3563,7 @@ class VideoCourseBrowser(QMainWindow):
                         last_position=v["last_position"] or 0,
                         marker_count=v["marker_count"] or 0,
                         is_favorite=bool(v.get("is_favorite", 0)),
+                        filename_without_ext=v.get("file_name_without_ext") or Path(v["file_name"]).stem,
                         tags=v.get("tags", []),
                         markers=v.get("markers", []),
                     )

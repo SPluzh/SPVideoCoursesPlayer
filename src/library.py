@@ -522,7 +522,7 @@ class VideoItemDelegate(QStyledItemDelegate):
 
             # Unpack data
             if isinstance(data, VideoItemData):
-                filename = data.filename
+                filename = getattr(data, "filename_without_ext", None) or Path(data.filename).stem
                 duration = data.duration
                 resolution = data.resolution
                 file_size = data.file_size
@@ -551,6 +551,7 @@ class VideoItemDelegate(QStyledItemDelegate):
                         last_position,
                         marker_count,
                     ) = data[:9]
+                    filename = Path(filename).stem
                     is_favorite = 0
                 else:
                     painter.restore()
