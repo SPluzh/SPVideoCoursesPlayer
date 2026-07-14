@@ -252,6 +252,33 @@ class PiPOverlay(QWidget):
             painter.end()
 
 
+from PyQt6.QtWidgets import QSlider, QWidgetAction
+
+
+class MenuSlider(QSlider):
+    """Custom slider for menu items to prevent closing the menu when clicking on it."""
+    def mouseReleaseEvent(self, event):
+        super().mouseReleaseEvent(event)
+        event.accept()
+
+    def mousePressEvent(self, event):
+        super().mousePressEvent(event)
+        event.accept()
+
+    def mouseMoveEvent(self, event):
+        super().mouseMoveEvent(event)
+        event.accept()
+
+
+class MenuWidgetContainer(QWidget):
+    """Container widget that accepts mouse events to prevent menu closure."""
+    def mouseReleaseEvent(self, event):
+        event.accept()
+
+    def mousePressEvent(self, event):
+        event.accept()
+
+
 class VideoCourseBrowser(QMainWindow):
     # natural_sort_key is now in utils.py
 
@@ -2381,6 +2408,12 @@ class VideoCourseBrowser(QMainWindow):
 
             menu.addSeparator()
 
+            # Playback speed slider action
+            speed_action = self._build_speed_widget_action(menu)
+            menu.addAction(speed_action)
+
+            menu.addSeparator()
+
             mark_watched_action = menu.addAction(
                 self.icons.get("context_mark_read", QIcon()),
                 tr("context_menu.mark_watched"),
@@ -2555,6 +2588,47 @@ class VideoCourseBrowser(QMainWindow):
                 tr("status.error"),
                 tr("error.folder_not_found", folder=folder_path),
             )
+
+    def _build_speed_widget_action(self, menu):
+        """Creates a speed slider action for the context menu."""
+        container = MenuWidgetContainer()
+        container.setObjectName("contextMenuSpeedContainer")
+        layout = QHBoxLayout(container)
+        layout.setContentsMargins(12, 4, 12, 4)
+        layout.setSpacing(8)
+
+        # Label/icon
+        label_title = QLabel(tr("context_menu.playback_speed"))
+        label_title.setObjectName("contextMenuSpeedTitle")
+        
+        # Slider
+        slider = MenuSlider(Qt.Orientation.Horizontal)
+        slider.setObjectName("contextMenuSpeedSlider")
+        slider.setRange(5, 30)
+        slider.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        
+        # Set current speed from player
+        current_val = self.video_player.speed_slider.value()
+        slider.setValue(current_val)
+
+        # Value label
+        label_val = QLabel(f"{current_val / 10.0:.1f}x")
+        label_val.setObjectName("contextMenuSpeedValue")
+        label_val.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+
+        def on_value_changed(val):
+            label_val.setText(f"{val / 10.0:.1f}x")
+            self.video_player.speed_slider.setValue(val)
+
+        slider.valueChanged.connect(on_value_changed)
+
+        layout.addWidget(label_title)
+        layout.addWidget(slider)
+        layout.addWidget(label_val)
+
+        action = QWidgetAction(menu)
+        action.setDefaultWidget(container)
+        return action
 
     # ADDED: Context menu audio track methods
     def populate_audio_submenu(self, menu, filepath, item):

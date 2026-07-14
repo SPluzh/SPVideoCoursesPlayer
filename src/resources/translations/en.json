@@ -431,7 +431,8 @@
         "open_pureref": "Open PureRef",
         "create_pureref": "Create PureRef",
         "delete_pureref": "Delete PureRef",
-        "remove_all_tags": "Remove all tags"
+        "remove_all_tags": "Remove all tags",
+        "playback_speed": "Speed"
     },
     "pureref": {
         "exe_not_found": "PureRef not found at: {path}",

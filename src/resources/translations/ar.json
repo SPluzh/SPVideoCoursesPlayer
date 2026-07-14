@@ -431,7 +431,8 @@
         "open_pureref": "فتح PureRef",
         "create_pureref": "إنشاء PureRef",
         "delete_pureref": "حذف PureRef",
-        "remove_all_tags": "إزالة كافة العلامات"
+        "remove_all_tags": "إزالة كافة العلامات",
+        "playback_speed": "السرعة"
     },
     "pureref": {
         "exe_not_found": "لم يتم العثور على PureRef في: {path}",

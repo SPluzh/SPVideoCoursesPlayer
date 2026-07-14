@@ -682,6 +682,26 @@ QMenu::indicator {
     height: 13px;
 }
 
+MenuWidgetContainer#contextMenuSpeedContainer {
+    background: transparent;
+    border: none;
+}
+
+QLabel#contextMenuSpeedTitle {
+    color: @text-main;
+}
+
+QSlider#contextMenuSpeedSlider {
+    min-width: 100px;
+    max-width: 100px;
+}
+
+QLabel#contextMenuSpeedValue {
+    color: @text-main;
+    min-width: 30px;
+    max-width: 30px;
+}
+
 /* ============================================================
    ОКНО НАСТРОЕК
    ============================================================ */

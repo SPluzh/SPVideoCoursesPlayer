@@ -431,7 +431,8 @@
         "open_pureref": "PureRef を開く",
         "create_pureref": "PureRef の作成",
         "delete_pureref": "PureRef の削除",
-        "remove_all_tags": "すべてのタグを削除します"
+        "remove_all_tags": "すべてのタグを削除します",
+        "playback_speed": "再生速度"
     },
     "pureref": {
         "exe_not_found": "PureRef が見つかりません: {path}",

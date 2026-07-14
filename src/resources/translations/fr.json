@@ -431,7 +431,8 @@
         "open_pureref": "ouvrir PureRef",
         "create_pureref": "Créer PureRef",
         "delete_pureref": "Supprimer PureRef",
-        "remove_all_tags": "Supprimer toutes les balises"
+        "remove_all_tags": "Supprimer toutes les balises",
+        "playback_speed": "Vitesse"
     },
     "pureref": {
         "exe_not_found": "PureRef introuvable à : {path}",

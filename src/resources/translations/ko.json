@@ -431,7 +431,8 @@
         "open_pureref": "PureRef 열기",
         "create_pureref": "PureRef 생성",
         "delete_pureref": "PureRef 삭제",
-        "remove_all_tags": "모든 태그 제거"
+        "remove_all_tags": "모든 태그 제거",
+        "playback_speed": "재생 속도"
     },
     "pureref": {
         "exe_not_found": "PureRef를 찾을 수 없음: {path}",

@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.6.10]
+- **Library**: Added a playback speed control slider directly to the video context menu, allowing you to adjust playback speed from 0.5x to 3.0x with real-time synchronization.
+
 ## [1.6.9]
 - **Library**: Show video names in the library list without their file extensions for a cleaner look.
 

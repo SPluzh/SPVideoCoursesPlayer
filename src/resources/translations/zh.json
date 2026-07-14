@@ -431,7 +431,8 @@
         "open_pureref": "Open PureRef",
         "create_pureref": "Create PureRef",
         "delete_pureref": "Delete PureRef",
-        "remove_all_tags": "删除所有标签"
+        "remove_all_tags": "删除所有标签",
+        "playback_speed": "播放速度"
     },
     "pureref": {
         "exe_not_found": "PureRef not found at: {path}",

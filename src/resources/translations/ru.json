@@ -431,7 +431,8 @@
         "open_pureref": "Открыть PureRef",
         "create_pureref": "Создать PureRef",
         "delete_pureref": "Удалить PureRef",
-        "remove_all_tags": "Удалить все теги"
+        "remove_all_tags": "Удалить все теги",
+        "playback_speed": "Скорость"
     },
     "pureref": {
         "exe_not_found": "PureRef не найден: {path}",

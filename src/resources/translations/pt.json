@@ -431,7 +431,8 @@
         "open_pureref": "Abra PureRef",
         "create_pureref": "Criar PureRef",
         "delete_pureref": "Excluir PureRef",
-        "remove_all_tags": "Remover todas as tags"
+        "remove_all_tags": "Remover todas as tags",
+        "playback_speed": "Velocidade"
     },
     "pureref": {
         "exe_not_found": "PureRef não encontrado em: {path}",
