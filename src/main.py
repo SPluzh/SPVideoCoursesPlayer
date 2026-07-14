@@ -988,17 +988,7 @@ class VideoCourseBrowser(QMainWindow):
                 except Exception as e:
                     logging.error(f"Error restoring splitter: {e}")
 
-            if "playback_speed" in state:
-                try:
-                    speed_value = int(state["playback_speed"])
-                    self.video_player._restoring_state = True
-                    self.video_player.speed_slider.setValue(speed_value)
-                    self.video_player._restoring_state = False
-                except Exception as e:
-                    logging.error(f"Error restoring playback speed: {e}")
-                    self.video_player._restoring_state = (
-                        False  # Ensure flag is reset on error
-                    )
+
 
             if "pip_geometry" in state:
                 try:
@@ -1117,8 +1107,14 @@ class VideoCourseBrowser(QMainWindow):
 
         if self.video_player.current_file:
             state["last_video"] = self.video_player.current_file
-
-        state["playback_speed"] = str(self.video_player.speed_slider.value())
+            if self.db:
+                try:
+                    self.db.save_video_speed(
+                        self.video_player.current_file,
+                        self.video_player.get_current_speed()
+                    )
+                except Exception as e:
+                    logging.error(f"Error saving speed in save_window_state: {e}")
         state["show_markers"] = str(self.marker_toggle_btn.isChecked())
         state["show_status_bar"] = str(self.status.isVisible())
         state["show_pureref_badges"] = str(self.show_pureref_badges_action.isChecked())
@@ -2888,7 +2884,7 @@ class VideoCourseBrowser(QMainWindow):
                 ):
                     self.video_player.osd_manager.show_next_video(next_filename)
 
-                self.play_video_in_player(item, resume=True, auto_play=should_play)
+                self.play_video_in_player(item, resume=True, auto_play=should_play, inherit_speed=True)
                 self.course_tree.scrollToItem(item)
                 self.course_tree.setCurrentItem(item)
                 return
@@ -2930,7 +2926,7 @@ class VideoCourseBrowser(QMainWindow):
                         self.video_player.osd_manager.show_prev_video(prev_filename)
 
                     self.play_video_in_player(
-                        last_video_item, resume=True, auto_play=should_play
+                        last_video_item, resume=True, auto_play=should_play, inherit_speed=True
                     )
                     self.course_tree.scrollToItem(last_video_item)
                     self.course_tree.setCurrentItem(last_video_item)
@@ -2996,7 +2992,7 @@ class VideoCourseBrowser(QMainWindow):
             delegate.is_paused = False
             self.course_tree.viewport().update()
 
-    def play_video_in_player(self, item, resume=False, auto_play=True):
+    def play_video_in_player(self, item, resume=False, auto_play=True, inherit_speed=False):
         logging.debug("play_video_in_player called")
 
         # Save progress and update folder stats for the PREVIOUS video before switching
@@ -3014,7 +3010,7 @@ class VideoCourseBrowser(QMainWindow):
                 saved_position, saved_volume = self.get_saved_position(file_path)
 
             self.video_player.load_video(
-                file_path, saved_position, volume=saved_volume, auto_play=auto_play
+                file_path, saved_position, volume=saved_volume, auto_play=auto_play, inherit_speed=inherit_speed
             )
             # Update delegate
             delegate = self.course_tree.itemDelegate()

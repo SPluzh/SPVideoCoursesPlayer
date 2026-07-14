@@ -71,6 +71,7 @@ class DatabaseManager:
                     subtitles_enabled INTEGER DEFAULT 0,
                     is_available INTEGER DEFAULT 1,
                     content_hash TEXT DEFAULT NULL,
+                    playback_speed REAL DEFAULT NULL,
                     FOREIGN KEY(folder_path) REFERENCES folders(path) ON DELETE CASCADE,
                     FOREIGN KEY(selected_audio_id) REFERENCES audio_tracks(id) ON DELETE SET NULL,
                     FOREIGN KEY(selected_subtitle_id) REFERENCES subtitle_tracks(id) ON DELETE SET NULL
@@ -279,6 +280,10 @@ class DatabaseManager:
                             "UPDATE video_files SET file_name_without_ext = ? WHERE id = ?",
                             (stem, row_id)
                         )
+            if "playback_speed" not in columns:
+                c.execute(
+                    "ALTER TABLE video_files ADD COLUMN playback_speed REAL DEFAULT NULL"
+                )
             c.execute(
                 "CREATE INDEX IF NOT EXISTS idx_content_hash ON video_files(content_hash)"
             )
@@ -802,6 +807,35 @@ class DatabaseManager:
                     }
         except Exception as e:
             logging.error(f"Error getting video progress: {e}", exc_info=True)
+        return None
+
+    def save_video_speed(self, file_path, speed: float):
+        """Saves playback speed for a specific video."""
+        try:
+            with self.get_connection() as conn:
+                c = conn.cursor()
+                c.execute(
+                    "UPDATE video_files SET playback_speed = ? WHERE file_path = ?",
+                    (speed, str(file_path)),
+                )
+                conn.commit()
+        except Exception as e:
+            logging.error(f"Error saving video speed: {e}", exc_info=True)
+
+    def get_video_speed(self, file_path) -> float | None:
+        """Returns saved playback speed for a video, or None if never set."""
+        try:
+            with self.get_connection() as conn:
+                c = conn.cursor()
+                c.execute(
+                    "SELECT playback_speed FROM video_files WHERE file_path = ?",
+                    (str(file_path),),
+                )
+                row = c.fetchone()
+                if row and row[0] is not None:
+                    return float(row[0])
+        except Exception as e:
+            logging.error(f"Error getting video speed: {e}", exc_info=True)
         return None
 
     def get_marker_count(self, file_path):

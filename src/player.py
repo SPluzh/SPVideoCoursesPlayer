@@ -1631,19 +1631,21 @@ class VideoPlayerWidget(QWidget):
         if hasattr(self, "thumb_provider"):
             self.thumb_provider.ffmpeg_path = path
 
-    def load_video(self, file_path, saved_position=0, volume=100, auto_play=True):
+    def load_video(self, file_path, saved_position=0, volume=100, auto_play=True, inherit_speed=False):
         """
         Load video
         file_path: path to file
         saved_position: saved position in seconds
         volume: saved volume in % (default 100)
         auto_play: automatically start playback
+        inherit_speed: whether to inherit current speed if no saved speed exists
         """
         logging.info(f"🎬 ========== LOADING VIDEO ==========")
         logging.info(f"🎬 File: {file_path}")
         logging.info(f"🎬 Saved position: {saved_position}s")
         logging.info(f"🎬 Volume: {volume}%")
         logging.info(f"🎬 Auto-play: {auto_play}")
+        logging.info(f"🎬 Inherit speed: {inherit_speed}")
 
         if not str(file_path).startswith(r"\\") and not str(file_path).startswith("//"):
             if not Path(file_path).exists():
@@ -1659,6 +1661,29 @@ class VideoPlayerWidget(QWidget):
             if not self.player:
                 logging.error("🎬 ❌ Cannot load video, player not initialized")
                 return False
+
+        # Save speed of current video before switching
+        if self.current_file and self.db:
+            try:
+                self.db.save_video_speed(self.current_file, self.get_current_speed())
+                logging.info(f"🎬 Saved speed {self.get_current_speed()} for: {self.current_file}")
+            except Exception as e:
+                logging.error(f"🎬 Error saving speed in load_video: {e}")
+
+        # Restore per-video speed
+        if self.db:
+            try:
+                saved_speed = self.db.get_video_speed(file_path)
+                if saved_speed is not None:
+                    logging.info(f"🎬 Restoring saved speed {saved_speed} for: {file_path}")
+                    self.set_speed(saved_speed)
+                elif not inherit_speed:
+                    logging.info(f"🎬 No saved speed for: {file_path}, resetting to 1.0")
+                    self.set_speed(1.0)
+                else:
+                    logging.info(f"🎬 No saved speed for: {file_path}, inheriting current speed {self.get_current_speed()}")
+            except Exception as e:
+                logging.error(f"🎬 Error restoring speed in load_video: {e}")
 
         self.current_file = file_path
         self.saved_position = saved_position
@@ -1738,6 +1763,14 @@ class VideoPlayerWidget(QWidget):
         try:
             file_to_unload = self.current_file
             logging.info(f"Unloading video: {file_to_unload}")
+
+            # Save speed of current video before unloading
+            if file_to_unload and self.db:
+                try:
+                    self.db.save_video_speed(file_to_unload, self.get_current_speed())
+                    logging.info(f"🎬 Saved speed {self.get_current_speed()} for: {file_to_unload}")
+                except Exception as e:
+                    logging.error(f"🎬 Error saving speed in unload_video: {e}")
 
             # Reset current file FIRST so other methods (like save_progress) know we're stopping
             self.current_file = None
@@ -3041,6 +3074,25 @@ class VideoPlayerWidget(QWidget):
                     self.osd_manager.show_speed(speed)
         except Exception as e:
             logging.error(f"Error changing speed: {e}", exc_info=True)
+
+    def get_current_speed(self) -> float:
+        """Returns the current playback speed as a float (e.g. 1.0, 1.5, 2.0)."""
+        return self.speed_slider.value() / 10.0
+
+    def set_speed(self, speed: float):
+        """Sets playback speed from a float value, updating slider and MPV."""
+        try:
+            val = int(round(speed * 10.0))
+            val = max(5, min(30, val))
+            self._restoring_state = True
+            self.speed_slider.setValue(val)
+            self._restoring_state = False
+            if self.player:
+                self.player.speed = val / 10.0
+            self.speed_label.setText(tr("player.speed", speed=f"{val/10.0:.1f}"))
+        except Exception as e:
+            logging.error(f"Error setting speed: {e}", exc_info=True)
+            self._restoring_state = False
 
     @staticmethod
     def format_time(seconds):

@@ -3,6 +3,7 @@
 All notable changes to this project will be documented in this file.
 
 ## [1.6.10]
+- **Playback**: Remember and restore playback speed individually for each video. When switching to the next/previous video, the current speed is kept unless that video already has its own saved speed.
 - **Library**: Added a playback speed control slider directly to the video context menu, allowing you to adjust playback speed from 0.5x to 3.0x with real-time synchronization.
 
 ## [1.6.9]
