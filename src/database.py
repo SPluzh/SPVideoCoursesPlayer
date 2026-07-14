@@ -822,6 +822,20 @@ class DatabaseManager:
         except Exception as e:
             logging.error(f"Error saving video speed: {e}", exc_info=True)
 
+    def save_videos_speed(self, file_paths: list[str], speed: float):
+        """Saves playback speed for multiple videos at once."""
+        try:
+            with self.get_connection() as conn:
+                c = conn.cursor()
+                c.executemany(
+                    "UPDATE video_files SET playback_speed = ? WHERE file_path = ?",
+                    [(speed, str(p)) for p in file_paths]
+                )
+                conn.commit()
+        except Exception as e:
+            logging.error(f"Error saving bulk video speed: {e}", exc_info=True)
+
+
     def get_video_speed(self, file_path) -> float | None:
         """Returns saved playback speed for a video, or None if never set."""
         try:

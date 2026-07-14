@@ -2405,7 +2405,7 @@ class VideoCourseBrowser(QMainWindow):
             menu.addSeparator()
 
             # Playback speed slider action
-            speed_action = self._build_speed_widget_action(menu)
+            speed_action = self._build_speed_widget_action(menu, item=item)
             menu.addAction(speed_action)
 
             menu.addSeparator()
@@ -2585,7 +2585,7 @@ class VideoCourseBrowser(QMainWindow):
                 tr("error.folder_not_found", folder=folder_path),
             )
 
-    def _build_speed_widget_action(self, menu):
+    def _build_speed_widget_action(self, menu, item=None):
         """Creates a speed slider action for the context menu."""
         container = MenuWidgetContainer()
         container.setObjectName("contextMenuSpeedContainer")
@@ -2603,8 +2603,19 @@ class VideoCourseBrowser(QMainWindow):
         slider.setRange(5, 30)
         slider.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         
-        # Set current speed from player
-        current_val = self.video_player.speed_slider.value()
+        # Set speed based on the item (clicked video), fallback to player speed
+        initial_speed = None
+        if item is not None and self.db:
+            file_path = item.data(0, Qt.ItemDataRole.UserRole)
+            if file_path:
+                initial_speed = self.db.get_video_speed(file_path)
+
+        if initial_speed is None:
+            current_val = self.video_player.speed_slider.value()
+        else:
+            current_val = int(round(initial_speed * 10.0))
+            current_val = max(5, min(30, current_val))
+
         slider.setValue(current_val)
 
         # Value label
@@ -2613,8 +2624,32 @@ class VideoCourseBrowser(QMainWindow):
         label_val.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
 
         def on_value_changed(val):
-            label_val.setText(f"{val / 10.0:.1f}x")
-            self.video_player.speed_slider.setValue(val)
+            speed_float = val / 10.0
+            label_val.setText(f"{speed_float:.1f}x")
+            
+            # Determine target items for speed change (mass select support)
+            target_items = []
+            if item is not None:
+                checked_items = self.get_checked_items()
+                if item in checked_items:
+                    target_items = checked_items
+                else:
+                    target_items = [item]
+            
+            if target_items:
+                file_paths = []
+                for target_item in target_items:
+                    file_path = target_item.data(0, Qt.ItemDataRole.UserRole)
+                    if file_path:
+                        file_paths.append(file_path)
+                
+                if file_paths and self.db:
+                    self.db.save_videos_speed(file_paths, speed_float)
+                    
+                    # If currently playing video is in the targets, update the player as well
+                    current_file = self.video_player.current_file
+                    if current_file and current_file in file_paths:
+                        self.video_player.speed_slider.setValue(val)
 
         slider.valueChanged.connect(on_value_changed)
 
@@ -2625,6 +2660,7 @@ class VideoCourseBrowser(QMainWindow):
         action = QWidgetAction(menu)
         action.setDefaultWidget(container)
         return action
+
 
     # ADDED: Context menu audio track methods
     def populate_audio_submenu(self, menu, filepath, item):

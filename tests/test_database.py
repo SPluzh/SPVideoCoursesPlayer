@@ -107,5 +107,38 @@ class TestDatabaseSecondarySubtitles(unittest.TestCase):
             self.assertEqual(row[0], "lesson_1_renamed.mkv")
             self.assertEqual(row[1], "lesson_1_renamed")
 
+    def test_save_videos_speed(self):
+        folder_path = "C:/Test/Folder"
+        file_path_1 = "C:/Test/Folder/video1.mp4"
+        file_path_2 = "C:/Test/Folder/video2.mp4"
+
+        # 1. Insert folder and video records
+        with self.db.get_connection() as conn:
+            c = conn.cursor()
+            c.execute(
+                "INSERT INTO folders (path, name) VALUES (?, ?)",
+                (folder_path, "Folder")
+            )
+            c.execute(
+                "INSERT INTO video_files (folder_path, file_path, file_name) VALUES (?, ?, ?)",
+                (folder_path, file_path_1, "video1.mp4")
+            )
+            c.execute(
+                "INSERT INTO video_files (folder_path, file_path, file_name) VALUES (?, ?, ?)",
+                (folder_path, file_path_2, "video2.mp4")
+            )
+            conn.commit()
+
+        # 2. Verify initial speeds are None
+        self.assertIsNone(self.db.get_video_speed(file_path_1))
+        self.assertIsNone(self.db.get_video_speed(file_path_2))
+
+        # 3. Save speed for both in bulk
+        self.db.save_videos_speed([file_path_1, file_path_2], 1.5)
+
+        # 4. Verify saved speeds
+        self.assertEqual(self.db.get_video_speed(file_path_1), 1.5)
+        self.assertEqual(self.db.get_video_speed(file_path_2), 1.5)
+
 if __name__ == "__main__":
     unittest.main()
