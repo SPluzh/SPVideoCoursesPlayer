@@ -1472,13 +1472,10 @@ class VideoScanner:
                             continue
                         video_id = video_row[0]
 
-                        # Update audio tracks
-                        c.execute(
-                            "DELETE FROM audio_tracks WHERE video_id = ?", (video_id,)
-                        )
-
+                        # ── Audio tracks: upsert (preserve IDs) ──────────────────────────
                         selected_audio_id = None
                         saved_selection = result.get("saved_audio_selection")
+                        seen_audio_keys = []  # (track_type, stream_index, audio_file_path)
 
                         for audio in result["audio_tracks"]:
                             c.execute(
@@ -1489,6 +1486,21 @@ class VideoScanner:
                                  codec, bitrate, sample_rate, channels, channel_layout,
                                  duration, file_size, is_default, match_score)
                                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                ON CONFLICT(video_file_path, track_type, stream_index, audio_file_path)
+                                DO UPDATE SET
+                                    video_id       = excluded.video_id,
+                                    audio_file_name= excluded.audio_file_name,
+                                    language       = excluded.language,
+                                    title          = excluded.title,
+                                    codec          = excluded.codec,
+                                    bitrate        = excluded.bitrate,
+                                    sample_rate    = excluded.sample_rate,
+                                    channels       = excluded.channels,
+                                    channel_layout = excluded.channel_layout,
+                                    duration       = excluded.duration,
+                                    file_size      = excluded.file_size,
+                                    is_default     = excluded.is_default,
+                                    match_score    = excluded.match_score
                             """,
                                 (
                                     video_id,
@@ -1511,7 +1523,24 @@ class VideoScanner:
                                 ),
                             )
 
-                            audio_track_id = c.lastrowid
+                            # Fetch the stable ID (existing or newly inserted)
+                            c.execute(
+                                """
+                                SELECT id FROM audio_tracks
+                                WHERE video_file_path = ? AND track_type = ?
+                                  AND stream_index IS ? AND audio_file_path IS ?
+                                """,
+                                (
+                                    result["file_path"],
+                                    audio["track_type"],
+                                    audio["stream_index"],
+                                    audio["audio_file_path"],
+                                ),
+                            )
+                            row = c.fetchone()
+                            audio_track_id = row[0] if row else c.lastrowid
+
+                            seen_audio_keys.append(audio_track_id)
 
                             # Restore selection
                             if saved_selection:
@@ -1529,6 +1558,18 @@ class VideoScanner:
                                         ):
                                             selected_audio_id = audio_track_id
 
+                        # Remove audio tracks that no longer exist for this video
+                        if seen_audio_keys:
+                            placeholders = ",".join("?" * len(seen_audio_keys))
+                            c.execute(
+                                f"DELETE FROM audio_tracks WHERE video_id = ? AND id NOT IN ({placeholders})",
+                                [video_id] + seen_audio_keys,
+                            )
+                        else:
+                            c.execute(
+                                "DELETE FROM audio_tracks WHERE video_id = ?", (video_id,)
+                            )
+
                         if selected_audio_id:
                             c.execute(
                                 "UPDATE video_files SET selected_audio_id = ? WHERE id = ?",
@@ -1536,11 +1577,8 @@ class VideoScanner:
                             )
                             restored_audio_selections += 1
 
-                        # Add subtitles
-                        c.execute(
-                            "DELETE FROM subtitle_tracks WHERE video_id = ?",
-                            (video_id,),
-                        )
+                        # ── Subtitle tracks: upsert (preserve IDs) ───────────────────────
+                        seen_subtitle_keys = []  # stable IDs of current tracks
 
                         for subtitle in result.get("subtitle_tracks", []):
                             c.execute(
@@ -1550,6 +1588,17 @@ class VideoScanner:
                                  subtitle_file_path, subtitle_file_name, language, title,
                                  codec, format, is_default, is_forced, match_score)
                                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                ON CONFLICT(video_file_path, track_type, stream_index, subtitle_file_path)
+                                DO UPDATE SET
+                                    video_id          = excluded.video_id,
+                                    subtitle_file_name= excluded.subtitle_file_name,
+                                    language          = excluded.language,
+                                    title             = excluded.title,
+                                    codec             = excluded.codec,
+                                    format            = excluded.format,
+                                    is_default        = excluded.is_default,
+                                    is_forced         = excluded.is_forced,
+                                    match_score       = excluded.match_score
                             """,
                                 (
                                     video_id,
@@ -1566,6 +1615,35 @@ class VideoScanner:
                                     subtitle["is_forced"],
                                     subtitle["match_score"],
                                 ),
+                            )
+
+                            # Fetch the stable ID (existing or newly inserted)
+                            c.execute(
+                                """
+                                SELECT id FROM subtitle_tracks
+                                WHERE video_file_path = ? AND track_type = ?
+                                  AND stream_index IS ? AND subtitle_file_path IS ?
+                                """,
+                                (
+                                    result["file_path"],
+                                    subtitle["track_type"],
+                                    subtitle["stream_index"],
+                                    subtitle["subtitle_file_path"],
+                                ),
+                            )
+                            row = c.fetchone()
+                            seen_subtitle_keys.append(row[0] if row else c.lastrowid)
+
+                        # Remove subtitle tracks that no longer exist for this video
+                        if seen_subtitle_keys:
+                            placeholders = ",".join("?" * len(seen_subtitle_keys))
+                            c.execute(
+                                f"DELETE FROM subtitle_tracks WHERE video_id = ? AND id NOT IN ({placeholders})",
+                                [video_id] + seen_subtitle_keys,
+                            )
+                        else:
+                            c.execute(
+                                "DELETE FROM subtitle_tracks WHERE video_id = ?", (video_id,)
                             )
 
                         total_video_count += 1

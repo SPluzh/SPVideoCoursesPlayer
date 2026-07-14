@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.6.11]
+- **Fix**: Fixed a bug where subtitles would not show up immediately when loading a video, requiring you to toggle them off and on to display.
+- **Library**: Fixed an issue where rescanning the library would reset or break your saved subtitle and audio track selections for videos.
+
+
+
 ## [1.6.10]
 - **Playback**: Remember and restore playback speed individually for each video. When switching to the next/previous video, the current speed is kept unless that video already has its own saved speed.
 - **Library**: Added a playback speed control slider directly to the video context menu, allowing you to adjust playback speed from 0.5x to 3.0x with real-time synchronization.

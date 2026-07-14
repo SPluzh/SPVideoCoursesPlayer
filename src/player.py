@@ -1096,10 +1096,56 @@ class VideoPlayerWidget(QWidget):
                 return
 
             logging.info("📂 Getting track info from DB...")
-            primary_track = self.db.get_track_info("audio_tracks", primary_id)
-            secondary_track = self.db.get_track_info(
-                "audio_tracks", self.secondary_audio_track_id
-            )
+            primary_track = next((t for t in primary_tracks if t["id"] == primary_id), None)
+            if not primary_track:
+                primary_track = self.db.get_track_info("audio_tracks", primary_id)
+
+            secondary_track = next((t for t in primary_tracks if t["id"] == self.secondary_audio_track_id), None)
+            if not secondary_track and primary_tracks:
+                # secondary_audio_track_id is stale (track ID changed after rescan).
+                # Strategy: find the best match inside the CURRENT video's tracks list.
+                old_track = self.db.get_track_info("audio_tracks", self.secondary_audio_track_id)
+                if old_track:
+                    old_path = old_track.get("audio_file_path") or ""
+                    old_idx  = old_track.get("stream_index")
+                    old_type = old_track.get("track_type")
+                    
+                    for t in primary_tracks:
+                        if t.get("track_type") == old_type:
+                            if old_path and t.get("audio_file_path") == old_path:
+                                secondary_track = t
+                                logging.info(
+                                    f"🔊 Matched stale secondary ID {self.secondary_audio_track_id} → current track {t['id']} by file path"
+                                )
+                                break
+                            if old_idx is not None and t.get("stream_index") == old_idx:
+                                secondary_track = t
+                                logging.info(
+                                    f"🔊 Matched stale secondary ID {self.secondary_audio_track_id} → current track {t['id']} by stream_index"
+                                )
+                                break
+
+                # Update DB and memory with current secondary track ID if it was stale
+                if secondary_track:
+                    old_id = self.secondary_audio_track_id
+                    self.secondary_audio_track_id = secondary_track["id"]
+                    logging.info(
+                        f"🔊 Updating stale secondary_audio_track_id {old_id} → {self.secondary_audio_track_id} in DB"
+                    )
+                    try:
+                        self.db.save_secondary_audio(
+                            self.current_file,
+                            self.secondary_audio_track_id,
+                            self.secondary_audio_volume,
+                            self.secondary_audio_enabled,
+                        )
+                    except Exception as e:
+                        logging.warning(f"🔊 Could not update secondary_audio_track_id in DB: {e}")
+
+            if not secondary_track:
+                secondary_track = self.db.get_track_info(
+                    "audio_tracks", self.secondary_audio_track_id
+                )
 
             logging.info(f"📂 Primary track: {primary_track}")
             logging.info(f"📂 Secondary track: {secondary_track}")
@@ -2097,13 +2143,54 @@ class VideoPlayerWidget(QWidget):
                 logging.info(f"🔊 ========== AUDIO TRACK RESTORED (DEFAULT) ==========")
                 return
 
-            logging.info(f"🔊 Selected audio ID from DB: {selected_audio_id}")
-            track = self.db.get_track_info("audio_tracks", selected_audio_id)
+            track = next((t for t in tracks if t["id"] == selected_audio_id), None)
+
+            if not track and tracks:
+                # selected_audio_id is stale (track ID changed after rescan).
+                # Strategy: find the best match inside the CURRENT video's tracks list.
+                old_track = self.db.get_track_info("audio_tracks", selected_audio_id)
+                if old_track:
+                    old_path = old_track.get("audio_file_path") or ""
+                    old_idx  = old_track.get("stream_index")
+                    old_type = old_track.get("track_type")
+                    
+                    for t in tracks:
+                        if t.get("track_type") == old_type:
+                            if old_path and t.get("audio_file_path") == old_path:
+                                track = t
+                                logging.info(
+                                    f"🔊 Matched stale ID {selected_audio_id} → current track {t['id']} by file path"
+                                )
+                                break
+                            if old_idx is not None and t.get("stream_index") == old_idx:
+                                track = t
+                                logging.info(
+                                    f"🔊 Matched stale ID {selected_audio_id} → current track {t['id']} by stream_index"
+                                )
+                                break
+
+                # Fallback to the first track if still no match
+                if not track:
+                    track = tracks[0]
+                    logging.info(
+                        f"🔊 Stale ID {selected_audio_id} not found, falling back to first track {track['id']}"
+                    )
+
             if not track:
                 logging.error(
-                    f"🔊 ❌ Track not found in database for ID: {selected_audio_id}"
+                    f"🔊 ❌ Audio track {selected_audio_id} not found — no suitable track in current list"
                 )
                 return
+
+            # Update DB with current track ID if it was stale
+            if track["id"] != selected_audio_id:
+                logging.info(
+                    f"🔊 Updating stale selected_audio_id {selected_audio_id} → {track['id']} in DB"
+                )
+                try:
+                    self.db.save_selected_audio(filepath, track["id"])
+                except Exception as e:
+                    logging.warning(f"🔊 Could not update selected_audio_id in DB: {e}")
 
             track_type = track["track_type"]
             stream_index = track["stream_index"]
@@ -2830,12 +2917,43 @@ class VideoPlayerWidget(QWidget):
                 return
 
             track = next((t for t in tracks if t["id"] == selected_subtitle_id), None)
-            if not track and self._cached_subtitle_data is None:
-                # Fallback to DB query if running standalone without cache
-                track = self.db.get_track_info("subtitle_tracks", selected_subtitle_id)
+
+            if not track and tracks:
+                # selected_subtitle_id is stale (track ID changed after rescan).
+                # Strategy: find the best match inside the CURRENT video's tracks list.
+
+                # Step 1: query DB for the old track to get its file path / stream_index
+                old_track = self.db.get_track_info("subtitle_tracks", selected_subtitle_id)
+                if old_track:
+                    old_path = old_track.get("subtitle_file_path") or ""
+                    old_idx  = old_track.get("stream_index")
+                    old_type = old_track.get("track_type")
+                    # Try to find a track in the current list with the same file path or stream_index
+                    for t in tracks:
+                        if t.get("track_type") == old_type:
+                            if old_path and t.get("subtitle_file_path") == old_path:
+                                track = t
+                                logging.info(
+                                    f"📝 Matched stale ID {selected_subtitle_id} → current track {t['id']} by file path"
+                                )
+                                break
+                            if old_idx is not None and t.get("stream_index") == old_idx:
+                                track = t
+                                logging.info(
+                                    f"📝 Matched stale ID {selected_subtitle_id} → current track {t['id']} by stream_index"
+                                )
+                                break
+
+                # Step 2: if still not matched and there is only one track, use it
+                if not track and len(tracks) == 1:
+                    track = tracks[0]
+                    logging.info(
+                        f"📝 Using only available track {track['id']} as fallback for stale ID {selected_subtitle_id}"
+                    )
+
             if not track:
                 logging.error(
-                    f"📝 ❌ Subtitle track {selected_subtitle_id} not found in DB, setting MPV sid='no' to be safe"
+                    f"📝 ❌ Subtitle track {selected_subtitle_id} not found — no suitable track in current list"
                 )
                 try:
                     self.player.sid = "no"
@@ -2847,6 +2965,16 @@ class VideoPlayerWidget(QWidget):
             track_type = track["track_type"]
             stream_index = track["stream_index"]
             subtitle_file_path = track["subtitle_file_path"]
+
+            # If we resolved a stale ID to a current track, update DB to avoid the fallback next time
+            if track["id"] != selected_subtitle_id:
+                logging.info(
+                    f"📝 Updating stale selected_subtitle_id {selected_subtitle_id} → {track['id']} in DB"
+                )
+                try:
+                    self.db.save_selected_subtitle(filepath, track["id"])
+                except Exception as e:
+                    logging.warning(f"📝 Could not update selected_subtitle_id in DB: {e}")
 
             logging.info(f"📝 Track details:")
             logging.info(f"📝   Type: {track_type}")
