@@ -388,6 +388,7 @@ class VideoPlayerWidget(QWidget):
         self.subtitle_btn.secondarySubtitleToggled.connect(self._on_secondary_subtitle_toggled)
         self.subtitle_btn.secondarySubtitleChanged.connect(self._on_secondary_subtitle_changed)
         self.subtitle_btn.secondaryHoverOnlyChanged.connect(self._on_secondary_hover_only_changed)
+        self.subtitle_btn.subtitleDelayChanged.connect(self._on_subtitle_delay_changed)
 
         self.sub_settings_btn = QPushButton()
         self.sub_settings_btn.setObjectName("subSettingsBtn")
@@ -635,27 +636,51 @@ class VideoPlayerWidget(QWidget):
             return
         try:
             current = self.player.audio_delay or 0
-            new_val = current + delta
-            self.player.audio_delay = new_val
-            # Show OSD notification via OSD Manager
-            if self.osd_manager:
-                ms_val = int(new_val * 1000)
-                self.osd_manager.show_audio_delay(ms_val)
+            new_val = round(current + delta, 3)
+            self.set_audio_delay(new_val)
         except Exception as e:
             logging.error(f"Error adjusting delay: {e}")
 
-    def set_audio_delay(self, value):
+    def set_audio_delay(self, value, show_osd=True):
         """Set absolute audio delay in seconds."""
+        self.audio_opts["delay"] = value
+        if hasattr(self, "volume_btn") and self.volume_btn:
+            self.volume_btn.setDelay(value)
+        if self.player:
+            try:
+                self.player.audio_delay = value
+                # Show OSD notification via OSD Manager
+                if show_osd and self.osd_manager:
+                    ms = int(value * 1000)
+                    self.osd_manager.show_audio_delay(ms)
+            except Exception as e:
+                logging.error(f"Error setting delay: {e}")
+
+    def adjust_subtitle_delay(self, delta):
+        """Adjust subtitle delay by delta seconds."""
         if not self.player:
             return
         try:
-            self.player.audio_delay = value
-            # Show OSD notification via OSD Manager
-            if self.osd_manager:
-                ms = int(value * 1000)
-                self.osd_manager.show_audio_delay(ms)
+            current = getattr(self, "sub_delay", 0.0)
+            new_val = round(current + delta, 3)
+            self.set_subtitle_delay(new_val)
         except Exception as e:
-            logging.error(f"Error setting delay: {e}")
+            logging.error(f"Error adjusting subtitle delay: {e}")
+
+    def set_subtitle_delay(self, value, show_osd=True):
+        """Set absolute subtitle delay in seconds."""
+        self.sub_delay = value
+        if hasattr(self, "subtitle_btn") and self.subtitle_btn:
+            self.subtitle_btn.setDelay(value)
+        if self.player:
+            try:
+                self.player["sub-delay"] = value
+                # Show OSD notification via OSD Manager
+                if show_osd and self.osd_manager:
+                    ms = int(value * 1000)
+                    self.osd_manager.show_subtitle_delay(ms)
+            except Exception as e:
+                logging.error(f"Error setting subtitle delay: {e}")
 
     @staticmethod
     def _escape_lavfi_path(path) -> str:
@@ -816,6 +841,12 @@ class VideoPlayerWidget(QWidget):
     def _on_audio_delay_changed(self, delay_sec):
         """Update audio delay in MPV."""
         self.audio_opts["delay"] = delay_sec
+        if self.current_file and self.db:
+            try:
+                self.db.save_audio_delay(self.current_file, delay_sec)
+                logging.debug(f"Saved audio delay {delay_sec}s for {self.current_file}")
+            except Exception as e:
+                logging.error(f"Error saving audio delay to DB: {e}")
         if self.player:
             try:
                 self.player["audio-delay"] = delay_sec
@@ -826,6 +857,26 @@ class VideoPlayerWidget(QWidget):
                 logging.debug(f"DEBUG: Audio delay set to {delay_sec}s")
             except Exception as e:
                 logging.error(f"Error setting audio delay: {e}")
+
+    def _on_subtitle_delay_changed(self, delay_sec):
+        """Update subtitle delay in MPV."""
+        self.sub_delay = delay_sec
+        if self.current_file and self.db:
+            try:
+                self.db.save_subtitle_delay(self.current_file, delay_sec)
+                logging.debug(f"Saved subtitle delay {delay_sec}s for {self.current_file}")
+            except Exception as e:
+                logging.error(f"Error saving subtitle delay to DB: {e}")
+        if self.player:
+            try:
+                self.player["sub-delay"] = delay_sec
+                # Show OSD notification for subtitle delay
+                if self.osd_manager:
+                    ms = int(delay_sec * 1000)
+                    self.osd_manager.show_subtitle_delay(ms)
+                logging.debug(f"DEBUG: Subtitle delay set to {delay_sec}s")
+            except Exception as e:
+                logging.error(f"Error setting subtitle delay: {e}")
 
     def has_ai_model(self):
         return (RESOURCES_DIR / "bin" / "bd.rnn").exists()
@@ -1650,6 +1701,24 @@ class VideoPlayerWidget(QWidget):
             logging.error(f"_on_file_loaded: _restore_secondary_audio error: {e}", exc_info=True)
 
         try:
+            # 5b. Restore saved subtitle delay
+            saved_sub_delay = self.db.get_subtitle_delay(filepath) if self.db else 0.0
+            sub_delay = saved_sub_delay if saved_sub_delay is not None else 0.0
+            self.set_subtitle_delay(sub_delay, show_osd=False)
+            logging.info(f"🎬 Restored subtitle delay {sub_delay}s for: {filepath}")
+        except Exception as e:
+            logging.error(f"_on_file_loaded: restore subtitle delay error: {e}", exc_info=True)
+
+        try:
+            # 5c. Restore saved audio delay
+            saved_audio_delay = self.db.get_audio_delay(filepath) if self.db else 0.0
+            audio_delay = saved_audio_delay if saved_audio_delay is not None else 0.0
+            self.set_audio_delay(audio_delay, show_osd=False)
+            logging.info(f"🎬 Restored audio delay {audio_delay}s for: {filepath}")
+        except Exception as e:
+            logging.error(f"_on_file_loaded: restore audio delay error: {e}", exc_info=True)
+
+        try:
             # 6. Set play/pause state
             if self.auto_play_pending:
                 self._ensure_playing()
@@ -1708,13 +1777,15 @@ class VideoPlayerWidget(QWidget):
                 logging.error("🎬 ❌ Cannot load video, player not initialized")
                 return False
 
-        # Save speed of current video before switching
+        # Save speed and delays of current video before switching
         if self.current_file and self.db:
             try:
                 self.db.save_video_speed(self.current_file, self.get_current_speed())
-                logging.info(f"🎬 Saved speed {self.get_current_speed()} for: {self.current_file}")
+                self.db.save_subtitle_delay(self.current_file, getattr(self, "sub_delay", 0.0))
+                self.db.save_audio_delay(self.current_file, self.audio_opts.get("delay", 0.0))
+                logging.info(f"🎬 Saved speed {self.get_current_speed()} & delays for: {self.current_file}")
             except Exception as e:
-                logging.error(f"🎬 Error saving speed in load_video: {e}")
+                logging.error(f"🎬 Error saving speed/delays in load_video: {e}")
 
         # Restore per-video speed
         if self.db:
@@ -1810,13 +1881,15 @@ class VideoPlayerWidget(QWidget):
             file_to_unload = self.current_file
             logging.info(f"Unloading video: {file_to_unload}")
 
-            # Save speed of current video before unloading
+            # Save speed and delays of current video before unloading
             if file_to_unload and self.db:
                 try:
                     self.db.save_video_speed(file_to_unload, self.get_current_speed())
-                    logging.info(f"🎬 Saved speed {self.get_current_speed()} for: {file_to_unload}")
+                    self.db.save_subtitle_delay(file_to_unload, getattr(self, "sub_delay", 0.0))
+                    self.db.save_audio_delay(file_to_unload, self.audio_opts.get("delay", 0.0))
+                    logging.info(f"🎬 Saved speed {self.get_current_speed()} & delays for: {file_to_unload}")
                 except Exception as e:
-                    logging.error(f"🎬 Error saving speed in unload_video: {e}")
+                    logging.error(f"🎬 Error saving speed/delays in unload_video: {e}")
 
             # Reset current file FIRST so other methods (like save_progress) know we're stopping
             self.current_file = None

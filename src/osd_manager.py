@@ -117,6 +117,17 @@ class OSDManager:
         message = tr("player.osd.audio_delay", delay=f"{sign}{delay_ms}")
         self.show_osd(message)
 
+    def show_subtitle_delay(self, delay_ms):
+        """
+        Show subtitle delay OSD.
+
+        Args:
+            delay_ms: Subtitle delay in milliseconds (can be negative)
+        """
+        sign = "+" if delay_ms >= 0 else ""
+        message = tr("player.osd.subtitle_delay", delay=f"{sign}{delay_ms}")
+        self.show_osd(message)
+
     def show_screenshot(self, success=True):
         """
         Show screenshot result OSD.

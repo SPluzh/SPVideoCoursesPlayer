@@ -140,5 +140,33 @@ class TestDatabaseSecondarySubtitles(unittest.TestCase):
         self.assertEqual(self.db.get_video_speed(file_path_1), 1.5)
         self.assertEqual(self.db.get_video_speed(file_path_2), 1.5)
 
+    def test_save_and_get_delays(self):
+        folder_path = "C:/Test/Folder"
+        file_path = "C:/Test/Folder/video_delay.mp4"
+
+        with self.db.get_connection() as conn:
+            c = conn.cursor()
+            c.execute(
+                "INSERT INTO folders (path, name) VALUES (?, ?)",
+                (folder_path, "Folder")
+            )
+            c.execute(
+                "INSERT INTO video_files (folder_path, file_path, file_name) VALUES (?, ?, ?)",
+                (folder_path, file_path, "video_delay.mp4")
+            )
+            conn.commit()
+
+        # Check default values (0.0 or None)
+        self.assertIn(self.db.get_subtitle_delay(file_path), [0.0, None])
+        self.assertIn(self.db.get_audio_delay(file_path), [0.0, None])
+
+        # Save delays
+        self.db.save_subtitle_delay(file_path, 0.25)
+        self.db.save_audio_delay(file_path, -0.5)
+
+        # Verify retrieved delays
+        self.assertAlmostEqual(self.db.get_subtitle_delay(file_path), 0.25)
+        self.assertAlmostEqual(self.db.get_audio_delay(file_path), -0.5)
+
 if __name__ == "__main__":
     unittest.main()

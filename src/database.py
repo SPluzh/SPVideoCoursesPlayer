@@ -284,6 +284,14 @@ class DatabaseManager:
                 c.execute(
                     "ALTER TABLE video_files ADD COLUMN playback_speed REAL DEFAULT NULL"
                 )
+            if "subtitle_delay" not in columns:
+                c.execute(
+                    "ALTER TABLE video_files ADD COLUMN subtitle_delay REAL DEFAULT 0"
+                )
+            if "audio_delay" not in columns:
+                c.execute(
+                    "ALTER TABLE video_files ADD COLUMN audio_delay REAL DEFAULT 0"
+                )
             c.execute(
                 "CREATE INDEX IF NOT EXISTS idx_content_hash ON video_files(content_hash)"
             )
@@ -850,6 +858,64 @@ class DatabaseManager:
                     return float(row[0])
         except Exception as e:
             logging.error(f"Error getting video speed: {e}", exc_info=True)
+        return None
+
+    def save_subtitle_delay(self, file_path, delay: float):
+        """Saves subtitle delay (in seconds) for a specific video."""
+        try:
+            with self.get_connection() as conn:
+                c = conn.cursor()
+                c.execute(
+                    "UPDATE video_files SET subtitle_delay = ? WHERE file_path = ?",
+                    (delay, str(file_path)),
+                )
+                conn.commit()
+        except Exception as e:
+            logging.error(f"Error saving subtitle delay: {e}", exc_info=True)
+
+    def get_subtitle_delay(self, file_path) -> float | None:
+        """Returns saved subtitle delay (in seconds) for a video, or None if never set."""
+        try:
+            with self.get_connection() as conn:
+                c = conn.cursor()
+                c.execute(
+                    "SELECT subtitle_delay FROM video_files WHERE file_path = ?",
+                    (str(file_path),),
+                )
+                row = c.fetchone()
+                if row and row[0] is not None:
+                    return float(row[0])
+        except Exception as e:
+            logging.error(f"Error getting subtitle delay: {e}", exc_info=True)
+        return None
+
+    def save_audio_delay(self, file_path, delay: float):
+        """Saves audio delay (in seconds) for a specific video."""
+        try:
+            with self.get_connection() as conn:
+                c = conn.cursor()
+                c.execute(
+                    "UPDATE video_files SET audio_delay = ? WHERE file_path = ?",
+                    (delay, str(file_path)),
+                )
+                conn.commit()
+        except Exception as e:
+            logging.error(f"Error saving audio delay: {e}", exc_info=True)
+
+    def get_audio_delay(self, file_path) -> float | None:
+        """Returns saved audio delay (in seconds) for a video, or None if never set."""
+        try:
+            with self.get_connection() as conn:
+                c = conn.cursor()
+                c.execute(
+                    "SELECT audio_delay FROM video_files WHERE file_path = ?",
+                    (str(file_path),),
+                )
+                row = c.fetchone()
+                if row and row[0] is not None:
+                    return float(row[0])
+        except Exception as e:
+            logging.error(f"Error getting audio delay: {e}", exc_info=True)
         return None
 
     def get_marker_count(self, file_path):

@@ -2,11 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.6.12]
+- **Subtitles**: Added subtitle delay adjustment with OSD notifications and per-video persistence.
+
 ## [1.6.11]
 - **Fix**: Fixed a bug where subtitles would not show up immediately when loading a video, requiring you to toggle them off and on to display.
 - **Library**: Fixed an issue where rescanning the library would reset or break your saved subtitle and audio track selections for videos.
-
-
 
 ## [1.6.10]
 - **Playback**: Remember and restore playback speed individually for each video. When switching to the next/previous video, the current speed is kept unless that video already has its own saved speed.

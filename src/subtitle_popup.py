@@ -6,7 +6,7 @@ from pathlib import Path
 from PyQt6.QtWidgets import (
     QWidget, QHBoxLayout, QVBoxLayout, QListWidget, QLabel, QPushButton,
     QFrame, QGridLayout, QApplication, QCheckBox, QComboBox,
-    QDialog, QLineEdit, QListWidgetItem, QSlider
+    QDialog, QLineEdit, QListWidgetItem, QSlider, QSpinBox
 )
 from PyQt6.QtCore import Qt, pyqtSignal, QTimer, QPoint, QRect
 from PyQt6.QtGui import QIcon
@@ -82,6 +82,7 @@ class SubtitlePopup(QWidget):
     secondarySubtitleToggled = pyqtSignal(bool)
     secondarySubtitleChanged = pyqtSignal(int)
     secondaryHoverOnlyChanged = pyqtSignal(bool)
+    subtitleDelayChanged = pyqtSignal(float)
     
     def __init__(self, parent=None):
         super().__init__(parent, Qt.WindowType.Tool | Qt.WindowType.FramelessWindowHint | Qt.WindowType.WindowStaysOnTopHint)
@@ -93,7 +94,7 @@ class SubtitlePopup(QWidget):
         
         self.setObjectName("subtitlePopup")
         self.setMinimumWidth(400)
-        self.setFixedHeight(330)
+        self.setFixedHeight(340)
         
         # Left side: toggle + subtitle list
         left_panel = QHBoxLayout()
@@ -178,6 +179,53 @@ class SubtitlePopup(QWidget):
         
         # Add lang_layout to toggle_col
         toggle_col.addLayout(lang_layout)
+        
+        # Subtitle Delay Control
+        toggle_col.addSpacing(16)
+        delay_layout = QVBoxLayout()
+        delay_layout.setSpacing(4)
+        self.delay_lbl = QLabel(tr("player.subtitle_delay"))
+        self.delay_lbl.setObjectName("popupHeaderLabel")
+        self.delay_lbl.setContentsMargins(0, 0, 0, 0)
+        self.delay_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        delay_layout.addWidget(self.delay_lbl, alignment=Qt.AlignmentFlag.AlignHCenter)
+
+        delay_row = QHBoxLayout()
+        delay_row.setSpacing(1)
+        delay_row.setContentsMargins(0, 0, 0, 0)
+        delay_row.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        self.delay_minus = QPushButton("-")
+        self.delay_minus.setFixedSize(24, 24)
+        self.delay_minus.setObjectName("delaySmallBtn")
+        self.delay_minus.setAutoRepeat(True)
+        self.delay_minus.setAutoRepeatDelay(300)
+        self.delay_minus.setAutoRepeatInterval(50)
+        self.delay_minus.clicked.connect(lambda: self.adjust_delay(-50))
+        delay_row.addWidget(self.delay_minus)
+
+        self.delay_spin = QSpinBox()
+        self.delay_spin.setObjectName("delaySpin")
+        self.delay_spin.setRange(-10000, 10000)
+        self.delay_spin.setSuffix("ms")
+        self.delay_spin.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.delay_spin.setButtonSymbols(QSpinBox.ButtonSymbols.NoButtons)
+        self.delay_spin.setFixedWidth(64)
+        self.delay_spin.setFixedHeight(24)
+        self.delay_spin.valueChanged.connect(self._on_delay_spin_changed)
+        delay_row.addWidget(self.delay_spin)
+
+        self.delay_plus = QPushButton("+")
+        self.delay_plus.setFixedSize(24, 24)
+        self.delay_plus.setObjectName("delaySmallBtn")
+        self.delay_plus.setAutoRepeat(True)
+        self.delay_plus.setAutoRepeatDelay(300)
+        self.delay_plus.setAutoRepeatInterval(50)
+        self.delay_plus.clicked.connect(lambda: self.adjust_delay(50))
+        delay_row.addWidget(self.delay_plus)
+
+        delay_layout.addLayout(delay_row)
+        toggle_col.addLayout(delay_layout)
         
         toggle_col.addStretch()
         left_panel.addLayout(toggle_col)
@@ -751,6 +799,45 @@ class SubtitlePopup(QWidget):
         self.secondary_enabled_cb.blockSignals(False)
         self.secondary_container.setVisible(enabled)
 
+    def adjust_delay(self, delta_ms):
+        self.delay_spin.setValue(self.delay_spin.value() + delta_ms)
+
+    def _on_delay_spin_changed(self, val_ms):
+        # MPV expects delay in seconds
+        self.subtitleDelayChanged.emit(val_ms / 1000.0)
+
+    def setDelay(self, seconds):
+        """External update (e.g. from player load)"""
+        self.delay_spin.blockSignals(True)
+        self.delay_spin.setValue(int(seconds * 1000))
+        self.delay_spin.blockSignals(False)
+
+    def update_texts(self):
+        """Update localized strings."""
+        if hasattr(self, "translation_lang_title_label"):
+            self.translation_lang_title_label.setText(tr("player.interactive_subtitles"))
+        if hasattr(self, "list_title_label"):
+            self.list_title_label.setText(tr("player.subtitle_tracks"))
+        if hasattr(self, "secondary_enabled_cb"):
+            self.secondary_enabled_cb.setText(tr("player.enable_secondary_subtitle"))
+        if hasattr(self, "secondary_hover_only_cb"):
+            self.secondary_hover_only_cb.setText(tr("player.secondary_subtitle_hover_only"))
+        if hasattr(self, "secondary_title_label"):
+            self.secondary_title_label.setText(tr("player.secondary_subtitle_track"))
+        if hasattr(self, "size_title_label"):
+            self.size_title_label.setText(tr("player.subtitle_size"))
+        if hasattr(self, "text_title_label"):
+            self.text_title_label.setText(tr("player.subtitle_text"))
+        if hasattr(self, "secondary_text_title_label"):
+            self.secondary_text_title_label.setText(tr("player.secondary_subtitle_text"))
+        if hasattr(self, "outline_title_label"):
+            self.outline_title_label.setText(tr("player.subtitle_outline"))
+        if hasattr(self, "opacity_title_label"):
+            val = self.opacity_slider.value()
+            self.opacity_title_label.setText(f"{tr('player.subtitle_bg_opacity')} ({val}%)")
+        if hasattr(self, "delay_lbl"):
+            self.delay_lbl.setText(tr("player.subtitle_delay"))
+
 
 class SubtitleButton(QPushButton):
     """Subtitle button: Left click - select, Right click - toggle on/off."""
@@ -759,6 +846,7 @@ class SubtitleButton(QPushButton):
     secondarySubtitleToggled = pyqtSignal(bool)
     secondarySubtitleChanged = pyqtSignal(int)
     secondaryHoverOnlyChanged = pyqtSignal(bool)
+    subtitleDelayChanged = pyqtSignal(float)
     
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -773,6 +861,7 @@ class SubtitleButton(QPushButton):
         self.popup.secondarySubtitleToggled.connect(self.secondarySubtitleToggled.emit)
         self.popup.secondarySubtitleChanged.connect(self.secondarySubtitleChanged.emit)
         self.popup.secondaryHoverOnlyChanged.connect(self.secondaryHoverOnlyChanged.emit)
+        self.popup.subtitleDelayChanged.connect(self.subtitleDelayChanged.emit)
         self.last_hide_time = 0
         self.subtitles_enabled = False
         self._update_icon()
@@ -892,4 +981,8 @@ class SubtitleButton(QPushButton):
 
     def setTranslationTargetLang(self, lang_code):
         self.popup.setTranslationTargetLang(lang_code)
+
+    def setDelay(self, seconds):
+        self.popup.setDelay(seconds)
+
 
