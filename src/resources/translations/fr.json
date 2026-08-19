@@ -421,7 +421,7 @@
         "mark_watched": "Marquer comme regardé",
         "reset_progress": "Réinitialiser la progression",
         "open_folder": "Ouvrir le dossier",
-        "open_directory": "Open Directory",
+        "open_directory": "Ouvrir le répertoire",
         "play_all": "Tout lire",
         "mark_all_watched": "Marquer tout comme regardé",
         "reset_all_progress": "Réinitialiser toute la progression",
@@ -600,7 +600,11 @@
     },
     "subtitle_popup": {
         "translation_lang": "Langue de traduction",
-        "translation_lang_tooltip": "Sélectionner la langue de traduction"
+        "translation_lang_tooltip": "Sélectionner la langue de traduction",
+        "dictionary_source_tooltip": "Sélectionner la source du dictionnaire / de la traduction",
+        "source_google": "🌐 Google Translate",
+        "source_free_dict": "📖 Free Dictionary",
+        "source_both": "✨ Les deux (dictionnaire + traduction)"
     },
     "translator": {
         "synonyms": "Synonymes",

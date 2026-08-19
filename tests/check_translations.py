@@ -58,49 +58,62 @@ def extract_placeholders(text):
 
 def is_potentially_untranslated(key, value, en_value, lang_code):
     """Check if the translation is potentially left untranslated."""
-    if not isinstance(value, str):
+    if not isinstance(value, str) or not isinstance(en_value, str):
         return False
     if key == "language_name":
         return False
         
+    # Remove format placeholders like {name}, {path}, {count}
+    clean_val = re.sub(r"\{[^{}]*\}", "", value)
+    clean_en = re.sub(r"\{[^{}]*\}", "", en_value)
+
     # Exclude technical words, keyboard keys, and variables
-    alphas = "".join(c for c in value if c.isalpha())
+    alphas = "".join(c for c in clean_val if c.isalpha())
     if not alphas:
         return False
         
     # Normalize and split into words
     exceptions = {
+        # Brand names & Technical libraries & proper nouns
         'pureref', 'ffmpeg', 'libmpv', 'url', 'github', 'osd', 'pip', 'db', 'kb', 'mb', 'gb', 
-        'arnndn', 'l-click', 'r-click', 'space', 'shift', 'alt', 'enter', 'f', 'm', 's', 'c', 
-        'r', 'z', 'b', 'g', 'p', 't', 'e', 'w', 'h', 'm', 's', 'x', 'mpv', 'dll', 'exe', 'sp', 
-        'video', 'courses', 'player', '1.0', 'time', 'times', 'watched', 'total', 'position', 
-        'percent', 'count', 'hours', 'minutes', 'sec'
+        'arnndn', 'mpv', 'dll', 'exe', 'sp', 'video', 'videos', 'courses', 'player', 'google', 'translate',
+        'dictionary', 'free', 'cache', 'subs', 'script', 'archive',
+        # Shortcuts & single keys
+        'l-click', 'r-click', 'space', 'shift', 'alt', 'enter', 'numpad',
+        'f', 'm', 's', 'c', 'r', 'z', 'b', 'g', 'p', 't', 'e', 'w', 'h', 'x',
+        # Common international terms, cognates & units
+        '1.0', 'time', 'times', 'watched', 'total', 'position', 'percent', 'count', 
+        'hours', 'minutes', 'sec', 'ok', 'audio', 'no', 'yes', 'auto', 'mono', 
+        'deess', 'deesser', 'de-esser', 'compressor', 'denoise', 'ai', 'eta', 'ms', 'fps', 
+        'status', 'id', 'gui', 'log', 'info', 'normal', 'comp', 'noise', 'fit',
+        'zoom', 'color', 'text', 'pause', 'error', 'volume', 'confirmation', 'version', 'phrase',
+        'adverb', 'verb'
     }
     
-    words = [w.strip('{}().,;:!?-+/*%@[]_<>|\"\'').lower() for w in value.split()]
+    words = [w.strip('{}().,;:!?-+/*%@[]_<>|\"\'').lower() for w in clean_val.split()]
     words = [w for w in words if any(c.isalpha() for c in w)]
-    if all(any(exc in w for exc in exceptions) or w.isdigit() for w in words):
+    if words and all(w in exceptions or w.isdigit() for w in words):
         return False
         
     # Check for script-specific characters for non-Latin scripts
     if lang_code == 'ko':
-        if not any(0xac00 <= ord(c) <= 0xd7a3 or 0x1100 <= ord(c) <= 0x11ff or 0x3130 <= ord(c) <= 0x318f for c in value):
+        if not any(0xac00 <= ord(c) <= 0xd7a3 or 0x1100 <= ord(c) <= 0x11ff or 0x3130 <= ord(c) <= 0x318f for c in clean_val):
             return True
     elif lang_code == 'ru':
-        if not any(0x0400 <= ord(c) <= 0x04ff for c in value):
+        if not any(0x0400 <= ord(c) <= 0x04ff for c in clean_val):
             return True
     elif lang_code == 'zh':
-        if not any(0x4e00 <= ord(c) <= 0x9fff for c in value):
+        if not any(0x4e00 <= ord(c) <= 0x9fff for c in clean_val):
             return True
     elif lang_code == 'ja':
-        if not any(0x3040 <= ord(c) <= 0x309f or 0x30a0 <= ord(c) <= 0x30ff or 0x4e00 <= ord(c) <= 0x9fff for c in value):
+        if not any(0x3040 <= ord(c) <= 0x309f or 0x30a0 <= ord(c) <= 0x30ff or 0x4e00 <= ord(c) <= 0x9fff for c in clean_val):
             return True
     elif lang_code == 'ar':
-        if not any(0x0600 <= ord(c) <= 0x06ff for c in value):
+        if not any(0x0600 <= ord(c) <= 0x06ff for c in clean_val):
             return True
             
     # For Latin target languages (es, de, fr, pt), or general fallback: check if identical to English
-    if lang_code != 'en' and value == en_value:
+    if lang_code != 'en' and clean_val.strip().lower() == clean_en.strip().lower():
         return True
         
     return False
@@ -223,10 +236,11 @@ def main():
             has_errors = True
             
         if untranslated_keys:
-            print(f"  [WARNING] Found {len(untranslated_keys)} keys that might be untranslated (English values):")
+            print(f"  [ERROR] Found {len(untranslated_keys)} untranslated keys (matching English or missing target language script):")
             for key, val in sorted(untranslated_keys):
                 val_safe = repr(val).encode('ascii', 'backslashreplace').decode('ascii')
                 print(f"    - {key}: {val_safe}")
+            has_errors = True
             
         if not missing_code_keys and not missing_ref_keys and not empty_values and not placeholder_mismatches and not untranslated_keys:
             print("  [OK] Passed all translation checks!")

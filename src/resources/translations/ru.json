@@ -600,7 +600,11 @@
     },
     "subtitle_popup": {
         "translation_lang": "Язык перевода",
-        "translation_lang_tooltip": "Выбрать язык перевода"
+        "translation_lang_tooltip": "Выбрать язык перевода",
+        "dictionary_source_tooltip": "Выбрать источник словаря / перевода",
+        "source_google": "🌐 Google Переводчик",
+        "source_free_dict": "📖 Free Dictionary",
+        "source_both": "✨ Оба (Словарь + Перевод)"
     },
     "translator": {
         "synonyms": "Синонимы",

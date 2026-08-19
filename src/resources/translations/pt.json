@@ -600,7 +600,11 @@
     },
     "subtitle_popup": {
         "translation_lang": "Linguagem de tradução",
-        "translation_lang_tooltip": "Selecione o idioma de tradução"
+        "translation_lang_tooltip": "Selecione o idioma de tradução",
+        "dictionary_source_tooltip": "Selecione a fonte do dicionário / tradução",
+        "source_google": "🌐 Google Translate",
+        "source_free_dict": "📖 Free Dictionary",
+        "source_both": "✨ Ambos (dicionário + tradução)"
     },
     "translator": {
         "synonyms": "Sinônimos",

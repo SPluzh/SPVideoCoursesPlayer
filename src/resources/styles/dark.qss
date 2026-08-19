@@ -1203,7 +1203,8 @@ PreviewPopup QLabel {
     border-color: @accent;
 }
 
-QPushButton#translationLangBtn {
+QPushButton#translationLangBtn,
+QPushButton#dictSourceBtn {
     background-color: @bg-dark;
     color: @text-main;
     border: 1px solid @border;
@@ -1213,7 +1214,8 @@ QPushButton#translationLangBtn {
     padding: 4px;
 }
 
-QPushButton#translationLangBtn:hover {
+QPushButton#translationLangBtn:hover,
+QPushButton#dictSourceBtn:hover {
     background-color: @accent;
     border-color: @accent;
     color: @text-light;

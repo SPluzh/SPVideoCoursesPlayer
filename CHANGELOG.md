@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## [1.6.12]
 - **Subtitles**: Added subtitle delay adjustment with OSD notifications and per-video persistence.
+- **Subtitles**: Set Free Dictionary as the default dictionary provider and English as the default target language for subtitle translation.
+- **Localization**: Enhanced interface translation quality and completeness across all supported languages, ensuring consistent menu titles, dialogs, and button labels.
 
 ## [1.6.11]
 - **Fix**: Fixed a bug where subtitles would not show up immediately when loading a video, requiring you to toggle them off and on to display.

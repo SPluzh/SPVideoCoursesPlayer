@@ -115,7 +115,7 @@
         "interactive_subtitles": "インタラクティブ字幕",
         "tooltip_volume": "音量 (L-クリックしてミュート)",
         "tooltip_volume_settings": "オーディオと音量の設定",
-        "tooltip_speed": "Playback speed (0.5x - 3.0x)",
+        "tooltip_speed": "再生速度 (0.5x - 3.0x)",
         "audio_tracks": "オーディオトラック",
         "embedded_audio": "埋め込み型",
         "external_audio": "外部",
@@ -185,7 +185,7 @@
             "frame_forward": "次のフレーム",
             "frame_backward": "前のフレーム",
             "noise_off": "ノイズリダクション: オフ",
-            "noise_standard": "Noise Reduction: Standard",
+            "noise_standard": "ノイズリダクション：標準",
             "noise_ai": "ノイズリダクション：AI",
             "compressor_on": "コンプレッサー: オン",
             "compressor_off": "コンプレッサー: オフ",
@@ -200,7 +200,7 @@
         "audio_tools": {
             "title": "オーディオ強化",
             "noise": "ノイズ",
-            "noise_tooltip": "Noise Reduction (Off/Standard/AI)",
+            "noise_tooltip": "ノイズ低減 (オフ/標準/AI)",
             "comp": "コンプ",
             "comp_tooltip": "コンプレッサー (ダイナミックノーマライザー)",
             "deess": "ディエッサー",
@@ -600,7 +600,11 @@
     },
     "subtitle_popup": {
         "translation_lang": "翻訳言語",
-        "translation_lang_tooltip": "翻訳言語の選択"
+        "translation_lang_tooltip": "翻訳言語の選択",
+        "dictionary_source_tooltip": "辞書/翻訳ソースを選択",
+        "source_google": "🌐 Google Translate",
+        "source_free_dict": "📖 Free Dictionary",
+        "source_both": "✨ 両方 (辞書 + 翻訳)"
     },
     "translator": {
         "synonyms": "同義語",

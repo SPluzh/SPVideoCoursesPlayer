@@ -600,7 +600,11 @@
     },
     "subtitle_popup": {
         "translation_lang": "Übersetzungssprache",
-        "translation_lang_tooltip": "Übersetzungssprache auswählen"
+        "translation_lang_tooltip": "Übersetzungssprache auswählen",
+        "dictionary_source_tooltip": "Wörterbuch- / Übersetzungsquelle auswählen",
+        "source_google": "🌐 Google Translate",
+        "source_free_dict": "📖 Free Dictionary",
+        "source_both": "✨ Beide (Wörterbuch + Übersetzung)"
     },
     "translator": {
         "synonyms": "Synonyme",

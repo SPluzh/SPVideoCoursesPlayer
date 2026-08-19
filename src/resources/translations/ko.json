@@ -600,7 +600,11 @@
     },
     "subtitle_popup": {
         "translation_lang": "번역 언어",
-        "translation_lang_tooltip": "번역 언어 선택"
+        "translation_lang_tooltip": "번역 언어 선택",
+        "dictionary_source_tooltip": "사전 / 번역 소스 선택",
+        "source_google": "🌐 Google Translate",
+        "source_free_dict": "📖 Free Dictionary",
+        "source_both": "✨ 둘 다 (사전 + 번역)"
     },
     "translator": {
         "synonyms": "동의어",

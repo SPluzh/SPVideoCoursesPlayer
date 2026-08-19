@@ -66,7 +66,8 @@ class ConfigManager:
             "bg_opacity": "70",
             "extensions": ".srt,.ass,.ssa,.sub,.idx,.vtt,.sup,.stl,.smi,.txt",
             "interactive": "True",
-            "translation_target_lang": "ru",
+            "dictionary_source": "free_dict",
+            "translation_target_lang": "en",
             "secondary_subtitle_hover_only": "True",
         },
         "Audio": {
@@ -397,13 +398,28 @@ class ConfigManager:
             config["Subtitles"]["bg_opacity"] = str(value)
         elif property_name == "translation-target-lang":
             config["Subtitles"]["translation_target_lang"] = value
+        elif property_name == "dictionary-source":
+            config["Subtitles"]["dictionary_source"] = value
 
         self._write_config(config)
 
-    def get_translation_target_lang(self) -> str:
-        """Returns the target language for subtitle translation (e.g. 'ru')."""
+    def get_dictionary_source(self) -> str:
+        """Returns the dictionary source ('google', 'free_dict', 'both')."""
         config = self._read_config()
-        return config.get("Subtitles", "translation_target_lang", fallback="ru")
+        return config.get("Subtitles", "dictionary_source", fallback="free_dict")
+
+    def set_dictionary_source(self, source: str):
+        """Sets the dictionary source ('google', 'free_dict', 'both')."""
+        config = self._read_config()
+        if "Subtitles" not in config:
+            config["Subtitles"] = {}
+        config["Subtitles"]["dictionary_source"] = source
+        self._write_config(config)
+
+    def get_translation_target_lang(self) -> str:
+        """Returns the target language for subtitle translation (e.g. 'en')."""
+        config = self._read_config()
+        return config.get("Subtitles", "translation_target_lang", fallback="en")
 
     def set_translation_target_lang(self, lang_code: str):
         """Sets the target language for subtitle translation."""

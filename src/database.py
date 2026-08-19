@@ -1381,11 +1381,24 @@ class DatabaseManager:
                 )
                 row = c.fetchone()
                 if row:
-                    return {
+                    pos = json.loads(row["parts_of_speech_json"]) if row["parts_of_speech_json"] else {}
+                    syn = json.loads(row["synonyms_json"]) if row["synonyms_json"] else {}
+                    res = {
                         "translation": row["translation"],
-                        "parts_of_speech": json.loads(row["parts_of_speech_json"]) if row["parts_of_speech_json"] else {},
-                        "synonyms": json.loads(row["synonyms_json"]) if row["synonyms_json"] else {}
+                        "parts_of_speech": pos,
+                        "synonyms": syn
                     }
+                    if "__meta__" in pos:
+                        meta = pos.pop("__meta__")
+                        res["is_free_dict"] = meta.get("is_free_dict", False)
+                        res["is_both"] = meta.get("is_both", False)
+                        res["word"] = meta.get("word", "")
+                        res["phonetic"] = meta.get("phonetic", "")
+                        res["audio_url"] = meta.get("audio_url", "")
+                        res["gt_translation"] = meta.get("gt_translation", "")
+                        res["gt_parts_of_speech"] = meta.get("gt_parts_of_speech", {})
+                        res["gt_synonyms"] = meta.get("gt_synonyms", {})
+                    return res
         except Exception as e:
             logging.error(f"Error reading translation cache: {e}", exc_info=True)
         return None
@@ -1394,7 +1407,22 @@ class DatabaseManager:
         """Saves a translation result to the database cache."""
         cleaned = text.strip()
         translation = result_dict.get("translation", "")
-        parts_of_speech_json = json.dumps(result_dict.get("parts_of_speech", {}))
+        pos_data = dict(result_dict.get("parts_of_speech", {}))
+        
+        # Preserve Free Dictionary & Dual Mode metadata if present
+        if result_dict.get("is_free_dict") or result_dict.get("is_both"):
+            pos_data["__meta__"] = {
+                "is_free_dict": result_dict.get("is_free_dict", False),
+                "is_both": result_dict.get("is_both", False),
+                "word": result_dict.get("word", ""),
+                "phonetic": result_dict.get("phonetic", ""),
+                "audio_url": result_dict.get("audio_url", ""),
+                "gt_translation": result_dict.get("gt_translation", ""),
+                "gt_parts_of_speech": result_dict.get("gt_parts_of_speech", {}),
+                "gt_synonyms": result_dict.get("gt_synonyms", {})
+            }
+
+        parts_of_speech_json = json.dumps(pos_data)
         synonyms_json = json.dumps(result_dict.get("synonyms", {}))
         try:
             with self.get_connection() as conn:

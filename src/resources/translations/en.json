@@ -600,7 +600,11 @@
     },
     "subtitle_popup": {
         "translation_lang": "Translation language",
-        "translation_lang_tooltip": "Select translation language"
+        "translation_lang_tooltip": "Select translation language",
+        "dictionary_source_tooltip": "Select dictionary / translation source",
+        "source_google": "🌐 Google Translate",
+        "source_free_dict": "📖 Free Dictionary",
+        "source_both": "✨ Both (Dict + Translation)"
     },
     "translator": {
         "synonyms": "Synonyms",
