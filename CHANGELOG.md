@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.6.13]
+- **Subtitles**: When subtitles are enabled, Left and Right arrow keys automatically navigate to the previous/next subtitle phrase.
+- **UI**: Moved the "Previous Subtitle" button to the right side of the subtitle overlay controls container.
+
 ## [1.6.12]
 - **Subtitles**: Added subtitle delay adjustment with OSD notifications and per-video persistence.
 - **Subtitles**: Set Free Dictionary as the default dictionary provider and English as the default target language for subtitle translation.

@@ -1379,6 +1379,7 @@ class VideoPlayerWidget(QWidget):
                 self.osd_manager.show_pause_state(False)
         except Exception as e:
             logging.error(f"Error seeking to previous phrase: {e}")
+            self.seek_relative(-10)
 
     def seek_next_phrase(self):
         """Seek to the next subtitle phrase and resume playback."""
@@ -1401,6 +1402,7 @@ class VideoPlayerWidget(QWidget):
                 self.osd_manager.show_pause_state(False)
         except Exception as e:
             logging.error(f"Error seeking to next phrase: {e}")
+            self.seek_relative(10)
 
     def replay_current_phrase(self):
         """Replay the current subtitle phrase from the beginning."""
@@ -2502,6 +2504,12 @@ class VideoPlayerWidget(QWidget):
         new_state = not self.subtitle_btn.subtitles_enabled
         self.subtitle_btn.set_enabled_state(new_state)
         self.toggle_subtitles(new_state)
+
+    def are_subtitles_enabled(self):
+        """Check if subtitles are currently enabled."""
+        if hasattr(self, "subtitle_btn") and self.subtitle_btn:
+            return getattr(self.subtitle_btn, "subtitles_enabled", False)
+        return False
 
     def change_subtitle_style(self, property_name, value):
         """Change subtitle style in MPV."""

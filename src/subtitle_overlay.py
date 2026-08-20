@@ -200,7 +200,7 @@ class SubtitleOverlayWidget(QFrame):
 
         # Layout
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(50, 8, 125, 8)
+        layout.setContentsMargins(25, 8, 160, 8)
         layout.setSpacing(0)
 
         self.setMinimumHeight(0)
@@ -777,7 +777,7 @@ class SubtitleOverlayWidget(QFrame):
                 self.secondary_text_edit.setHtml(sec_html)
 
         # Adjust text width in the document to compute wrap height
-        text_width = width - 175  # Adjust for left (50px) and right (125px) margins
+        text_width = width - 185  # Adjust for left (25px) and right (160px) margins
         
         primary_height = 0
         secondary_height = 0
@@ -824,37 +824,31 @@ class SubtitleOverlayWidget(QFrame):
             y = global_pos.y() + vh - actual_height - bottom_margin
             self.setGeometry(x, y, width, actual_height)
 
-        # Position prev_phrase_btn at the left side of the widget
-        if hasattr(self, 'prev_phrase_btn') and self.prev_phrase_btn:
-            btn_width = 30
-            btn_height = 30
-            actual_height = self.height()
-            btn_x = 10
-            btn_y = (actual_height - btn_height) // 2
-            self.prev_phrase_btn.setGeometry(btn_x, btn_y, btn_width, btn_height)
-
-        # Position next_phrase_btn, translate_btn, and replay_phrase_btn at the right side of the widget
+        # Position buttons at the right side of the widget
         actual_height = self.height()
         btn_width = 30
         btn_height = 30
-        
+        btn_y = (actual_height - btn_height) // 2
+
         # next_phrase_btn is placed at the far right
         if hasattr(self, 'next_phrase_btn') and self.next_phrase_btn:
             btn_x = width - btn_width - 10
-            btn_y = (actual_height - btn_height) // 2
             self.next_phrase_btn.setGeometry(btn_x, btn_y, btn_width, btn_height)
 
         # translate_btn is placed to the left of next_phrase_btn
         if hasattr(self, 'translate_btn') and self.translate_btn:
             btn_x = width - btn_width - 10 - btn_width - 5  # 5px spacing
-            btn_y = (actual_height - btn_height) // 2
             self.translate_btn.setGeometry(btn_x, btn_y, btn_width, btn_height)
 
         # replay_phrase_btn is placed to the left of translate_btn
         if hasattr(self, 'replay_phrase_btn') and self.replay_phrase_btn:
-            btn_x = width - btn_width - 10 - btn_width - 5 - btn_width - 5  # 5px spacing
-            btn_y = (actual_height - btn_height) // 2
+            btn_x = width - btn_width - 10 - 2 * (btn_width + 5)  # 5px spacing
             self.replay_phrase_btn.setGeometry(btn_x, btn_y, btn_width, btn_height)
+
+        # prev_phrase_btn is placed to the left of replay_phrase_btn
+        if hasattr(self, 'prev_phrase_btn') and self.prev_phrase_btn:
+            btn_x = width - btn_width - 10 - 3 * (btn_width + 5)  # 5px spacing
+            self.prev_phrase_btn.setGeometry(btn_x, btn_y, btn_width, btn_height)
 
     def _show_translate_btn(self):
         self._is_hovered = True

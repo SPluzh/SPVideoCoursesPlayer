@@ -599,9 +599,15 @@ class VideoCourseBrowser(QMainWindow):
             if self.video_player.player and not self.video_player.player.pause:
                 self.video_player.player.pause = True
         elif action == "seek_forward":
-            self.video_player.seek_relative(10)
+            if self.video_player.are_subtitles_enabled():
+                self.video_player.seek_next_phrase()
+            else:
+                self.video_player.seek_relative(10)
         elif action == "seek_backward":
-            self.video_player.seek_relative(-10)
+            if self.video_player.are_subtitles_enabled():
+                self.video_player.seek_prev_phrase()
+            else:
+                self.video_player.seek_relative(-10)
         elif action == "volume_up":
             self.video_player.adjust_volume(5)
         elif action == "volume_down":
